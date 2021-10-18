@@ -1,22 +1,63 @@
-#' Compute marginal effects using differences in predicted values between categorical variables (internal function)
-#'
-#' @rdname get_dydx_categorical
-#' @inheritParams marginaleffects
-#' @inheritParams get_dydx_and_se
-#' @keywords internal
-#' @return Numeric vector of contrasts associated to a categorical regressor
-get_dydx_categorical <- function (model, ...) {
-    UseMethod("get_dydx_categorical", model)
+get_dydx <- function(model,
+                     variable,
+                     group_name,
+                     fitfram,
+                     type,
+                     numDeriv_method) {
+
+    if (variable %in% find_categorical(fitfram)) {
+        dydx_fun <- get_dydx_categorical
+    } else {
+        dydx_fun <- get_dydx_continuous
+    }
+
+    out <- dydx_fun(model = model,
+                    fitfram = fitfram,
+                    v = variable,
+                    group_name = group_name,
+                    type = type,
+                    numDeriv_method = numDeriv_method)
+
+    return(out)
 }
 
 
-#' @keywords internal
-get_dydx_categorical.default <- function(model,
-                                         variable,
-                                         fitfram = insight::get_data(model),
-                                         group_name = NULL,
-                                         type = "response",
-                                         ...) {
+get_dydx_continuous <- function(model, 
+                                variable,
+                                fitfram = insight::get_data(model),
+                                group_name = NULL,
+                                type = "response",
+                                numDeriv_method = "simple",
+                                ...) {
+    fitfram_tmp <- fitfram
+    inner <- function(x) {
+        fitfram_tmp[[variable]] <- x
+        pred <- get_predict(model = model,
+                            newdata = fitfram_tmp,
+                            type = type,
+                            group_name = group_name,
+                            ...)
+
+        # strip weird attributes added by some methods (e.g., predict.svyglm)
+        pred <- as.numeric(pred)
+        return(pred)
+    }
+    g <- numDeriv::grad(func = inner, 
+                        x = fitfram[[variable]], 
+                        method = numDeriv_method)
+    out <- data.frame(rowid = 1:nrow(fitfram),
+                      term = variable,
+                      dydx = g)
+    return(out)
+}
+
+
+get_dydx_categorical <- function(model,
+                                 variable,
+                                 fitfram = insight::get_data(model),
+                                 group_name = NULL,
+                                 type = "response",
+                                 ...) {
 
     # Create counterfactual datasets with different factor values and compare the predictions
     if (!"rowid" %in% colnames(fitfram)) {
@@ -26,13 +67,13 @@ get_dydx_categorical.default <- function(model,
 
     if (is.logical(baseline[[variable]])) {
         baseline[[variable]] <- FALSE
-        baseline_prediction <- get_predict(model, 
-                                           newdata = baseline, 
+        baseline_prediction <- get_predict(model,
+                                           newdata = baseline,
                                            type = type,
                                            group_name = group_name)
         baseline[[variable]] <- TRUE
-        baseline$predicted <- get_predict(model = model, 
-                                          newdata = baseline, 
+        baseline$predicted <- get_predict(model = model,
+                                          newdata = baseline,
                                           type = type,
                                           group_name = group_name) - baseline_prediction
         baseline$term <- paste0(variable, baseline[[variable]])
@@ -42,14 +83,14 @@ get_dydx_categorical.default <- function(model,
     if (is.factor(baseline[[variable]])) {
         pred_list <- list()
         baseline[[variable]] <- factor(levels(baseline[[variable]])[1], levels = levels(baseline[[variable]]))
-        baseline_prediction <- get_predict(model, 
-                                           newdata = baseline, 
+        baseline_prediction <- get_predict(model,
+                                           newdata = baseline,
                                            type = type,
                                            group_name = group_name)
         for (i in 2:length(levels(baseline[[variable]]))) {
             baseline[[variable]] <- factor(levels(baseline[[variable]])[i], levels = levels(baseline[[variable]]))
-            baseline$predicted <- get_predict(model = model, 
-                                              newdata = baseline, 
+            baseline$predicted <- get_predict(model = model,
+                                              newdata = baseline,
                                               type = type,
                                               group_name = group_name) - baseline_prediction
             pred_list[[i]] <- baseline[, c("rowid", variable, "predicted")]
@@ -75,14 +116,14 @@ get_dydx_categorical.default <- function(model,
         pred_list <- list()
         levs <- unique(baseline[[variable]])
         baseline[[variable]] <- levs[1]
-        baseline_prediction <- get_predict(model, 
-                                           newdata = baseline, 
+        baseline_prediction <- get_predict(model,
+                                           newdata = baseline,
                                            type = type,
                                            group_name = group_name)
         for (i in 2:length(levs)) {
             baseline[[variable]] <- levs[i]
-            baseline$predicted <- get_predict(model = model, 
-                                              newdata = baseline, 
+            baseline$predicted <- get_predict(model = model,
+                                              newdata = baseline,
                                               type = type,
                                               group_name = group_name) - baseline_prediction
             baseline$term <- sprintf("%s%s", variable, baseline[[variable]])

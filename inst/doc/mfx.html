@@ -14,35 +14,6 @@
 
 <title>Marginal Effects</title>
 
-<script>// Pandoc 2.9 adds attributes on both header and div. We remove the former (to
-// be compatible with the behavior of Pandoc < 2.8).
-document.addEventListener('DOMContentLoaded', function(e) {
-  var hs = document.querySelectorAll("div.section[class*='level'] > :first-child");
-  var i, h, a;
-  for (i = 0; i < hs.length; i++) {
-    h = hs[i];
-    if (!/^h[1-6]$/i.test(h.tagName)) continue;  // it should be a header h1-h6
-    a = h.attributes;
-    while (a.length > 0) h.removeAttribute(a[0].name);
-  }
-});
-</script>
-<script>// Hide empty <a> tag within highlighted CodeBlock for screen reader accessibility (see https://github.com/jgm/pandoc/issues/6352#issuecomment-626106786) -->
-// v0.0.1
-// Written by JooYoung Seo (jooyoung@psu.edu) and Atsushi Yasumoto on June 1st, 2020.
-
-document.addEventListener('DOMContentLoaded', function() {
-  const codeList = document.getElementsByClassName("sourceCode");
-  for (var i = 0; i < codeList.length; i++) {
-    var linkList = codeList[i].getElementsByTagName('a');
-    for (var j = 0; j < linkList.length; j++) {
-      if (linkList[j].innerHTML === "") {
-        linkList[j].setAttribute('aria-hidden', 'true');
-      }
-    }
-  }
-});
-</script>
 
 <style type="text/css">
   code{white-space: pre-wrap;}
@@ -63,27 +34,26 @@ document.addEventListener('DOMContentLoaded', function() {
   }
 </style>
 <style type="text/css" data-origin="pandoc">
-pre > code.sourceCode { white-space: pre; position: relative; }
-pre > code.sourceCode > span { display: inline-block; line-height: 1.25; }
-pre > code.sourceCode > span:empty { height: 1.2em; }
-code.sourceCode > span { color: inherit; text-decoration: inherit; }
+a.sourceLine { display: inline-block; line-height: 1.25; }
+a.sourceLine { pointer-events: none; color: inherit; text-decoration: inherit; }
+a.sourceLine:empty { height: 1.2em; }
+.sourceCode { overflow: visible; }
+code.sourceCode { white-space: pre; position: relative; }
 div.sourceCode { margin: 1em 0; }
 pre.sourceCode { margin: 0; }
 @media screen {
 div.sourceCode { overflow: auto; }
 }
 @media print {
-pre > code.sourceCode { white-space: pre-wrap; }
-pre > code.sourceCode > span { text-indent: -5em; padding-left: 5em; }
+code.sourceCode { white-space: pre-wrap; }
+a.sourceLine { text-indent: -1em; padding-left: 1em; }
 }
-pre.numberSource code
-  { counter-reset: source-line 0; }
-pre.numberSource code > span
-  { position: relative; left: -4em; counter-increment: source-line; }
-pre.numberSource code > span > a:first-child::before
-  { content: counter(source-line);
+pre.numberSource a.sourceLine
+  { position: relative; left: -4em; }
+pre.numberSource a.sourceLine::before
+  { content: attr(title);
     position: relative; left: -1em; text-align: right; vertical-align: baseline;
-    border: none; display: inline-block;
+    border: none; pointer-events: all; display: inline-block;
     -webkit-touch-callout: none; -webkit-user-select: none;
     -khtml-user-select: none; -moz-user-select: none;
     -ms-user-select: none; user-select: none;
@@ -92,9 +62,9 @@ pre.numberSource code > span > a:first-child::before
   }
 pre.numberSource { margin-left: 3em; border-left: 1px solid #aaaaaa;  padding-left: 4px; }
 div.sourceCode
-  {   }
+  {  }
 @media screen {
-pre > code.sourceCode > span > a:first-child::before { text-decoration: underline; }
+a.sourceLine::before { text-decoration: underline; }
 }
 code span.al { color: #ff0000; font-weight: bold; } /* Alert */
 code span.an { color: #60a0b0; font-weight: bold; font-style: italic; } /* Annotation */
@@ -378,112 +348,115 @@ code > span.er { color: #a61717; background-color: #e3d2d2; }
 <p>The marginal effect is a <em>unit-level</em> measure of association between changes in a regressor and changes in the response. Except in the simplest linear models, the value of the marginal effect will be different from individual to individual, because it will depend on the values of the other covariates for each individual.</p>
 <p>The <code>marginaleffects</code> function thus produces distinct estimates of the marginal effect for each row of the data used to fit the model. The output of <code>marginaleffects</code> is a simple <code>data.frame</code>, which can be inspected with all the usual <code>R</code> commands.</p>
 <p>To show this, we load the library, download the <a href="https://allisonhorst.github.io/palmerpenguins/">Palmer Penguins</a> data from the <a href="https://vincentarelbundock.github.io/Rdatasets/articles/data.html"><code>Rdatasets</code> archive</a>, and estimate a GLM model:</p>
-<div class="sourceCode" id="cb1"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true"></a><span class="kw">library</span>(marginaleffects)</span>
-<span id="cb1-2"><a href="#cb1-2" aria-hidden="true"></a></span>
-<span id="cb1-3"><a href="#cb1-3" aria-hidden="true"></a>dat &lt;-<span class="st"> </span><span class="kw">read.csv</span>(<span class="st">&quot;https://vincentarelbundock.github.io/Rdatasets/csv/palmerpenguins/penguins.csv&quot;</span>)</span>
-<span id="cb1-4"><a href="#cb1-4" aria-hidden="true"></a>dat<span class="op">$</span>large_penguin &lt;-<span class="st"> </span><span class="kw">ifelse</span>(dat<span class="op">$</span>body_mass_g <span class="op">&gt;</span><span class="st"> </span><span class="kw">median</span>(dat<span class="op">$</span>body_mass_g, <span class="dt">na.rm =</span> <span class="ot">TRUE</span>), <span class="dv">1</span>, <span class="dv">0</span>)</span>
-<span id="cb1-5"><a href="#cb1-5" aria-hidden="true"></a></span>
-<span id="cb1-6"><a href="#cb1-6" aria-hidden="true"></a>mod &lt;-<span class="st"> </span><span class="kw">glm</span>(large_penguin <span class="op">~</span><span class="st"> </span>bill_length_mm <span class="op">+</span><span class="st"> </span>flipper_length_mm, </span>
-<span id="cb1-7"><a href="#cb1-7" aria-hidden="true"></a>           <span class="dt">data =</span> dat, <span class="dt">family =</span> binomial)</span></code></pre></div>
-<div class="sourceCode" id="cb2"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb2-1"><a href="#cb2-1" aria-hidden="true"></a>mfx &lt;-<span class="st"> </span><span class="kw">marginaleffects</span>(mod)</span>
-<span id="cb2-2"><a href="#cb2-2" aria-hidden="true"></a><span class="kw">head</span>(mfx)</span>
-<span id="cb2-3"><a href="#cb2-3" aria-hidden="true"></a><span class="co">#&gt;   rowid     type           term          dydx    std.error large_penguin</span></span>
-<span id="cb2-4"><a href="#cb2-4" aria-hidden="true"></a><span class="co">#&gt; 1     1 response bill_length_mm -0.0009199341 0.0006951380             0</span></span>
-<span id="cb2-5"><a href="#cb2-5" aria-hidden="true"></a><span class="co">#&gt; 2     2 response bill_length_mm -0.0026043673 0.0019591323             0</span></span>
-<span id="cb2-6"><a href="#cb2-6" aria-hidden="true"></a><span class="co">#&gt; 3     3 response bill_length_mm -0.0108418910 0.0079149418             0</span></span>
-<span id="cb2-7"><a href="#cb2-7" aria-hidden="true"></a><span class="co">#&gt; 4     4 response bill_length_mm -0.0095652441 0.0076582721             0</span></span>
-<span id="cb2-8"><a href="#cb2-8" aria-hidden="true"></a><span class="co">#&gt; 5     5 response bill_length_mm -0.0056069848 0.0042915529             0</span></span>
-<span id="cb2-9"><a href="#cb2-9" aria-hidden="true"></a><span class="co">#&gt; 6     6 response bill_length_mm -0.0009293834 0.0007080235             0</span></span>
-<span id="cb2-10"><a href="#cb2-10" aria-hidden="true"></a><span class="co">#&gt;   bill_length_mm flipper_length_mm  predicted</span></span>
-<span id="cb2-11"><a href="#cb2-11" aria-hidden="true"></a><span class="co">#&gt; 1           39.1               181 0.01767637</span></span>
-<span id="cb2-12"><a href="#cb2-12" aria-hidden="true"></a><span class="co">#&gt; 2           39.5               186 0.05184588</span></span>
-<span id="cb2-13"><a href="#cb2-13" aria-hidden="true"></a><span class="co">#&gt; 3           40.3               195 0.28702661</span></span>
-<span id="cb2-14"><a href="#cb2-14" aria-hidden="true"></a><span class="co">#&gt; 4           36.7               193 0.23645775</span></span>
-<span id="cb2-15"><a href="#cb2-15" aria-hidden="true"></a><span class="co">#&gt; 5           39.3               190 0.12030641</span></span>
-<span id="cb2-16"><a href="#cb2-16" aria-hidden="true"></a><span class="co">#&gt; 6           38.9               181 0.01786130</span></span></code></pre></div>
+<div class="sourceCode" id="cb1"><pre class="sourceCode r"><code class="sourceCode r"><a class="sourceLine" id="cb1-1" title="1"><span class="kw">library</span>(marginaleffects)</a>
+<a class="sourceLine" id="cb1-2" title="2"></a>
+<a class="sourceLine" id="cb1-3" title="3">dat &lt;-<span class="st"> </span><span class="kw">read.csv</span>(<span class="st">&quot;https://vincentarelbundock.github.io/Rdatasets/csv/palmerpenguins/penguins.csv&quot;</span>)</a>
+<a class="sourceLine" id="cb1-4" title="4">dat<span class="op">$</span>large_penguin &lt;-<span class="st"> </span><span class="kw">ifelse</span>(dat<span class="op">$</span>body_mass_g <span class="op">&gt;</span><span class="st"> </span><span class="kw">median</span>(dat<span class="op">$</span>body_mass_g, <span class="dt">na.rm =</span> <span class="ot">TRUE</span>), <span class="dv">1</span>, <span class="dv">0</span>)</a>
+<a class="sourceLine" id="cb1-5" title="5"></a>
+<a class="sourceLine" id="cb1-6" title="6">mod &lt;-<span class="st"> </span><span class="kw">glm</span>(large_penguin <span class="op">~</span><span class="st"> </span>bill_length_mm <span class="op">+</span><span class="st"> </span>flipper_length_mm, </a>
+<a class="sourceLine" id="cb1-7" title="7">           <span class="dt">data =</span> dat, <span class="dt">family =</span> binomial)</a></code></pre></div>
+<div class="sourceCode" id="cb2"><pre class="sourceCode r"><code class="sourceCode r"><a class="sourceLine" id="cb2-1" title="1">mfx &lt;-<span class="st"> </span><span class="kw">marginaleffects</span>(mod)</a>
+<a class="sourceLine" id="cb2-2" title="2"><span class="kw">head</span>(mfx)</a>
+<a class="sourceLine" id="cb2-3" title="3"><span class="co">#&gt;   rowid     type           term          dydx    std.error large_penguin</span></a>
+<a class="sourceLine" id="cb2-4" title="4"><span class="co">#&gt; 1     1 response bill_length_mm -0.0009199341 0.0006951380             0</span></a>
+<a class="sourceLine" id="cb2-5" title="5"><span class="co">#&gt; 2     2 response bill_length_mm -0.0026043673 0.0019591323             0</span></a>
+<a class="sourceLine" id="cb2-6" title="6"><span class="co">#&gt; 3     3 response bill_length_mm -0.0108418910 0.0079149418             0</span></a>
+<a class="sourceLine" id="cb2-7" title="7"><span class="co">#&gt; 4     4 response bill_length_mm -0.0095652441 0.0076582721             0</span></a>
+<a class="sourceLine" id="cb2-8" title="8"><span class="co">#&gt; 5     5 response bill_length_mm -0.0056069848 0.0042915529             0</span></a>
+<a class="sourceLine" id="cb2-9" title="9"><span class="co">#&gt; 6     6 response bill_length_mm -0.0009293834 0.0007080235             0</span></a>
+<a class="sourceLine" id="cb2-10" title="10"><span class="co">#&gt;   bill_length_mm flipper_length_mm  predicted</span></a>
+<a class="sourceLine" id="cb2-11" title="11"><span class="co">#&gt; 1           39.1               181 0.01767637</span></a>
+<a class="sourceLine" id="cb2-12" title="12"><span class="co">#&gt; 2           39.5               186 0.05184588</span></a>
+<a class="sourceLine" id="cb2-13" title="13"><span class="co">#&gt; 3           40.3               195 0.28702661</span></a>
+<a class="sourceLine" id="cb2-14" title="14"><span class="co">#&gt; 4           36.7               193 0.23645775</span></a>
+<a class="sourceLine" id="cb2-15" title="15"><span class="co">#&gt; 5           39.3               190 0.12030641</span></a>
+<a class="sourceLine" id="cb2-16" title="16"><span class="co">#&gt; 6           38.9               181 0.01786130</span></a></code></pre></div>
 </div>
 <div id="average-mfx" class="section level1">
 <h1>Average MFX</h1>
 <p>A dataset with one marginal effect estimate per unit of observation is a bit unwieldy and difficult to interpret. Many analysts like to report the “Average Marginal Effect”, that is, the average of all the observation-specific marginal effects. These are easy to compute based on the full <code>data.frame</code> shown above, but the <code>summary</code> function is convenient:</p>
-<div class="sourceCode" id="cb3"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb3-1"><a href="#cb3-1" aria-hidden="true"></a><span class="kw">summary</span>(mfx)</span>
-<span id="cb3-2"><a href="#cb3-2" aria-hidden="true"></a><span class="co">#&gt; Average marginal effects </span></span>
-<span id="cb3-3"><a href="#cb3-3" aria-hidden="true"></a><span class="co">#&gt;       type              Term   Effect Std. Error z value Pr(&gt;|z|)    2.5 %</span></span>
-<span id="cb3-4"><a href="#cb3-4" aria-hidden="true"></a><span class="co">#&gt; 1 response    bill_length_mm -0.00512   0.003530   -1.45  0.14698 -0.01204</span></span>
-<span id="cb3-5"><a href="#cb3-5" aria-hidden="true"></a><span class="co">#&gt; 2 response flipper_length_mm  0.02189   0.001221   17.92  &lt; 2e-16  0.01950</span></span>
-<span id="cb3-6"><a href="#cb3-6" aria-hidden="true"></a><span class="co">#&gt;     97.5 %</span></span>
-<span id="cb3-7"><a href="#cb3-7" aria-hidden="true"></a><span class="co">#&gt; 1 0.001799</span></span>
-<span id="cb3-8"><a href="#cb3-8" aria-hidden="true"></a><span class="co">#&gt; 2 0.024284</span></span>
-<span id="cb3-9"><a href="#cb3-9" aria-hidden="true"></a><span class="co">#&gt; </span></span>
-<span id="cb3-10"><a href="#cb3-10" aria-hidden="true"></a><span class="co">#&gt; Model type:  glm </span></span>
-<span id="cb3-11"><a href="#cb3-11" aria-hidden="true"></a><span class="co">#&gt; Prediction type:  response</span></span></code></pre></div>
+<div class="sourceCode" id="cb3"><pre class="sourceCode r"><code class="sourceCode r"><a class="sourceLine" id="cb3-1" title="1"><span class="kw">summary</span>(mfx)</a>
+<a class="sourceLine" id="cb3-2" title="2"><span class="co">#&gt; Average marginal effects </span></a>
+<a class="sourceLine" id="cb3-3" title="3"><span class="co">#&gt;       type              Term   Effect Std. Error z value Pr(&gt;|z|)    2.5 %</span></a>
+<a class="sourceLine" id="cb3-4" title="4"><span class="co">#&gt; 1 response    bill_length_mm -0.00512   0.003530   -1.45  0.14698 -0.01204</span></a>
+<a class="sourceLine" id="cb3-5" title="5"><span class="co">#&gt; 2 response flipper_length_mm  0.02189   0.001221   17.92  &lt; 2e-16  0.01950</span></a>
+<a class="sourceLine" id="cb3-6" title="6"><span class="co">#&gt;     97.5 %</span></a>
+<a class="sourceLine" id="cb3-7" title="7"><span class="co">#&gt; 1 0.001799</span></a>
+<a class="sourceLine" id="cb3-8" title="8"><span class="co">#&gt; 2 0.024284</span></a>
+<a class="sourceLine" id="cb3-9" title="9"><span class="co">#&gt; </span></a>
+<a class="sourceLine" id="cb3-10" title="10"><span class="co">#&gt; Model type:  glm </span></a>
+<a class="sourceLine" id="cb3-11" title="11"><span class="co">#&gt; Prediction type:  response</span></a></code></pre></div>
 <p>Note that since marginal effects are derivatives, they are only properly defined for continuous numeric variables. When the model also includes categorical regressors, the <code>summary</code> function will try to display relevant (regression-adjusted) contrasts between different categories, as shown above.</p>
 <p>You can also extract average marginal effects using <code>tidy</code> and <code>glance</code> methods which conform to the <a href="https://broom.tidymodels.org/"><code>broom</code> package specification</a>:</p>
-<div class="sourceCode" id="cb4"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb4-1"><a href="#cb4-1" aria-hidden="true"></a><span class="kw">tidy</span>(mfx)</span>
-<span id="cb4-2"><a href="#cb4-2" aria-hidden="true"></a><span class="co">#&gt;       type              term     estimate   std.error statistic   p.value</span></span>
-<span id="cb4-3"><a href="#cb4-3" aria-hidden="true"></a><span class="co">#&gt; 1 response    bill_length_mm -0.005119629 0.003530082 -1.450286 0.1469788</span></span>
-<span id="cb4-4"><a href="#cb4-4" aria-hidden="true"></a><span class="co">#&gt; 2 response flipper_length_mm  0.021890337 0.001221236 17.924734 0.0000000</span></span>
-<span id="cb4-5"><a href="#cb4-5" aria-hidden="true"></a><span class="co">#&gt;      conf.low   conf.high</span></span>
-<span id="cb4-6"><a href="#cb4-6" aria-hidden="true"></a><span class="co">#&gt; 1 -0.01203846 0.001799205</span></span>
-<span id="cb4-7"><a href="#cb4-7" aria-hidden="true"></a><span class="co">#&gt; 2  0.01949676 0.024283916</span></span>
-<span id="cb4-8"><a href="#cb4-8" aria-hidden="true"></a><span class="kw">glance</span>(mfx)</span>
-<span id="cb4-9"><a href="#cb4-9" aria-hidden="true"></a><span class="co">#&gt;   null.deviance df.null    logLik      AIC      BIC deviance df.residual nobs</span></span>
-<span id="cb4-10"><a href="#cb4-10" aria-hidden="true"></a><span class="co">#&gt; 1      473.8202     341 -108.0567 222.1133 233.6178 216.1133         339  342</span></span></code></pre></div>
+<div class="sourceCode" id="cb4"><pre class="sourceCode r"><code class="sourceCode r"><a class="sourceLine" id="cb4-1" title="1"><span class="kw">tidy</span>(mfx)</a>
+<a class="sourceLine" id="cb4-2" title="2"><span class="co">#&gt;       type              term     estimate   std.error statistic   p.value</span></a>
+<a class="sourceLine" id="cb4-3" title="3"><span class="co">#&gt; 1 response    bill_length_mm -0.005119629 0.003530082 -1.450286 0.1469788</span></a>
+<a class="sourceLine" id="cb4-4" title="4"><span class="co">#&gt; 2 response flipper_length_mm  0.021890337 0.001221236 17.924734 0.0000000</span></a>
+<a class="sourceLine" id="cb4-5" title="5"><span class="co">#&gt;      conf.low   conf.high</span></a>
+<a class="sourceLine" id="cb4-6" title="6"><span class="co">#&gt; 1 -0.01203846 0.001799205</span></a>
+<a class="sourceLine" id="cb4-7" title="7"><span class="co">#&gt; 2  0.01949676 0.024283916</span></a>
+<a class="sourceLine" id="cb4-8" title="8"></a>
+<a class="sourceLine" id="cb4-9" title="9"><span class="kw">glance</span>(mfx)</a>
+<a class="sourceLine" id="cb4-10" title="10"><span class="co">#&gt;   null.deviance df.null    logLik      AIC      BIC deviance df.residual nobs</span></a>
+<a class="sourceLine" id="cb4-11" title="11"><span class="co">#&gt; 1      473.8202     341 -108.0567 222.1133 233.6178 216.1133         339  342</span></a>
+<a class="sourceLine" id="cb4-12" title="12"><span class="co">#&gt;          F</span></a>
+<a class="sourceLine" id="cb4-13" title="13"><span class="co">#&gt; 1 45.93554</span></a></code></pre></div>
 </div>
 <div id="typical-mfx" class="section level1">
 <h1>Typical MFX</h1>
 <p>Sometimes, we are not interested in <em>all</em> the unit-specific marginal effects, but would rather look at the estimated marginal effects for certain “typical” individuals. The <code>typical</code> function helps us build datasets full of “typical” rows. For example, to generate artificial Adelies and Gentoos with 180mm flippers:</p>
-<div class="sourceCode" id="cb5"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb5-1"><a href="#cb5-1" aria-hidden="true"></a><span class="kw">typical</span>(<span class="dt">flipper_length_mm =</span> <span class="dv">180</span>, </span>
-<span id="cb5-2"><a href="#cb5-2" aria-hidden="true"></a>        <span class="dt">species =</span> <span class="kw">c</span>(<span class="st">&quot;Adelie&quot;</span>, <span class="st">&quot;Gentoo&quot;</span>), </span>
-<span id="cb5-3"><a href="#cb5-3" aria-hidden="true"></a>        <span class="dt">model =</span> mod)</span>
-<span id="cb5-4"><a href="#cb5-4" aria-hidden="true"></a><span class="co">#&gt;   bill_length_mm flipper_length_mm species</span></span>
-<span id="cb5-5"><a href="#cb5-5" aria-hidden="true"></a><span class="co">#&gt; 1       43.92193               180  Adelie</span></span>
-<span id="cb5-6"><a href="#cb5-6" aria-hidden="true"></a><span class="co">#&gt; 2       43.92193               180  Gentoo</span></span></code></pre></div>
+<div class="sourceCode" id="cb5"><pre class="sourceCode r"><code class="sourceCode r"><a class="sourceLine" id="cb5-1" title="1"><span class="kw">typical</span>(<span class="dt">flipper_length_mm =</span> <span class="dv">180</span>, </a>
+<a class="sourceLine" id="cb5-2" title="2">        <span class="dt">species =</span> <span class="kw">c</span>(<span class="st">&quot;Adelie&quot;</span>, <span class="st">&quot;Gentoo&quot;</span>), </a>
+<a class="sourceLine" id="cb5-3" title="3">        <span class="dt">model =</span> mod)</a>
+<a class="sourceLine" id="cb5-4" title="4"><span class="co">#&gt;   bill_length_mm flipper_length_mm species</span></a>
+<a class="sourceLine" id="cb5-5" title="5"><span class="co">#&gt; 1       43.92193               180  Adelie</span></a>
+<a class="sourceLine" id="cb5-6" title="6"><span class="co">#&gt; 2       43.92193               180  Gentoo</span></a></code></pre></div>
 <p>The same command can be used (omitting the <code>model</code> argument) to <code>marginaleffects</code>’s <code>newdata</code> argument to compute marginal effects for those (fictional) individuals:</p>
-<div class="sourceCode" id="cb6"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb6-1"><a href="#cb6-1" aria-hidden="true"></a><span class="kw">marginaleffects</span>(mod, <span class="dt">newdata =</span> <span class="kw">typical</span>(<span class="dt">flipper_length_mm =</span> <span class="dv">180</span>, </span>
-<span id="cb6-2"><a href="#cb6-2" aria-hidden="true"></a>                                       <span class="dt">species =</span> <span class="kw">c</span>(<span class="st">&quot;Adelie&quot;</span>, <span class="st">&quot;Gentoo&quot;</span>)))</span>
-<span id="cb6-3"><a href="#cb6-3" aria-hidden="true"></a><span class="co">#&gt;   rowid     type              term          dydx    std.error bill_length_mm</span></span>
-<span id="cb6-4"><a href="#cb6-4" aria-hidden="true"></a><span class="co">#&gt; 1     1 response    bill_length_mm -0.0005758662 0.0003533902       43.92193</span></span>
-<span id="cb6-5"><a href="#cb6-5" aria-hidden="true"></a><span class="co">#&gt; 2     2 response    bill_length_mm -0.0005758662 0.0003533902       43.92193</span></span>
-<span id="cb6-6"><a href="#cb6-6" aria-hidden="true"></a><span class="co">#&gt; 3     1 response flipper_length_mm  0.0024622958 0.0008480042       43.92193</span></span>
-<span id="cb6-7"><a href="#cb6-7" aria-hidden="true"></a><span class="co">#&gt; 4     2 response flipper_length_mm  0.0024622958 0.0008480042       43.92193</span></span>
-<span id="cb6-8"><a href="#cb6-8" aria-hidden="true"></a><span class="co">#&gt;   flipper_length_mm species  predicted</span></span>
-<span id="cb6-9"><a href="#cb6-9" aria-hidden="true"></a><span class="co">#&gt; 1               180  Adelie 0.01099037</span></span>
-<span id="cb6-10"><a href="#cb6-10" aria-hidden="true"></a><span class="co">#&gt; 2               180  Gentoo 0.01099037</span></span>
-<span id="cb6-11"><a href="#cb6-11" aria-hidden="true"></a><span class="co">#&gt; 3               180  Adelie 0.01099037</span></span>
-<span id="cb6-12"><a href="#cb6-12" aria-hidden="true"></a><span class="co">#&gt; 4               180  Gentoo 0.01099037</span></span></code></pre></div>
+<div class="sourceCode" id="cb6"><pre class="sourceCode r"><code class="sourceCode r"><a class="sourceLine" id="cb6-1" title="1"><span class="kw">marginaleffects</span>(mod, <span class="dt">newdata =</span> <span class="kw">typical</span>(<span class="dt">flipper_length_mm =</span> <span class="dv">180</span>, </a>
+<a class="sourceLine" id="cb6-2" title="2">                                       <span class="dt">species =</span> <span class="kw">c</span>(<span class="st">&quot;Adelie&quot;</span>, <span class="st">&quot;Gentoo&quot;</span>)))</a>
+<a class="sourceLine" id="cb6-3" title="3"><span class="co">#&gt;   rowid     type              term          dydx    std.error bill_length_mm</span></a>
+<a class="sourceLine" id="cb6-4" title="4"><span class="co">#&gt; 1     1 response    bill_length_mm -0.0005758662 0.0003533902       43.92193</span></a>
+<a class="sourceLine" id="cb6-5" title="5"><span class="co">#&gt; 2     2 response    bill_length_mm -0.0005758662 0.0003533902       43.92193</span></a>
+<a class="sourceLine" id="cb6-6" title="6"><span class="co">#&gt; 3     1 response flipper_length_mm  0.0024622958 0.0008480042       43.92193</span></a>
+<a class="sourceLine" id="cb6-7" title="7"><span class="co">#&gt; 4     2 response flipper_length_mm  0.0024622958 0.0008480042       43.92193</span></a>
+<a class="sourceLine" id="cb6-8" title="8"><span class="co">#&gt;   flipper_length_mm species  predicted</span></a>
+<a class="sourceLine" id="cb6-9" title="9"><span class="co">#&gt; 1               180  Adelie 0.01099037</span></a>
+<a class="sourceLine" id="cb6-10" title="10"><span class="co">#&gt; 2               180  Gentoo 0.01099037</span></a>
+<a class="sourceLine" id="cb6-11" title="11"><span class="co">#&gt; 3               180  Adelie 0.01099037</span></a>
+<a class="sourceLine" id="cb6-12" title="12"><span class="co">#&gt; 4               180  Gentoo 0.01099037</span></a></code></pre></div>
 <p>When variables are omitted from the <code>typical</code> call, they will automatically be set at their median or mode (depending on variable type).</p>
 </div>
 <div id="counterfactual-mfx" class="section level1">
 <h1>Counterfactual MFX</h1>
 <p>The <code>typical</code> function allowed us look at completely fictional individuals. The <code>counterfactual</code> function lets us compute the marginal effects for the actual observations in our dataset, but with a few manipulated values. For example, this code will create a <code>data.frame</code> twice as long as the original <code>dat</code>, where each observation is repeated with different values of the <code>flipper_length_mm</code> variable:</p>
-<div class="sourceCode" id="cb7"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb7-1"><a href="#cb7-1" aria-hidden="true"></a>nd &lt;-<span class="st"> </span><span class="kw">counterfactual</span>(<span class="dt">flipper_length_mm =</span> <span class="kw">c</span>(<span class="dv">160</span>, <span class="dv">180</span>), <span class="dt">model =</span> mod)</span></code></pre></div>
+<div class="sourceCode" id="cb7"><pre class="sourceCode r"><code class="sourceCode r"><a class="sourceLine" id="cb7-1" title="1">nd &lt;-<span class="st"> </span><span class="kw">counterfactual</span>(<span class="dt">flipper_length_mm =</span> <span class="kw">c</span>(<span class="dv">160</span>, <span class="dv">180</span>), <span class="dt">model =</span> mod)</a></code></pre></div>
 <p>We see that the rows 1, 2, and 3 of the original dataset have been replicated twice, with different values of the <code>flipper_length_mm</code> variable:</p>
-<div class="sourceCode" id="cb8"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb8-1"><a href="#cb8-1" aria-hidden="true"></a>nd[nd<span class="op">$</span>rowid <span class="op">%in%</span><span class="st"> </span><span class="dv">1</span><span class="op">:</span><span class="dv">3</span>,]</span>
-<span id="cb8-2"><a href="#cb8-2" aria-hidden="true"></a><span class="co">#&gt;     rowid bill_length_mm flipper_length_mm</span></span>
-<span id="cb8-3"><a href="#cb8-3" aria-hidden="true"></a><span class="co">#&gt; 1       1           39.1               160</span></span>
-<span id="cb8-4"><a href="#cb8-4" aria-hidden="true"></a><span class="co">#&gt; 2       2           39.5               160</span></span>
-<span id="cb8-5"><a href="#cb8-5" aria-hidden="true"></a><span class="co">#&gt; 3       3           40.3               160</span></span>
-<span id="cb8-6"><a href="#cb8-6" aria-hidden="true"></a><span class="co">#&gt; 343     1           39.1               180</span></span>
-<span id="cb8-7"><a href="#cb8-7" aria-hidden="true"></a><span class="co">#&gt; 344     2           39.5               180</span></span>
-<span id="cb8-8"><a href="#cb8-8" aria-hidden="true"></a><span class="co">#&gt; 345     3           40.3               180</span></span></code></pre></div>
+<div class="sourceCode" id="cb8"><pre class="sourceCode r"><code class="sourceCode r"><a class="sourceLine" id="cb8-1" title="1">nd[nd<span class="op">$</span>rowid <span class="op">%in%</span><span class="st"> </span><span class="dv">1</span><span class="op">:</span><span class="dv">3</span>,]</a>
+<a class="sourceLine" id="cb8-2" title="2"><span class="co">#&gt;     rowid bill_length_mm flipper_length_mm</span></a>
+<a class="sourceLine" id="cb8-3" title="3"><span class="co">#&gt; 1       1           39.1               160</span></a>
+<a class="sourceLine" id="cb8-4" title="4"><span class="co">#&gt; 2       2           39.5               160</span></a>
+<a class="sourceLine" id="cb8-5" title="5"><span class="co">#&gt; 3       3           40.3               160</span></a>
+<a class="sourceLine" id="cb8-6" title="6"><span class="co">#&gt; 343     1           39.1               180</span></a>
+<a class="sourceLine" id="cb8-7" title="7"><span class="co">#&gt; 344     2           39.5               180</span></a>
+<a class="sourceLine" id="cb8-8" title="8"><span class="co">#&gt; 345     3           40.3               180</span></a></code></pre></div>
 <p>Again, we can use this to compute average (or median, or anything else) marginal effects over the counterfactual individuals:</p>
-<div class="sourceCode" id="cb9"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb9-1"><a href="#cb9-1" aria-hidden="true"></a><span class="kw">library</span>(dplyr)</span>
-<span id="cb9-2"><a href="#cb9-2" aria-hidden="true"></a></span>
-<span id="cb9-3"><a href="#cb9-3" aria-hidden="true"></a><span class="kw">marginaleffects</span>(mod, <span class="dt">newdata =</span> nd) <span class="op">%&gt;%</span></span>
-<span id="cb9-4"><a href="#cb9-4" aria-hidden="true"></a><span class="st">    </span><span class="kw">group_by</span>(term) <span class="op">%&gt;%</span></span>
-<span id="cb9-5"><a href="#cb9-5" aria-hidden="true"></a><span class="st">    </span><span class="kw">summarize</span>(<span class="kw">across</span>(dydx<span class="op">:</span>std.error, median))</span>
-<span id="cb9-6"><a href="#cb9-6" aria-hidden="true"></a><span class="co">#&gt; # A tibble: 2 × 3</span></span>
-<span id="cb9-7"><a href="#cb9-7" aria-hidden="true"></a><span class="co">#&gt;   term                     dydx  std.error</span></span>
-<span id="cb9-8"><a href="#cb9-8" aria-hidden="true"></a><span class="co">#&gt;   &lt;chr&gt;                   &lt;dbl&gt;      &lt;dbl&gt;</span></span>
-<span id="cb9-9"><a href="#cb9-9" aria-hidden="true"></a><span class="co">#&gt; 1 bill_length_mm    -0.00000617 0.00000520</span></span>
-<span id="cb9-10"><a href="#cb9-10" aria-hidden="true"></a><span class="co">#&gt; 2 flipper_length_mm  0.0000264  0.0000225</span></span></code></pre></div>
+<div class="sourceCode" id="cb9"><pre class="sourceCode r"><code class="sourceCode r"><a class="sourceLine" id="cb9-1" title="1"><span class="kw">library</span>(dplyr)</a>
+<a class="sourceLine" id="cb9-2" title="2"></a>
+<a class="sourceLine" id="cb9-3" title="3"><span class="kw">marginaleffects</span>(mod, <span class="dt">newdata =</span> nd) <span class="op">%&gt;%</span></a>
+<a class="sourceLine" id="cb9-4" title="4"><span class="st">    </span><span class="kw">group_by</span>(term) <span class="op">%&gt;%</span></a>
+<a class="sourceLine" id="cb9-5" title="5"><span class="st">    </span><span class="kw">summarize</span>(<span class="kw">across</span>(dydx<span class="op">:</span>std.error, median))</a>
+<a class="sourceLine" id="cb9-6" title="6"><span class="co">#&gt; # A tibble: 2 × 3</span></a>
+<a class="sourceLine" id="cb9-7" title="7"><span class="co">#&gt;   term                     dydx  std.error</span></a>
+<a class="sourceLine" id="cb9-8" title="8"><span class="co">#&gt;   &lt;chr&gt;                   &lt;dbl&gt;      &lt;dbl&gt;</span></a>
+<a class="sourceLine" id="cb9-9" title="9"><span class="co">#&gt; 1 bill_length_mm    -0.00000617 0.00000520</span></a>
+<a class="sourceLine" id="cb9-10" title="10"><span class="co">#&gt; 2 flipper_length_mm  0.0000264  0.0000225</span></a></code></pre></div>
 </div>
 <div id="conditional-mfx-plot" class="section level1">
 <h1>Conditional MFX (Plot)</h1>
 <p>The <code>plot_cme</code> function can be used to draw “Conditional Marginal Effects.” This is useful when a model includes interaction terms and we want to plot how the marginal effect of a variable changes as the value of a “condition” (or “moderator”) variable changes:</p>
-<div class="sourceCode" id="cb10"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb10-1"><a href="#cb10-1" aria-hidden="true"></a>mod &lt;-<span class="st"> </span><span class="kw">lm</span>(mpg <span class="op">~</span><span class="st"> </span>hp <span class="op">*</span><span class="st"> </span>wt <span class="op">+</span><span class="st"> </span>drat, <span class="dt">data =</span> mtcars)</span>
-<span id="cb10-2"><a href="#cb10-2" aria-hidden="true"></a></span>
-<span id="cb10-3"><a href="#cb10-3" aria-hidden="true"></a><span class="kw">plot_cme</span>(mod, <span class="dt">effect =</span> <span class="st">&quot;hp&quot;</span>, <span class="dt">condition =</span> <span class="st">&quot;wt&quot;</span>)</span></code></pre></div>
+<div class="sourceCode" id="cb10"><pre class="sourceCode r"><code class="sourceCode r"><a class="sourceLine" id="cb10-1" title="1">mod &lt;-<span class="st"> </span><span class="kw">lm</span>(mpg <span class="op">~</span><span class="st"> </span>hp <span class="op">*</span><span class="st"> </span>wt <span class="op">+</span><span class="st"> </span>drat, <span class="dt">data =</span> mtcars)</a>
+<a class="sourceLine" id="cb10-2" title="2"></a>
+<a class="sourceLine" id="cb10-3" title="3"><span class="kw">plot_cme</span>(mod, <span class="dt">effect =</span> <span class="st">&quot;hp&quot;</span>, <span class="dt">condition =</span> <span class="st">&quot;wt&quot;</span>)</a></code></pre></div>
 <p><img src="data:image/png;base64,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" width="60%" /></p>
 <p>The marginal effects in the plot above were computed with values of all regressors – except the <code>effect</code> and the <code>condition</code> – held at their means or modes, depending on variable type.</p>
 </div>
@@ -496,56 +469,56 @@ code > span.er { color: #a61717; background-color: #e3d2d2; }
 <p><span class="math display">\[\partial Y / \partial X = \beta_0 + 2 \cdot \beta_1 X\]</span> <span class="math display">\[\partial Y / \partial X = 1 + 4X\]</span></p>
 <p>This result suggests that the effect of a <em>change</em> in <span class="math inline">\(X\)</span> on <span class="math inline">\(Y\)</span> depends on the <em>level</em> of <span class="math inline">\(X\)</span>. When <span class="math inline">\(X\)</span> is large and positive, an increase in <span class="math inline">\(X\)</span> is associated to a large increase in <span class="math inline">\(Y\)</span>. When <span class="math inline">\(X\)</span> is small and positive, an increase in <span class="math inline">\(X\)</span> is associated to a small increase in <span class="math inline">\(Y\)</span>. When <span class="math inline">\(X\)</span> is a large negative value, an increase in <span class="math inline">\(X\)</span> is associated with a <em>decrease</em> in <span class="math inline">\(Y\)</span>.</p>
 <p><code>marginaleffects</code> arrives at the same conclusion in simulated data:</p>
-<div class="sourceCode" id="cb11"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb11-1"><a href="#cb11-1" aria-hidden="true"></a><span class="kw">library</span>(tidyverse)</span>
-<span id="cb11-2"><a href="#cb11-2" aria-hidden="true"></a>N &lt;-<span class="st"> </span><span class="fl">1e5</span></span>
-<span id="cb11-3"><a href="#cb11-3" aria-hidden="true"></a>quad &lt;-<span class="st"> </span><span class="kw">data.frame</span>(<span class="dt">x =</span> <span class="kw">rnorm</span>(N))</span>
-<span id="cb11-4"><a href="#cb11-4" aria-hidden="true"></a>quad<span class="op">$</span>y &lt;-<span class="st"> </span><span class="dv">1</span> <span class="op">+</span><span class="st"> </span><span class="dv">1</span> <span class="op">*</span><span class="st"> </span>quad<span class="op">$</span>x <span class="op">+</span><span class="st"> </span><span class="dv">2</span> <span class="op">*</span><span class="st"> </span>quad<span class="op">$</span>x<span class="op">^</span><span class="dv">2</span> <span class="op">+</span><span class="st"> </span><span class="kw">rnorm</span>(N)</span>
-<span id="cb11-5"><a href="#cb11-5" aria-hidden="true"></a>mod &lt;-<span class="st"> </span><span class="kw">lm</span>(y <span class="op">~</span><span class="st"> </span>x <span class="op">+</span><span class="st"> </span><span class="kw">I</span>(x<span class="op">^</span><span class="dv">2</span>), quad)</span>
-<span id="cb11-6"><a href="#cb11-6" aria-hidden="true"></a></span>
-<span id="cb11-7"><a href="#cb11-7" aria-hidden="true"></a><span class="kw">marginaleffects</span>(mod, <span class="dt">newdata =</span> <span class="kw">typical</span>(<span class="dt">x =</span> <span class="dv">-2</span><span class="op">:</span><span class="dv">2</span>))  <span class="op">%&gt;%</span></span>
-<span id="cb11-8"><a href="#cb11-8" aria-hidden="true"></a><span class="st">    </span><span class="kw">mutate</span>(<span class="dt">truth =</span> <span class="dv">1</span> <span class="op">+</span><span class="st"> </span><span class="dv">4</span> <span class="op">*</span><span class="st"> </span>x) <span class="op">%&gt;%</span></span>
-<span id="cb11-9"><a href="#cb11-9" aria-hidden="true"></a><span class="st">    </span><span class="kw">select</span>(dydx, truth)</span>
-<span id="cb11-10"><a href="#cb11-10" aria-hidden="true"></a><span class="co">#&gt;        dydx truth</span></span>
-<span id="cb11-11"><a href="#cb11-11" aria-hidden="true"></a><span class="co">#&gt; 1 -7.002916    -7</span></span>
-<span id="cb11-12"><a href="#cb11-12" aria-hidden="true"></a><span class="co">#&gt; 2 -3.000661    -3</span></span>
-<span id="cb11-13"><a href="#cb11-13" aria-hidden="true"></a><span class="co">#&gt; 3  1.001595     1</span></span>
-<span id="cb11-14"><a href="#cb11-14" aria-hidden="true"></a><span class="co">#&gt; 4  5.003851     5</span></span>
-<span id="cb11-15"><a href="#cb11-15" aria-hidden="true"></a><span class="co">#&gt; 5  9.006107     9</span></span></code></pre></div>
+<div class="sourceCode" id="cb11"><pre class="sourceCode r"><code class="sourceCode r"><a class="sourceLine" id="cb11-1" title="1"><span class="kw">library</span>(tidyverse)</a>
+<a class="sourceLine" id="cb11-2" title="2">N &lt;-<span class="st"> </span><span class="fl">1e5</span></a>
+<a class="sourceLine" id="cb11-3" title="3">quad &lt;-<span class="st"> </span><span class="kw">data.frame</span>(<span class="dt">x =</span> <span class="kw">rnorm</span>(N))</a>
+<a class="sourceLine" id="cb11-4" title="4">quad<span class="op">$</span>y &lt;-<span class="st"> </span><span class="dv">1</span> <span class="op">+</span><span class="st"> </span><span class="dv">1</span> <span class="op">*</span><span class="st"> </span>quad<span class="op">$</span>x <span class="op">+</span><span class="st"> </span><span class="dv">2</span> <span class="op">*</span><span class="st"> </span>quad<span class="op">$</span>x<span class="op">^</span><span class="dv">2</span> <span class="op">+</span><span class="st"> </span><span class="kw">rnorm</span>(N)</a>
+<a class="sourceLine" id="cb11-5" title="5">mod &lt;-<span class="st"> </span><span class="kw">lm</span>(y <span class="op">~</span><span class="st"> </span>x <span class="op">+</span><span class="st"> </span><span class="kw">I</span>(x<span class="op">^</span><span class="dv">2</span>), quad)</a>
+<a class="sourceLine" id="cb11-6" title="6"></a>
+<a class="sourceLine" id="cb11-7" title="7"><span class="kw">marginaleffects</span>(mod, <span class="dt">newdata =</span> <span class="kw">typical</span>(<span class="dt">x =</span> <span class="dv">-2</span><span class="op">:</span><span class="dv">2</span>))  <span class="op">%&gt;%</span></a>
+<a class="sourceLine" id="cb11-8" title="8"><span class="st">    </span><span class="kw">mutate</span>(<span class="dt">truth =</span> <span class="dv">1</span> <span class="op">+</span><span class="st"> </span><span class="dv">4</span> <span class="op">*</span><span class="st"> </span>x) <span class="op">%&gt;%</span></a>
+<a class="sourceLine" id="cb11-9" title="9"><span class="st">    </span><span class="kw">select</span>(dydx, truth)</a>
+<a class="sourceLine" id="cb11-10" title="10"><span class="co">#&gt;         dydx truth</span></a>
+<a class="sourceLine" id="cb11-11" title="11"><span class="co">#&gt; 1 -6.9978857    -7</span></a>
+<a class="sourceLine" id="cb11-12" title="12"><span class="co">#&gt; 2 -3.0010537    -3</span></a>
+<a class="sourceLine" id="cb11-13" title="13"><span class="co">#&gt; 3  0.9957784     1</span></a>
+<a class="sourceLine" id="cb11-14" title="14"><span class="co">#&gt; 4  4.9926104     5</span></a>
+<a class="sourceLine" id="cb11-15" title="15"><span class="co">#&gt; 5  8.9894425     9</span></a></code></pre></div>
 <p>We can also plot the result with the <code>plot_cme</code> function (see section below):</p>
-<div class="sourceCode" id="cb12"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb12-1"><a href="#cb12-1" aria-hidden="true"></a><span class="kw">plot_cme</span>(mod, <span class="dt">effect =</span> <span class="st">&quot;x&quot;</span>, <span class="dt">condition =</span> <span class="st">&quot;x&quot;</span>)</span></code></pre></div>
-<p><img src="data:image/png;base64,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" /><!-- --></p>
+<div class="sourceCode" id="cb12"><pre class="sourceCode r"><code class="sourceCode r"><a class="sourceLine" id="cb12-1" title="1"><span class="kw">plot_cme</span>(mod, <span class="dt">effect =</span> <span class="st">&quot;x&quot;</span>, <span class="dt">condition =</span> <span class="st">&quot;x&quot;</span>)</a></code></pre></div>
+<p><img src="data:image/png;base64,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" /><!-- --></p>
 <p>Again, the conclusion is the same. When <span class="math inline">\(x&lt;0\)</span>, an increase in <span class="math inline">\(x\)</span> is associated with an increase in <span class="math inline">\(y\)</span>. When <span class="math inline">\(x=0\)</span>, the marginal effect is equal to 0. When <span class="math inline">\(x&gt;0\)</span>, an increase in <span class="math inline">\(x\)</span> is associated with a decrease in <span class="math inline">\(y\)</span>.</p>
 </div>
 <div id="prediction-types" class="section level1">
 <h1>Prediction types</h1>
 <p>The <code>marginaleffect</code> function takes the derivative of the fitted (or predicted) values of the model, as is typically generated by the <code>predict(model)</code> function. By default, <code>predict</code> produces predictions on the <code>&quot;response&quot;</code> scale, so the marginal effects should be interpreted on that scale. However, users can pass a string or a vector of strings to the <code>type</code> argument, and <code>marginaleffects</code> will consider different outcomes.</p>
 <p>Typical values include <code>&quot;response&quot;</code> and <code>&quot;link&quot;</code>, but users should refer to the documentation of the <code>predict</code> of the package they used to fit the model to know what values are allowable. documentation.</p>
-<div class="sourceCode" id="cb13"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb13-1"><a href="#cb13-1" aria-hidden="true"></a>mod &lt;-<span class="st"> </span><span class="kw">glm</span>(am <span class="op">~</span><span class="st"> </span>mpg, <span class="dt">family =</span> binomial, <span class="dt">data =</span> mtcars)</span>
-<span id="cb13-2"><a href="#cb13-2" aria-hidden="true"></a>mfx &lt;-<span class="st"> </span><span class="kw">marginaleffects</span>(mod, <span class="dt">type =</span> <span class="kw">c</span>(<span class="st">&quot;response&quot;</span>, <span class="st">&quot;link&quot;</span>))</span>
-<span id="cb13-3"><a href="#cb13-3" aria-hidden="true"></a><span class="kw">summary</span>(mfx)</span>
-<span id="cb13-4"><a href="#cb13-4" aria-hidden="true"></a><span class="co">#&gt; Average marginal effects </span></span>
-<span id="cb13-5"><a href="#cb13-5" aria-hidden="true"></a><span class="co">#&gt;       type Term  Effect Std. Error z value   Pr(&gt;|z|)   2.5 %  97.5 %</span></span>
-<span id="cb13-6"><a href="#cb13-6" aria-hidden="true"></a><span class="co">#&gt; 1     link  mpg 0.30703   0.114842   2.673  0.0075066 0.08194 0.53211</span></span>
-<span id="cb13-7"><a href="#cb13-7" aria-hidden="true"></a><span class="co">#&gt; 2 response  mpg 0.04649   0.008856   5.249 1.5285e-07 0.02913 0.06384</span></span>
-<span id="cb13-8"><a href="#cb13-8" aria-hidden="true"></a><span class="co">#&gt; </span></span>
-<span id="cb13-9"><a href="#cb13-9" aria-hidden="true"></a><span class="co">#&gt; Model type:  glm </span></span>
-<span id="cb13-10"><a href="#cb13-10" aria-hidden="true"></a><span class="co">#&gt; Prediction type:  response link</span></span></code></pre></div>
+<div class="sourceCode" id="cb13"><pre class="sourceCode r"><code class="sourceCode r"><a class="sourceLine" id="cb13-1" title="1">mod &lt;-<span class="st"> </span><span class="kw">glm</span>(am <span class="op">~</span><span class="st"> </span>mpg, <span class="dt">family =</span> binomial, <span class="dt">data =</span> mtcars)</a>
+<a class="sourceLine" id="cb13-2" title="2">mfx &lt;-<span class="st"> </span><span class="kw">marginaleffects</span>(mod, <span class="dt">type =</span> <span class="kw">c</span>(<span class="st">&quot;response&quot;</span>, <span class="st">&quot;link&quot;</span>))</a>
+<a class="sourceLine" id="cb13-3" title="3"><span class="kw">summary</span>(mfx)</a>
+<a class="sourceLine" id="cb13-4" title="4"><span class="co">#&gt; Average marginal effects </span></a>
+<a class="sourceLine" id="cb13-5" title="5"><span class="co">#&gt;       type Term  Effect Std. Error z value   Pr(&gt;|z|)   2.5 %  97.5 %</span></a>
+<a class="sourceLine" id="cb13-6" title="6"><span class="co">#&gt; 1     link  mpg 0.30703   0.114842   2.673  0.0075066 0.08194 0.53211</span></a>
+<a class="sourceLine" id="cb13-7" title="7"><span class="co">#&gt; 2 response  mpg 0.04649   0.008856   5.249 1.5285e-07 0.02913 0.06384</span></a>
+<a class="sourceLine" id="cb13-8" title="8"><span class="co">#&gt; </span></a>
+<a class="sourceLine" id="cb13-9" title="9"><span class="co">#&gt; Model type:  glm </span></a>
+<a class="sourceLine" id="cb13-10" title="10"><span class="co">#&gt; Prediction type:  response link</span></a></code></pre></div>
 </div>
 <div id="regression-tables" class="section level1">
 <h1>Regression tables</h1>
 <p>Average marginal effects are easy to display in a regression table using packages like <code>modelsummary</code>:</p>
-<div class="sourceCode" id="cb14"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb14-1"><a href="#cb14-1" aria-hidden="true"></a><span class="kw">library</span>(modelsummary)</span>
-<span id="cb14-2"><a href="#cb14-2" aria-hidden="true"></a></span>
-<span id="cb14-3"><a href="#cb14-3" aria-hidden="true"></a><span class="co"># fit models and store them in a named list</span></span>
-<span id="cb14-4"><a href="#cb14-4" aria-hidden="true"></a>mod &lt;-<span class="st"> </span><span class="kw">list</span>(</span>
-<span id="cb14-5"><a href="#cb14-5" aria-hidden="true"></a>    <span class="st">&quot;Logit&quot;</span> =<span class="st"> </span><span class="kw">glm</span>(large_penguin <span class="op">~</span><span class="st"> </span>flipper_length_mm <span class="op">+</span><span class="st"> </span>species, <span class="dt">data =</span> dat, <span class="dt">family =</span> binomial),</span>
-<span id="cb14-6"><a href="#cb14-6" aria-hidden="true"></a>    <span class="st">&quot;OLS&quot;</span> =<span class="st"> </span><span class="kw">lm</span>(body_mass_g <span class="op">~</span><span class="st"> </span>flipper_length_mm <span class="op">+</span><span class="st"> </span>bill_length_mm <span class="op">+</span><span class="st"> </span>species, <span class="dt">data =</span> dat))</span>
-<span id="cb14-7"><a href="#cb14-7" aria-hidden="true"></a></span>
-<span id="cb14-8"><a href="#cb14-8" aria-hidden="true"></a><span class="co"># apply the `marginaleffects` function to all the models using `lapply`</span></span>
-<span id="cb14-9"><a href="#cb14-9" aria-hidden="true"></a>mfx &lt;-<span class="st"> </span><span class="kw">lapply</span>(mod, marginaleffects)</span>
-<span id="cb14-10"><a href="#cb14-10" aria-hidden="true"></a></span>
-<span id="cb14-11"><a href="#cb14-11" aria-hidden="true"></a><span class="co"># build a table</span></span>
-<span id="cb14-12"><a href="#cb14-12" aria-hidden="true"></a><span class="kw">modelsummary</span>(mfx)</span></code></pre></div>
+<div class="sourceCode" id="cb14"><pre class="sourceCode r"><code class="sourceCode r"><a class="sourceLine" id="cb14-1" title="1"><span class="kw">library</span>(modelsummary)</a>
+<a class="sourceLine" id="cb14-2" title="2"></a>
+<a class="sourceLine" id="cb14-3" title="3"><span class="co"># fit models and store them in a named list</span></a>
+<a class="sourceLine" id="cb14-4" title="4">mod &lt;-<span class="st"> </span><span class="kw">list</span>(</a>
+<a class="sourceLine" id="cb14-5" title="5">    <span class="st">&quot;Logit&quot;</span> =<span class="st"> </span><span class="kw">glm</span>(large_penguin <span class="op">~</span><span class="st"> </span>flipper_length_mm <span class="op">+</span><span class="st"> </span>species, <span class="dt">data =</span> dat, <span class="dt">family =</span> binomial),</a>
+<a class="sourceLine" id="cb14-6" title="6">    <span class="st">&quot;OLS&quot;</span> =<span class="st"> </span><span class="kw">lm</span>(body_mass_g <span class="op">~</span><span class="st"> </span>flipper_length_mm <span class="op">+</span><span class="st"> </span>bill_length_mm <span class="op">+</span><span class="st"> </span>species, <span class="dt">data =</span> dat))</a>
+<a class="sourceLine" id="cb14-7" title="7"></a>
+<a class="sourceLine" id="cb14-8" title="8"><span class="co"># apply the `marginaleffects` function to all the models using `lapply`</span></a>
+<a class="sourceLine" id="cb14-9" title="9">mfx &lt;-<span class="st"> </span><span class="kw">lapply</span>(mod, marginaleffects)</a>
+<a class="sourceLine" id="cb14-10" title="10"></a>
+<a class="sourceLine" id="cb14-11" title="11"><span class="co"># build a table</span></a>
+<a class="sourceLine" id="cb14-12" title="12"><span class="kw">modelsummary</span>(mfx)</a></code></pre></div>
 <table>
 <thead>
 <tr class="header">
@@ -627,7 +600,7 @@ code > span.er { color: #a61717; background-color: #e3d2d2; }
 </tr>
 <tr class="odd">
 <td align="left">F</td>
-<td align="center"></td>
+<td align="center">19.252</td>
 <td align="center">389.713</td>
 </tr>
 </tbody>
@@ -638,26 +611,26 @@ code > span.er { color: #a61717; background-color: #e3d2d2; }
 <p>In most cases, extending <code>marginaleffects</code> to support new models is easy. Imagine you want to add support for an object called <code>model</code> of class <code>EXAMPLE</code> with N observations.</p>
 <div id="step-1-check-if-marginaleffects-default-functions-work" class="section level4">
 <h4><em>Step 1:</em> Check if <code>marginaleffects</code> default functions work:</h4>
-<div class="sourceCode" id="cb15"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb15-1"><a href="#cb15-1" aria-hidden="true"></a><span class="co"># returns a named vector of coefficients</span></span>
-<span id="cb15-2"><a href="#cb15-2" aria-hidden="true"></a><span class="kw">get_coef</span>(model)</span>
-<span id="cb15-3"><a href="#cb15-3" aria-hidden="true"></a></span>
-<span id="cb15-4"><a href="#cb15-4" aria-hidden="true"></a><span class="co"># returns a named vector of predictions </span></span>
-<span id="cb15-5"><a href="#cb15-5" aria-hidden="true"></a><span class="co"># returns a named matrix of size NxK for models with K levels (e.g., multinomial logit)</span></span>
-<span id="cb15-6"><a href="#cb15-6" aria-hidden="true"></a><span class="kw">get_predict</span>(model)</span>
-<span id="cb15-7"><a href="#cb15-7" aria-hidden="true"></a></span>
-<span id="cb15-8"><a href="#cb15-8" aria-hidden="true"></a><span class="co"># returns a named square matrix of size equal to the number of coefficients</span></span>
-<span id="cb15-9"><a href="#cb15-9" aria-hidden="true"></a><span class="kw">get_vcov</span>(model)</span>
-<span id="cb15-10"><a href="#cb15-10" aria-hidden="true"></a></span>
-<span id="cb15-11"><a href="#cb15-11" aria-hidden="true"></a><span class="co"># returns a new model object with different stored coefficients </span></span>
-<span id="cb15-12"><a href="#cb15-12" aria-hidden="true"></a><span class="co"># calling get_predict(model) and get_predict(model_new) should produce different results</span></span>
-<span id="cb15-13"><a href="#cb15-13" aria-hidden="true"></a>model_new &lt;-<span class="st"> </span><span class="kw">set_coef</span>(model, <span class="kw">rep</span>(<span class="dv">0</span>, <span class="kw">length</span>(<span class="kw">get_coef</span>(model))))</span>
-<span id="cb15-14"><a href="#cb15-14" aria-hidden="true"></a><span class="kw">predict</span>(model) <span class="op">!=</span><span class="st"> </span><span class="kw">predict</span>(model_new)</span></code></pre></div>
+<div class="sourceCode" id="cb15"><pre class="sourceCode r"><code class="sourceCode r"><a class="sourceLine" id="cb15-1" title="1"><span class="co"># returns a named vector of coefficients</span></a>
+<a class="sourceLine" id="cb15-2" title="2"><span class="kw">get_coef</span>(model)</a>
+<a class="sourceLine" id="cb15-3" title="3"></a>
+<a class="sourceLine" id="cb15-4" title="4"><span class="co"># returns a named vector of predictions </span></a>
+<a class="sourceLine" id="cb15-5" title="5"><span class="co"># returns a named matrix of size NxK for models with K levels (e.g., multinomial logit)</span></a>
+<a class="sourceLine" id="cb15-6" title="6"><span class="kw">get_predict</span>(model)</a>
+<a class="sourceLine" id="cb15-7" title="7"></a>
+<a class="sourceLine" id="cb15-8" title="8"><span class="co"># returns a named square matrix of size equal to the number of coefficients</span></a>
+<a class="sourceLine" id="cb15-9" title="9"><span class="kw">get_vcov</span>(model)</a>
+<a class="sourceLine" id="cb15-10" title="10"></a>
+<a class="sourceLine" id="cb15-11" title="11"><span class="co"># returns a new model object with different stored coefficients </span></a>
+<a class="sourceLine" id="cb15-12" title="12"><span class="co"># calling get_predict(model) and get_predict(model_new) should produce different results</span></a>
+<a class="sourceLine" id="cb15-13" title="13">model_new &lt;-<span class="st"> </span><span class="kw">set_coef</span>(model, <span class="kw">rep</span>(<span class="dv">0</span>, <span class="kw">length</span>(<span class="kw">get_coef</span>(model))))</a>
+<a class="sourceLine" id="cb15-14" title="14"><span class="kw">predict</span>(model) <span class="op">!=</span><span class="st"> </span><span class="kw">predict</span>(model_new)</a></code></pre></div>
 <p>If all of these functions work out-of-the-box, there’s a good chance your model will be supported automatically. If they do <em>not</em> work, move to…</p>
 </div>
 <div id="step-2-define-the-missing-methods." class="section level4">
 <h4><em>Step 2:</em> Define the missing methods.</h4>
 <p>Find the class name of your model by calling:</p>
-<div class="sourceCode" id="cb16"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb16-1"><a href="#cb16-1" aria-hidden="true"></a><span class="kw">class</span>(model)</span></code></pre></div>
+<div class="sourceCode" id="cb16"><pre class="sourceCode r"><code class="sourceCode r"><a class="sourceLine" id="cb16-1" title="1"><span class="kw">class</span>(model)</a></code></pre></div>
 <p>Then, create functions (methods) called <code>get_coef.EXAMPLE</code>, <code>get_predict.EXAMPLE</code>, <code>vcov.EXAMPLE</code>, and <code>set_coef.EXAMPLE</code>, with the “EXAMPLE” replaced by the name your model class.</p>
 </div>
 <div id="step-3-add-tests" class="section level4">
@@ -677,7 +650,7 @@ code > span.er { color: #a61717; background-color: #e3d2d2; }
 <div class="footnotes">
 <hr />
 <ol>
-<li id="fn1"><p>The term “effect” is itself tricky. To be clear, this vignette does <em>not</em> use the word “effect” to imply “causality”.<a href="#fnref1" class="footnote-back">↩︎</a></p></li>
+<li id="fn1"><p>The term “effect” is itself tricky. To be clear, this vignette does <em>not</em> use the word “effect” to imply “causality”.<a href="#fnref1" class="footnote-back">↩</a></p></li>
 </ol>
 </div>
 

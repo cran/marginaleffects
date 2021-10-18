@@ -1,6 +1,7 @@
 #' Adjusted Predictions
 #'
 #' Compute model-adjusted predictions (fitted values) for a "grid" of regressor values.
+#' @inheritParams marginaleffects
 #' @param model Model object
 #' @param variables Character vector. Compute Adjusted Predictions for
 #'   combinations of each of these variables. Factor levels are considered at
@@ -19,16 +20,11 @@ predictions <- function(model,
                         variables = NULL,
                         newdata = NULL,
                         conf.level = 0.95,
+                        type = "response",
                         ...) {
 
-    # TODO uncomment in the loop and remove hardcoded expectation
-    if ("type" %in% names(list(...))) {
-        warning('The "type" argument is not currently supported by the `predictions` function. All predictions will be made on the "response" or "expectation" scale. The code to support various prediction types is already written, but we are waiting for an update to the `insight` package. Support should come very soon.')
-    }
-
-    type = "expectation"
     # sanity checks and pre-processing
-    # type <- sanity_type(model, type)
+    type <- sanity_type(model, type)
 
     ## do not check this because `insight` supports more models than `marginaleffects`
     # model <- sanity_model(model)
@@ -38,7 +34,7 @@ predictions <- function(model,
     scall <- substitute(newdata)
     if (is.call(scall) && as.character(scall)[1] %in% c("typical", "counterfactual")) {
         lcall <- as.list(scall)
-        if (!any(c("model", "data") %in% names(lcall))) {
+        if (!any(c("model", "newdata") %in% names(lcall))) {
             lcall <- c(lcall, list("model" = model))
             newdata <- eval.parent(as.call(lcall))
         }
@@ -72,46 +68,50 @@ predictions <- function(model,
         variables <- sanity_variables(model, newdata, variables)
     }
 
-
     # for merging later
-    if (!"rowid" %in% colnames(newdata)) {
-        newdata$rowid <- 1:nrow(newdata)
-    }
+    newdata$rowid_internal <- 1:nrow(newdata)
 
     # pad factors: `get_predicted/model.matrix` break when factor levels are missing
-    newdata$rowid <- 1:nrow(newdata)
     padding <- complete_levels(newdata, levels_character)
     newdata <- rbind(padding, newdata)
 
     # predictions
     out_list <- list()
     for (predt in type) {
-        tmp <- insight::get_predicted(model,
-                                      data = newdata,
-                                      predict = "expectation",
-                                      # predict = predt,
-                                      ci = conf.level)
+        # extract
+        tmp <- try(insight::get_predicted(model,
+                                          data = newdata,
+                                          predict = NULL,
+                                          type = predt,
+                                          ci = conf.level),
+                   silent = TRUE)
+        if (inherits(tmp, "try-error")) {
+            tmp <- get_predict(model, newdata = newdata, type = predt)
+        }
+
+        # process
         if (inherits(tmp, "get_predicted")) {
             tmp <- as.data.frame(tmp)
             tmp <- insight::standardize_names(tmp, style = "broom")
             tmp$type <- predt
-            tmp$rowid <- newdata$rowid
+            tmp$rowid_internal <- newdata$rowid_internal
         } else {
-            tmp <- data.frame(newdata$rowid, predt, tmp)
-            colnames(tmp) <- c("rowid", "type", "predicted")
+            tmp <- data.frame(newdata$rowid_internal, predt, tmp)
+            colnames(tmp) <- c("rowid_internal", "type", "predicted")
         }
         out_list[[predt]] <- tmp
     }
     out <- do.call("rbind", out_list)
 
     # unpad factors
-    out <- out[out$rowid > 0, , drop = FALSE]
+    out <- out[out$rowid_internal > 0, , drop = FALSE]
 
     # return data
     out <- merge(out, newdata, all.x = TRUE, sort = FALSE)
 
     # rowid does not make sense here because the grid is made up
-    out$rowid <- NULL
+    # Wrong! rowid does make sense when we use `counterfactual()` in `newdata`
+    out$rowid_internal <- NULL
 
     # clean columns
     stubcols <- c("rowid", "type", "term", "predicted", "std.error", "conf.low", "conf.high",

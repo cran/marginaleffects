@@ -6,8 +6,16 @@ tmp$am <- as.logical(tmp$am)
 mod <- lm(mpg ~ hp + wt + factor(cyl) + am, data = tmp)
 
 # TODO: remove this when insight is updated
-test_that("need update to insight", {
-    expect_warning(predictions(mod, type = "response"))
+test_that("insight > 0.14.1 allows us to support `type`", {
+    expect_warning(predictions(mod, type = "response"), NA)
+})
+
+
+test_that("bugfix: counterfactual predictions keep rowid", {
+  mod <- lm(mpg ~ hp + am, mtcars)
+  pred <- predictions(mod, newdata = counterfactual(am = 0:1))
+  expect_predictions(pred, n_row = 64)
+  expect_true("rowid" %in% colnames(pred))
 })
 
 

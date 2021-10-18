@@ -65,10 +65,10 @@ mod <- glm(certified_fresh ~ length * style, data = dat, family = binomial)
 plot_cap(mod, condition = c("length", "style"))
 
 ## -----------------------------------------------------------------------------
-predictions(mod, 
-              type = c("response", "link"),
-              newdata = typical(length = 90:120,
-                                style = c("Action", "Comedy"))) %>%
+predictions(mod,
+            type = c("response", "link"),
+            newdata = typical(length = 90:120,
+                              style = c("Action", "Comedy"))) %>%
     ggplot(aes(length, predicted, color = style))  +
     geom_line() +
     facet_wrap(~type, scales = "free_y")
@@ -76,4 +76,10 @@ predictions(mod,
 ## -----------------------------------------------------------------------------
 mod <- glm(am ~ mpg, family = binomial, data = mtcars)
 predictions(mod, type = c("response", "link"))
+
+## -----------------------------------------------------------------------------
+plot_cap(mod, condition = "mpg", type = "response")
+
+## -----------------------------------------------------------------------------
+plot_cap(mod, condition = "mpg", type = "link")
 

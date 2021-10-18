@@ -1,4 +1,5 @@
 skip_on_ci() # different graphics engine produce different snapshots
+skip_on_cran() # different graphics engine produce different snapshots
 
 test_that("two conditions", {
     mod <- lm(mpg ~ hp * wt * am, data = mtcars)
@@ -20,4 +21,12 @@ test_that("conf.level in plots", {
     p2 <- plot_cap(mod, condition = "hp", conf.level = .4)
     vdiffr::expect_doppelganger("plot_cap large ci", p1)
     vdiffr::expect_doppelganger("plot_cap small ci", p2)
+})
+
+test_that("link vs response", {
+    mod <- glm(am ~ hp + wt, data = mtcars, family = binomial)
+    p1 <- plot_cap(mod, condition = "hp", type = "response")
+    p2 <- plot_cap(mod, condition = "hp", type = "link")
+    vdiffr::expect_doppelganger("plot_cap logit response", p1)
+    vdiffr::expect_doppelganger("plot_cap logit link", p2)
 })

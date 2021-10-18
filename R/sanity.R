@@ -107,7 +107,7 @@ sanity_vcov <- function(model, vcov) {
         vcov <- FALSE
     }
 
-    # TRUE: try to extract a vcov (TODO: implement get_vcov)
+    # TRUE: try to extract a vcov
     if (isTRUE(vcov)) {
         vcov <- try(get_vcov(model), silent = TRUE)
         if (inherits(vcov, "try-error")) {
@@ -116,7 +116,7 @@ sanity_vcov <- function(model, vcov) {
             # dpoMatrix conversion
         }
         vcov <- as.matrix(vcov)
-    } 
+    }
 
     # TODO: Test if the names of the matrix match the names of the coefficients.
     # This could be dangerous, so leaving as a Github issue until I have time for serious work.
@@ -129,7 +129,8 @@ sanity_vcov <- function(model, vcov) {
 
 
 sanity_predict_vector <- function(pred, model, newdata, type) {
-    if (!isTRUE(checkmate::check_atomic_vector(pred))) {
+    if (!isTRUE(checkmate::check_atomic_vector(pred)) &&
+        !isTRUE(checkmate::check_array(pred, d = 1))) {
         msg <- sprintf(
 '`predict(model, type = "%s")` was called on a model of class `%s`, but this command did not produce the expected outcome: A numeric vector of length %s. This can sometimes happen when users try compute a marginal effect for some models with grouped or multivariate outcome which are not supported yet by `marginaleffects` package. Please consult your modeling package documentation to learn what alternative `type` arguments are accepted by the `predict` method, or file a feature request on Github:  https://github.com/vincentarelbundock/marginaleffects/issues',
         type, class(model)[1], nrow(newdata))

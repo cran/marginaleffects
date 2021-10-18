@@ -22,11 +22,12 @@ sanity_model_supported_class <- function(model) {
                       "bife",
                       "brglmFit",
                       c("brnb", "negbin", "glm"),
-                      # "clm",
+                      "clm",
                       "coxph",
                       "crch",
                       "fixest",
-                      c("Gam", "glm", "lm"),
+                      c("Gam", "glm", "lm"), # package: gam
+                      c("gam", "glm", "lm"), # package: mgcv
                       c("geeglm", "gee", "glm"),
                       "glm",
                       "gls",

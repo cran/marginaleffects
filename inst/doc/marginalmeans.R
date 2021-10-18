@@ -66,3 +66,34 @@ modelsummary(me,
              statistic = NULL,
              group = term + group ~ model)
 
+## -----------------------------------------------------------------------------
+library(nnet)
+library(marginaleffects)
+
+set.seed(1839)
+n <- 1200
+x <- factor(sample(letters[1:3], n, TRUE))
+y <- vector(length = n)
+y[x == "a"] <- sample(letters[4:6], sum(x == "a"), TRUE)
+y[x == "b"] <- sample(letters[4:6], sum(x == "b"), TRUE, c(1 / 4, 2 / 4, 1 / 4))
+y[x == "c"] <- sample(letters[4:6], sum(x == "c"), TRUE, c(1 / 5, 3 / 5, 2 / 5))
+
+dat <- data.frame(x = x, y = factor(y))
+tmp <- as.data.frame(replicate(20, factor(sample(letters[7:9], n, TRUE))))
+dat <- cbind(dat, tmp)
+void <- capture.output({
+    mod <- multinom(y ~ ., dat)
+})
+
+## ---- eval=FALSE--------------------------------------------------------------
+#  marginalmeans(mod)
+
+## ---- eval=FALSE--------------------------------------------------------------
+#  marginalmeans(mod, type = "probs")
+
+## ---- eval=FALSE--------------------------------------------------------------
+#  marginalmeans(mod,
+#                type = "probs",
+#                variables = c("x", "V1"),
+#                variables_grid = paste0("V", 2:5))
+
