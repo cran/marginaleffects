@@ -44,7 +44,7 @@ library(marginaleffects)
 dat <- read.csv("https://vincentarelbundock.github.io/Rdatasets/csv/palmerpenguins/penguins.csv")
 dat$large_penguin <- ifelse(dat$body_mass_g > median(dat$body_mass_g, na.rm = TRUE), 1, 0)
 
-mod <- glm(large_penguin ~ bill_length_mm + flipper_length_mm, 
+mod <- glm(large_penguin ~ bill_length_mm + flipper_length_mm + species,
            data = dat, family = binomial)
 
 ## -----------------------------------------------------------------------------
@@ -60,16 +60,17 @@ tidy(mfx)
 glance(mfx)
 
 ## -----------------------------------------------------------------------------
-typical(flipper_length_mm = 180, 
-        species = c("Adelie", "Gentoo"), 
-        model = mod)
+datagrid(flipper_length_mm = 180,
+         species = c("Adelie", "Gentoo"),
+         model = mod)
 
 ## -----------------------------------------------------------------------------
-marginaleffects(mod, newdata = typical(flipper_length_mm = 180, 
-                                       species = c("Adelie", "Gentoo")))
+marginaleffects(mod,
+                newdata = datagrid(flipper_length_mm = 180,
+                                   species = c("Adelie", "Gentoo")))
 
 ## -----------------------------------------------------------------------------
-nd <- counterfactual(flipper_length_mm = c(160, 180), model = mod)
+nd <- datagrid(flipper_length_mm = c(160, 180), model = mod, grid.type = "counterfactual")
 
 ## -----------------------------------------------------------------------------
 nd[nd$rowid %in% 1:3,]
@@ -93,7 +94,7 @@ quad <- data.frame(x = rnorm(N))
 quad$y <- 1 + 1 * quad$x + 2 * quad$x^2 + rnorm(N)
 mod <- lm(y ~ x + I(x^2), quad)
 
-marginaleffects(mod, newdata = typical(x = -2:2))  %>%
+marginaleffects(mod, newdata = datagrid(x = -2:2))  %>%
     mutate(truth = 1 + 4 * x) %>%
     select(dydx, truth)
 
@@ -108,17 +109,30 @@ summary(mfx)
 ## ---- echo = FALSE------------------------------------------------------------
 options(modelsummary_factory_default = "markdown")
 
+
 ## -----------------------------------------------------------------------------
 library(modelsummary)
+library(marginaleffects)
 
 # fit models and store them in a named list
 mod <- list(
-    "Logit" = glm(large_penguin ~ flipper_length_mm + species, data = dat, family = binomial),
-    "OLS" = lm(body_mass_g ~ flipper_length_mm + bill_length_mm + species, data = dat))
+    "Short" = glm(large_penguin ~ flipper_length_mm, data = dat, family = binomial),
+    "Long" = glm(large_penguin ~ flipper_length_mm + bill_length_mm, data = dat, family = binomial))
 
 # apply the `marginaleffects` function to all the models using `lapply`
 mfx <- lapply(mod, marginaleffects)
 
-# build a table
 modelsummary(mfx)
+
+## -----------------------------------------------------------------------------
+modelplot(mfx) + ggplot2::xlab("Average Marginal Effects with 95% Confidence Intervals")
+
+## -----------------------------------------------------------------------------
+mod <- list(
+    "Logit" = glm(large_penguin ~ flipper_length_mm + species, data = dat, family = binomial),
+    "OLS" = lm(body_mass_g ~ flipper_length_mm + bill_length_mm + species, data = dat))
+
+mfx <- lapply(mod, marginaleffects)
+
+modelsummary(mfx, group = term + contrast ~ model)
 

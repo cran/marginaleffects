@@ -4,9 +4,9 @@ test_that("simple contrasts: no validity check", {
     mod <- lm(mpg ~ hp + am + factor(cyl), data = dat)
     res <- tidy(marginaleffects(mod))
     expect_s3_class(res, "data.frame")
-    expect_equal(dim(res), c(4, 8))
+    expect_equal(dim(res), c(4, 9))
 })
-
+ 
 
 test_that("contrast as difference and CI make sense", {
     # problem reported with suggested fix by E.Book in Issue 58
@@ -26,6 +26,6 @@ test_that("bug be dead: all levels appear", {
     tmp <- mtcars
     tmp$am <- as.logical(tmp$am)
     mod <- lm(mpg ~ am + factor(cyl), tmp)
-    mfx = marginaleffects(mod, newdata = typical(cyl = c(4, 6)))
+    mfx = marginaleffects(mod, newdata = datagrid(cyl = c(4, 6)))
     expect_equal(nrow(mfx), 6)
 })

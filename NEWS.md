@@ -1,3 +1,38 @@
+# marginaleffects 0.3.0
+
+Breaking changes:
+
+* `predictions` returns predictions for every observation in the original
+  dataset instead of `newdata=datagrid()`.
+* `marginalmeans` objects have new column names, as do the corresponding `tidy`
+  and `summary` outputs.
+
+Support for new models and packages:
+
+* `brms::brm`
+* `rstanarm::stanglm`
+* `brglm2::brmultinom`
+* `MASS::glmmPQL`
+* `aod::betabin`
+
+Misc:
+
+* `datagrid` function supersedes `typical` and `counterfactual` with the `grid.type`
+  argument. The `typical` and `counterfactual` functions will remain available
+  and exported, but their use is not encouraged.
+* `posteriordraws` function can be applied to a `predictions` or a
+  `marginaleffects` object to extract draws from the posterior distribution.
+* `marginalmeans` standard errors are now computed using the delta method.
+* `predictions` standard errors are now computed using the delta method when they are not available from `insight::get_predicted`.
+* New vignette on Bayesian models with `brms`
+* New vignette on Mixed effects models with `lme4`
+* If the `data.table` package is installed, `marginaleffects` will automatically use it to speed things up.
+* Contrast definition reported in a separate column of `marginaleffects` output.
+* Safer handling of the `type` argument.
+* Comprehensive list of supported and tests models on the website.
+* Many bug fixes
+* Many new tests, including several against `emmeans`
+
 # marginaleffects 0.2.0
 
 Breaking change:

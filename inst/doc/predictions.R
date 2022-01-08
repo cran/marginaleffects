@@ -19,7 +19,9 @@ library(marginaleffects)
 
 mod <- lm(mpg ~ hp + factor(cyl), data = mtcars)
 
-predictions(mod)
+pred <- predictions(mod)
+
+head(pred)
 
 ## -----------------------------------------------------------------------------
 predictions(mod, variables = c("cyl", "hp"))
@@ -36,10 +38,32 @@ predictions(mod, variables = c("cyl", "hp")) %>%
     add_header_above(header = c(" " = 1, "cyl" = 3))
 
 ## -----------------------------------------------------------------------------
-typical(cyl = c(4, 6, 8), model = mod)
+datagrid(cyl = c(4, 6, 8), model = mod)
 
 ## -----------------------------------------------------------------------------
-predictions(mod, newdata = typical(cyl = c(4, 6, 8)))
+predictions(mod, newdata = datagrid())
+
+predictions(mod, newdata = datagrid(cyl = c(4, 6, 8)))
+
+## -----------------------------------------------------------------------------
+mod <- glm(vs ~ hp + am, data = mtcars, family = binomial)
+
+nd <- datagrid(model = mod, am = 0:1, grid.type = "counterfactual")
+
+dim(nd)
+
+## ---- fig.asp = 1-------------------------------------------------------------
+pred <- predictions(mod, newdata = datagrid(am = 0:1, grid.type = "counterfactual")) %>%
+    select(am, predicted, rowid_original) %>%
+    pivot_wider(id_cols = rowid_original, 
+                names_from = am,
+                values_from = predicted)
+
+ggplot(pred, aes(x = `0`, y = `1`)) +
+    geom_point() +
+    geom_abline(intercept = 0, slope = 1) +
+    labs(x = "Predicted Pr(vs=1), when am = 0",
+         y = "Predicted Pr(vs=1), when am = 1")
 
 ## ---- message = FALSE---------------------------------------------------------
 library(tidyverse)
@@ -67,15 +91,16 @@ plot_cap(mod, condition = c("length", "style"))
 ## -----------------------------------------------------------------------------
 predictions(mod,
             type = c("response", "link"),
-            newdata = typical(length = 90:120,
-                              style = c("Action", "Comedy"))) %>%
+            newdata = datagrid(length = 90:120,
+                               style = c("Action", "Comedy"))) %>%
     ggplot(aes(length, predicted, color = style))  +
     geom_line() +
     facet_wrap(~type, scales = "free_y")
 
 ## -----------------------------------------------------------------------------
 mod <- glm(am ~ mpg, family = binomial, data = mtcars)
-predictions(mod, type = c("response", "link"))
+pred <- predictions(mod, type = c("response", "link"))
+head(pred)
 
 ## -----------------------------------------------------------------------------
 plot_cap(mod, condition = "mpg", type = "response")

@@ -50,21 +50,57 @@ get_vcov.polr <- function(model, ...) {
 #' @export
 get_predict.polr <- function(model,
                              newdata = insight::get_data(model),
-                             type = "response",
-                             group_name = "1",
+                             type = "probs",
+                             conf.level = NULL,
                              ...) {
 
-    pred <- stats::predict(model,
-                           newdata = newdata,
-                           type = type)
+    type <- sanity_type(model, type)
 
-    sanity_predict_numeric(pred = pred, model = model, newdata = newdata, type = type)
-
-    # numDeriv expects a vector
-    if (is.matrix(pred) && (!is.null(group_name) && group_name != "main_marginaleffect")) {
-        pred <- pred[, group_name, drop = TRUE]
+    # hack: 1-row newdata returns a vector, so get_predict.default does not learn about groups
+    if (nrow(newdata) == 1) {
+        hack <- TRUE
+        newdata <- newdata[c(1, 1), , drop = FALSE]
+    } else {
+        hack <- FALSE
     }
 
-    return(pred)
+    out <- get_predict.default(model,
+                               newdata = newdata,
+                               type = type,
+                               conf.level = conf.level,
+                               ...)
+
+    if (isTRUE(hack)) {
+        out <- out[out$rowid == 1, ]
+    }
+
+    return(out)
+}
+
+
+#' @include set_coef.R
+#' @rdname set_coef
+#' @export
+set_coef.glmmPQL <- function(model, coefs) {
+    model[["coefficients"]][["fixed"]][names(coefs)] <- coefs
+    model
+}
+
+
+#' @rdname get_predict
+#' @export
+get_predict.glmmPQL <- function(model,
+                                newdata = insight::get_data(model),
+                                type = "response",
+                                conf.level = NULL,
+                                ...) {
+
+    type <- sanity_type(model, type)
+
+    out <- stats::predict(model, newdata = newdata, type = type, ...)
+    out <- data.frame(
+        rowid = seq_len(nrow(newdata)),
+        predicted = out)
+    return(out)
 }
 

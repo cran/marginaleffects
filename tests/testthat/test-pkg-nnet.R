@@ -1,5 +1,4 @@
-skip_if(getRversion() == "3.6.3") 
-skip_if_not_installed("nnet")
+skip_if(getRversion() < 4.0) # problem on github actions with oldrel
 requiet("nnet")
 
 test_that("warning: standard error mismatch", {
@@ -13,7 +12,7 @@ test_that("error: bad type", {
     dat <- read.csv(test_path("stata/databases/MASS_polr_01.csv"))
     void <- capture.output(mod <- 
         nnet::multinom(factor(y) ~ x1 + x2, data = dat, quiet = true))
-    expect_warning(expect_error(marginaleffects(mod), regexp = "type.*supported"))
+    expect_warning(expect_error(marginaleffects(mod), regexp = "must be an element"))
 })
    
 test_that("multinom basic", {
@@ -23,15 +22,27 @@ test_that("multinom basic", {
     expect_warning(expect_marginaleffects(mod, type = "probs"))
 })
 
-test_that("multinom vs. Stata", {
-    stata <- readRDS(test_path("stata/stata.rds"))$nnet_multinom_01
+test_that("marginaleffects summary", {
     dat <- read.csv(test_path("stata/databases/MASS_polr_01.csv"))
     void <- capture.output(mod <- 
         nnet::multinom(factor(y) ~ x1 + x2, data = dat, quiet = true))
     mfx <- suppressWarnings(marginaleffects(mod, type = "probs"))
+    s <- tidy(mfx)
+    expect_false(anyNA(s$estimate))
+    expect_false(anyNA(s$std.error))
+})
+
+test_that("multinom vs. Stata", {
+    stata <- readRDS(test_path("stata/stata.rds"))$nnet_multinom_01
+    dat <- read.csv(test_path("stata/databases/MASS_polr_01.csv"))
+    dat$y <- as.factor(dat$y)
+    void <- capture.output(mod <- 
+        nnet::multinom(y ~ x1 + x2, data = dat, quiet = true))
+    mfx <- suppressWarnings(marginaleffects(mod, type = "probs"))
     mfx <- merge(tidy(mfx), stata, all = TRUE)
     # standard errors don't match
     expect_equal(mfx$estimate, mfx$dydxstata, tolerance = .0001)
+    # expect_equal(mfx$std.error, mfx$std.errorstata, tolerance = .0001)
 })
 
 test_that("set_coef", {
@@ -49,10 +60,10 @@ test_that("set_coef", {
 
 test_that("bugfix: nnet single row predictions", {
     dat <- read.csv(test_path("stata/databases/MASS_polr_01.csv"))
-    void <- capture.output(mod <- 
+    void <- capture.output(mod <-
         nnet::multinom(factor(y) ~ x1 + x2, data = dat, quiet = true))
-    expect_warning(marginaleffects(mod, newdata = typical(), type = "probs"))
-    mfx <- suppressWarnings(marginaleffects(mod, newdata = typical(), type = "probs"))
+    expect_warning(marginaleffects(mod, newdata = datagrid(), type = "probs"))
+    mfx <- suppressWarnings(marginaleffects(mod, newdata = datagrid(), type = "probs"))
     expect_s3_class(mfx, "data.frame")
     expect_equal(nrow(mfx), 6)
 })
@@ -82,13 +93,13 @@ test_that("predictions with multinomial outcome", {
     # small predictions
     pred1 <- predictions(m1, type = "probs")
     pred2 <- predictions(m1, type = "probs", variables = "x")
-    expect_predictions(pred1, n_row = 3, se = FALSE)
-    expect_predictions(pred2, n_row = 9, se = FALSE)
+    expect_predictions(pred1, n_row = nrow(dat) * 3)
+    expect_predictions(pred2, n_row = 9)
 
     # large predictions
     idx <- 3:7
     pred <- predictions(m2, type = "probs", variables = colnames(dat)[idx])
-    expect_predictions(pred, n_row = 729, se = FALSE)
+    expect_predictions(pred, n_row = 729)
 
     # massive prediction raises error
     expect_error(predictions(m2, type = "probs", variables = colnames(dat)[3:ncol(dat)]),

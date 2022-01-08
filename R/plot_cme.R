@@ -1,4 +1,4 @@
-#' Conditional marginal effects plot
+#' Plot Conditional Marginal Effects
 #' 
 #' In models where two continuous variables are interacted, the marginal effect
 #' of one variable is conditional on the value of the other variable. This
@@ -59,7 +59,7 @@ plot_cme <- function(model,
     at_list <- list()
 
     # condition 1
-    if (is.numeric(dat[[condition1]])) {
+    if (is.numeric(dat[[condition1]]) && !isTRUE(attr(dat[[condition1]], "factor"))) {
         at_list[[condition1]] <- seq(min(dat[[condition1]], na.rm = TRUE), 
                                      max(dat[[condition1]], na.rm = TRUE), 
                                      length.out = 25)
@@ -138,7 +138,7 @@ plot_cme <- function(model,
     }
 
     p <- p + ggplot2::labs(x = condition1, 
-                           y = sprintf("Marginal effect of %s", resp),
+                           y = sprintf("Marginal effect of %s on %s", effect, resp),
                            color = condition2,
                            fill = condition2,
                            linetype = condition3)

@@ -36,12 +36,13 @@ tidy.marginaleffects <- function(x,
     # empty initial mfx data.frame means there were no numeric variables in the
     # model
     if ("term" %in% colnames(x)) {
-        cols <- c("type", "group", "term")
-        cols <- intersect(cols, colnames(x))
-        cols <- paste(cols, collapse = " + ")
-        f <- stats::as.formula(sprintf("dydx ~ %s", cols))
-
-        dydx <- stats::aggregate(f, data = x, FUN = mean)
+        lhs <- intersect(c("dydx", "conf.low", "conf.high"), colnames(x))
+        rhs <- intersect(c("type", "group", "term", "contrast"), colnames(x))
+        lhs <- sprintf("cbind(%s)", paste(lhs, collapse = ", "))
+        rhs <- paste(rhs, collapse = " + ")
+        form <- sprintf("%s ~ %s", lhs, rhs)
+        form <- stats::as.formula(form)
+        dydx <- stats::aggregate(form, data = x, FUN = mean, na.rm = TRUE)
 
         ## This might be a useful implementation of weights
         # if (is.null(attr(x, "weights"))) {
@@ -52,6 +53,10 @@ tidy.marginaleffects <- function(x,
 
         se <- attr(x, "se_at_mean_gradient")
         if (!is.null(se)) {
+            if ("group" %in% colnames(se) && 
+                all(se$group == "main_marginaleffect")) {
+                se$group <- NULL
+            }
             dydx <- merge(dydx, se, all.x = TRUE)
         }
         colnames(dydx)[match("dydx", colnames(dydx))] <- "estimate"
@@ -97,7 +102,15 @@ tidy.marginaleffects <- function(x,
 
 #' @export
 glance.marginaleffects <- function(x, ...) {
-    out <- attr(x, "glance")
+    assert_dependency("modelsummary")
+    model <- attr(x, "model")
+    gl <- suppressMessages(suppressWarnings(try(
+        modelsummary::get_gof(model, ...), silent = TRUE)))
+    if (inherits(gl, "data.frame")) {
+        out <- data.frame(gl)
+    } else {
+        out <- NULL
+    }
     return(out)
 }
 
@@ -110,13 +123,12 @@ glance.marginaleffects <- function(x, ...) {
 #' `broom` package specification.
 #' @export
 tidy.marginalmeans <- function(x,
-                                 conf.int = TRUE,
-                                 conf.level = 0.95,
-                                 ...) {
+                               conf.int = TRUE,
+                               conf.level = 0.95,
+                               ...) {
 
     out <- x
-    colnames(out)[colnames(out) == "value"] <- "group"
-    colnames(out)[colnames(out) == "predicted"] <- "estimate"
+    colnames(out)[colnames(out) == "marginalmean"] <- "estimate"
 
     if (!"statistic" %in% colnames(out) && "std.error" %in% colnames(out)) {
         out$statistic <- out$estimate / out$std.error
@@ -138,7 +150,7 @@ tidy.marginalmeans <- function(x,
     }
 
     # sort and subset columns
-    cols <- c("type", "term", "group", "estimate", "std.error", "statistic", "p.value", "conf.low", "conf.high")
+    cols <- c("type", "term", "value", "estimate", "std.error", "statistic", "p.value", "conf.low", "conf.high")
     out <- out[, intersect(cols, colnames(out)), drop = FALSE]
     out <- as.data.frame(out)
 
@@ -149,7 +161,8 @@ tidy.marginalmeans <- function(x,
 
 
 #' @export
-glance.marginalmeans <- function(x, ...) {
-    out <- attr(x, "glance")
-    return(out)
-}
+glance.marginalmeans <- glance.marginaleffects
+
+
+#' @export
+glance.predictions <- glance.marginaleffects

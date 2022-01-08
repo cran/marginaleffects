@@ -30,21 +30,24 @@ In the context of this package, an "Adjusted Prediction" is defined as:
 
 An adjusted prediction is thus the regression-adjusted response variable (or link, or other fitted value), for a given combination (or grid) of predictors. This grid may or may not correspond to the actual observations in a dataset.
 
-By default, `predictions` calculates the regression-adjusted predicted values for a single hypothetical unit of observation with all regressors set at their means or modes:
+By default, `predictions` calculates the regression-adjusted predicted values for every observation in the original dataset:
+
 
 ```{r}
 library(marginaleffects)
 
 mod <- lm(mpg ~ hp + factor(cyl), data = mtcars)
 
-predictions(mod)
+pred <- predictions(mod)
+
+head(pred)
 ```
 
 In many cases, this is too limiting, and researchers will want to specify a grid of "typical" values over which to compute adjusted predictions.
 
-# Typical Predictions
+# Predictions over a "typical" data grid
 
-There are two main ways to select the reference grid over which we want to compute adjusted predictions. The first is using the `variables` argument. The second is with the `newdata` argument and the [`typical()` function](https://vincentarelbundock.github.io/marginaleffects/reference/typical.html) that we already introduced in the [marginal effects vignette.](https://vincentarelbundock.github.io/marginaleffects/articles/mfx.html) 
+There are two main ways to select the reference grid over which we want to compute adjusted predictions. The first is using the `variables` argument. The second is with the `newdata` argument and the [`datagrid()` function](https://vincentarelbundock.github.io/marginaleffects/reference/datagrid.html) that we already introduced in the [marginal effects vignette.](https://vincentarelbundock.github.io/marginaleffects/articles/mfx.html) 
 
 ## `variables`: Levels and Tukey's 5 numbers 
 
@@ -68,19 +71,55 @@ predictions(mod, variables = c("cyl", "hp")) %>%
     add_header_above(header = c(" " = 1, "cyl" = 3))
 ```
 
-## `newdata` and `typical`
+## `newdata` and `datagrid`
 
-A second strategy to construct grids of predictors for adjusted predictions is to combine the `newdata` argument and the `typical` function. Recall that this function creates a "typical" dataset with all variables at their means or modes, except those we explicitly define:
-
-```{r}
-typical(cyl = c(4, 6, 8), model = mod)
-```
-
-We can also use this `typical` function in a `predictions` call (omitting the `model` argument):
+A second strategy to construct grids of predictors for adjusted predictions is to combine the `newdata` argument and the `datagrid` function. Recall that this function creates a "typical" dataset with all variables at their means or modes, except those we explicitly define:
 
 ```{r}
-predictions(mod, newdata = typical(cyl = c(4, 6, 8)))
+datagrid(cyl = c(4, 6, 8), model = mod)
 ```
+
+We can also use this `datagrid` function in a `predictions` call (omitting the `model` argument):
+
+```{r}
+predictions(mod, newdata = datagrid())
+
+predictions(mod, newdata = datagrid(cyl = c(4, 6, 8)))
+```
+
+Users can change the summary function used to summarize each type of variables using the `FUN.numeric`, `FUN.factor`, and related arguments, for example substituting the mean for the median.
+
+## `counterfactual` data grid
+
+An alternative approach to construct grids of predictors is to use `grid.type = "counterfactual"` argument value. This will duplicate the *whole* dataset, with the different values specified by the user. 
+
+For example, the `mtcars` dataset has 32 rows. This command produces a new dataset with 64 rows, with each row of the original dataset duplicated with the two values of the `am` variable supplied (0 and 1):
+
+```{r}
+mod <- glm(vs ~ hp + am, data = mtcars, family = binomial)
+
+nd <- datagrid(model = mod, am = 0:1, grid.type = "counterfactual")
+
+dim(nd)
+```
+
+Then, we can use this dataset and the `predictions` function to create interesting visualizations:
+
+```{r, fig.asp = 1}
+pred <- predictions(mod, newdata = datagrid(am = 0:1, grid.type = "counterfactual")) %>%
+    select(am, predicted, rowid_original) %>%
+    pivot_wider(id_cols = rowid_original, 
+                names_from = am,
+                values_from = predicted)
+
+ggplot(pred, aes(x = `0`, y = `1`)) +
+    geom_point() +
+    geom_abline(intercept = 0, slope = 1) +
+    labs(x = "Predicted Pr(vs=1), when am = 0",
+         y = "Predicted Pr(vs=1), when am = 1")
+```
+
+In this graph, each dot represents the predicted probability that `vs=1` for one observation of the dataset, in the counterfactual worlds where `am` is either 0 or 1. 
 
 # Plot: Conditional Predictions
 
@@ -121,8 +160,8 @@ Of course, you can also design your own plots or tables by working with the `pre
 ```{r}
 predictions(mod,
             type = c("response", "link"),
-            newdata = typical(length = 90:120,
-                              style = c("Action", "Comedy"))) %>%
+            newdata = datagrid(length = 90:120,
+                               style = c("Action", "Comedy"))) %>%
     ggplot(aes(length, predicted, color = style))  +
     geom_line() +
     facet_wrap(~type, scales = "free_y")
@@ -136,7 +175,8 @@ Typical values include `"response"` and `"link"`, but users should refer to the 
 
 ```{r}
 mod <- glm(am ~ mpg, family = binomial, data = mtcars)
-predictions(mod, type = c("response", "link"))
+pred <- predictions(mod, type = c("response", "link"))
+head(pred)
 ```
 
 Users who need more control over the type of adjusted predictions to compute, including a host of options for back-transformation, may want to consider the [`emmeans` package.](https://cran.r-project.org/package=emmeans)

@@ -14,7 +14,25 @@
 #' and less than 1. Defaults to 0.95, which corresponds to a 95 percent
 #' confidence interval.
 #' @param ... Additional arguments are pushed forward to `predict()`.
-#' @return A `data.frame` with a `predicted` column with predictions.
+#' @return A `data.frame` with one row per observation and several columns:
+#' * `rowid`: row number of the `newdata` data frame
+#' * `type`: prediction type, as defined by the `type` argument
+#' * `group`: (optional) value of the grouped outcome (e.g., categorical outcome models)
+#' * `predicted`: predicted outcome
+#' * `std.error`: standard errors computed by the `insight::get_predicted` function or, if unavailable, via `marginaleffects` delta method functionality.
+#' * `conf.low`: lower bound of the confidence or highest density interval (for bayesian models)
+#' * `conf.high`: upper bound of the confidence or highest density interval (for bayesian models)
+#' @examples
+#' # Predicted outcomes for every row of the original dataset
+#' mod <- lm(mpg ~ hp + factor(cyl), data = mtcars)
+#' pred <- predictions(mod)
+#' head(pred)
+#'
+#' # Predicted outcomes for user-specified values of the regressors
+#' predictions(mod, newdata = datagrid(hp = c(100, 120), cyl = 4))
+#'
+#' # Plot of predicted outcomes for different values of the regressor
+#' plot_cap(mod, condition = "hp")
 #' @export
 predictions <- function(model,
                         variables = NULL,
@@ -23,16 +41,13 @@ predictions <- function(model,
                         type = "response",
                         ...) {
 
-    # sanity checks and pre-processing
-    type <- sanity_type(model, type)
-
     ## do not check this because `insight` supports more models than `marginaleffects`
     # model <- sanity_model(model)
 
     # order of the first few paragraphs is important
-    # if `newdata` is a call to `typical()` or `counterfactual()`, insert `model`
+    # if `newdata` is a call to `typical` or `counterfactual`, insert `model`
     scall <- substitute(newdata)
-    if (is.call(scall) && as.character(scall)[1] %in% c("typical", "counterfactual")) {
+    if (is.call(scall) && as.character(scall)[1] %in% c("datagrid", "typical", "counterfactual")) {
         lcall <- as.list(scall)
         if (!any(c("model", "newdata") %in% names(lcall))) {
             lcall <- c(lcall, list("model" = model))
@@ -47,8 +62,6 @@ predictions <- function(model,
     # check before inferring `newdata`
     if (!is.null(variables) && !is.null(newdata)) {
         stop("The `variables` and `newdata` arguments cannot be used simultaneously.")
-    } else if (is.null(newdata) && is.null(variables)) {
-        newdata <- typical(model = model)
     } else if (!is.null(variables)) {
         # get new data if it doesn't exist
         newdata <- sanity_newdata(model, newdata)
@@ -63,7 +76,7 @@ predictions <- function(model,
             }
         }
         newdata <- do.call("typical", args)
-    } else if (!is.null(newdata)) {
+    } else {
         newdata <- sanity_newdata(model, newdata)
         variables <- sanity_variables(model, newdata, variables)
     }
@@ -77,65 +90,93 @@ predictions <- function(model,
 
     # predictions
     out_list <- list()
+    draws_list <- list()
     for (predt in type) {
         # extract
-        tmp <- try(insight::get_predicted(model,
-                                          data = newdata,
-                                          predict = NULL,
-                                          type = predt,
-                                          ci = conf.level),
-                   silent = TRUE)
-        if (inherits(tmp, "try-error")) {
-            tmp <- get_predict(model, newdata = newdata, type = predt)
-        }
+        tmp <- get_predict(model,
+                           newdata = newdata,
+                           type = predt,
+                           conf.level = conf.level,
+                           ...)
 
-        # process
-        if (inherits(tmp, "get_predicted")) {
-            tmp <- as.data.frame(tmp)
-            tmp <- insight::standardize_names(tmp, style = "broom")
-            tmp$type <- predt
+        if (inherits(tmp, "data.frame")) {
+            colnames(tmp)[colnames(tmp) == "Predicted"] <- "predicted"
+            colnames(tmp)[colnames(tmp) == "SE"] <- "std.error"
+            colnames(tmp)[colnames(tmp) == "CI_low"] <- "conf.low"
+            colnames(tmp)[colnames(tmp) == "CI_high"] <- "conf.high"
             tmp$rowid_internal <- newdata$rowid_internal
+            tmp$type <- predt
         } else {
             tmp <- data.frame(newdata$rowid_internal, predt, tmp)
             colnames(tmp) <- c("rowid_internal", "type", "predicted")
         }
+
+        # try to extract standard errors via the delta method if necessary
+        if (is.numeric(conf.level) && !any(c("std.error", "conf.low") %in% colnames(tmp))) {
+            fun <- function(...) get_predict(...)[["predicted"]]
+            se <- standard_errors_delta(model,
+                                        newdata = newdata,
+                                        vcov = get_vcov(model),
+                                        type = predt,
+                                        FUN = fun,
+                                        ...)
+            if (is.numeric(se) && length(se) == nrow(tmp)) {
+                tmp[["std.error"]] <- se
+            }
+        }
+
         out_list[[predt]] <- tmp
+        draws <- attr(tmp, "posterior_draws")
+        draws_list[[predt]] <- draws
     }
-    out <- do.call("rbind", out_list)
+
+    out <- bind_rows(out_list)
+    draws <- do.call("rbind", draws_list) # poorman::bind_rows does not work on matrices
 
     # unpad factors
-    out <- out[out$rowid_internal > 0, , drop = FALSE]
+    idx <- out$rowid_internal > 0
+    out <- out[idx, , drop = FALSE]
+    draws <- draws[idx, , drop = FALSE]
 
     # return data
-    out <- merge(out, newdata, all.x = TRUE, sort = FALSE)
+    # base::merge() mixes row order
+    out <- left_join(out, newdata, by = "rowid_internal")
 
     # rowid does not make sense here because the grid is made up
     # Wrong! rowid does make sense when we use `counterfactual()` in `newdata`
     out$rowid_internal <- NULL
 
     # clean columns
-    stubcols <- c("rowid", "type", "term", "predicted", "std.error", "conf.low", "conf.high",
+    stubcols <- c("rowid", "type", "term", "group", "predicted", "std.error", "conf.low", "conf.high",
                   sort(grep("^predicted", colnames(newdata), value = TRUE)))
     cols <- intersect(stubcols, colnames(out))
     cols <- unique(c(cols, colnames(out)))
-    out <- out[, cols]
+    out <- out[, cols, drop = FALSE]
     row.names(out) <- NULL
 
-    # attach model info
-    if (isTRUE(check_dependency("modelsummary"))) {
-        gl <- suppressMessages(suppressWarnings(try(modelsummary::get_gof(model), silent = TRUE)))
-        if (inherits(gl, "data.frame")) {
-            attr(out, "glance") <- data.frame(gl)
-        } else {
-            attr(out, "glance") <- NULL
-        }
-    } else {
-        attr(out, "glance") <- NULL
-    }
+    # we want consistent output, regardless of whether `data.table` is installed/used or not
+    out <- as.data.frame(out)
+
     class(out) <- c("predictions", class(out))
+    attr(out, "model") <- model
     attr(out, "type") <- type
     attr(out, "model_type") <- class(model)[1]
     attr(out, "variables") <- variables
+
+    # bayesian: store draws posterior density draws
+    attr(out, "posterior_draws") <- draws
+    if (!is.null(draws)) {
+        tmp <- apply(draws, 1, get_hdi, credMass = conf.level)
+        out[["predicted"]] <- apply(draws, 1, stats::median)
+        out[["std.error"]] <- NULL
+        out[["conf.low"]] <- tmp[1, ]
+        out[["conf.high"]] <- tmp[2, ]
+        attr(out, "posterior_draws") <- draws
+    }
+
+    if ("group" %in% names(out) && all(out$group == "main_marginaleffect")) {
+        out$group <- NULL
+    }
 
     return(out)
 }

@@ -96,7 +96,7 @@ library(marginaleffects)
 dat <- read.csv("https://vincentarelbundock.github.io/Rdatasets/csv/palmerpenguins/penguins.csv")
 dat$large_penguin <- ifelse(dat$body_mass_g > median(dat$body_mass_g, na.rm = TRUE), 1, 0)
 
-mod <- glm(large_penguin ~ bill_length_mm + flipper_length_mm, 
+mod <- glm(large_penguin ~ bill_length_mm + flipper_length_mm + species,
            data = dat, family = binomial)
 ```
 
@@ -125,29 +125,30 @@ glance(mfx)
 
 # Typical MFX
 
-Sometimes, we are not interested in *all* the unit-specific marginal effects, but would rather look at the estimated marginal effects for certain "typical" individuals. The `typical` function helps us build datasets full of "typical" rows. For example, to generate artificial Adelies and Gentoos with 180mm flippers:
+Sometimes, we are not interested in *all* the unit-specific marginal effects, but would rather look at the estimated marginal effects for certain "typical" individuals. The `datagrid` function helps us build a data grid full of "typical" rows. For example, to generate artificial Adelies and Gentoos with 180mm flippers:
 
 ```{r}
-typical(flipper_length_mm = 180, 
-        species = c("Adelie", "Gentoo"), 
-        model = mod)
+datagrid(flipper_length_mm = 180,
+         species = c("Adelie", "Gentoo"),
+         model = mod)
 ```
 
 The same command can be used (omitting the `model` argument) to `marginaleffects`'s `newdata` argument to compute marginal effects for those (fictional) individuals:
 
 ```{r}
-marginaleffects(mod, newdata = typical(flipper_length_mm = 180, 
-                                       species = c("Adelie", "Gentoo")))
+marginaleffects(mod,
+                newdata = datagrid(flipper_length_mm = 180,
+                                   species = c("Adelie", "Gentoo")))
 ```
 
-When variables are omitted from the `typical` call, they will automatically be set at their median or mode (depending on variable type).
+When variables are omitted from the `datagrid` call, they will automatically be set at their median or mode (depending on variable type).
 
 # Counterfactual MFX
 
-The `typical` function allowed us look at completely fictional individuals. The `counterfactual` function lets us compute the marginal effects for the actual observations in our dataset, but with a few manipulated values. For example, this code will create a `data.frame` twice as long as the original `dat`, where each observation is repeated with different values of the `flipper_length_mm` variable:
+The `datagrid` function allowed us look at completely fictional individuals. Setting the `grid.type` argument of this function to `"counterfactual"` lets us compute the marginal effects for the actual observations in our dataset, but with a few manipulated values. For example, this code will create a `data.frame` twice as long as the original `dat`, where each observation is repeated with different values of the `flipper_length_mm` variable:
 
 ```{r}
-nd <- counterfactual(flipper_length_mm = c(160, 180), model = mod)
+nd <- datagrid(flipper_length_mm = c(160, 180), model = mod, grid.type = "counterfactual")
 ```
 
 We see that the rows 1, 2, and 3 of the original dataset have been replicated twice, with different values of the `flipper_length_mm` variable:
@@ -202,7 +203,7 @@ quad <- data.frame(x = rnorm(N))
 quad$y <- 1 + 1 * quad$x + 2 * quad$x^2 + rnorm(N)
 mod <- lm(y ~ x + I(x^2), quad)
 
-marginaleffects(mod, newdata = typical(x = -2:2))  %>%
+marginaleffects(mod, newdata = datagrid(x = -2:2))  %>%
     mutate(truth = 1 + 4 * x) %>%
     select(dydx, truth)
 ```
@@ -227,27 +228,46 @@ mfx <- marginaleffects(mod, type = c("response", "link"))
 summary(mfx)
 ```
 
-# Regression tables
+# Regression tables and coefficient plots
 
-Average marginal effects are easy to display in a regression table using packages like `modelsummary`:
+Average marginal effects are easy to display in a regression table using packages like `modelsummary`.
 
 ```{r, echo = FALSE}
 options(modelsummary_factory_default = "markdown")
+
 ```
 
 ```{r}
 library(modelsummary)
+library(marginaleffects)
 
 # fit models and store them in a named list
 mod <- list(
-    "Logit" = glm(large_penguin ~ flipper_length_mm + species, data = dat, family = binomial),
-    "OLS" = lm(body_mass_g ~ flipper_length_mm + bill_length_mm + species, data = dat))
+    "Short" = glm(large_penguin ~ flipper_length_mm, data = dat, family = binomial),
+    "Long" = glm(large_penguin ~ flipper_length_mm + bill_length_mm, data = dat, family = binomial))
 
 # apply the `marginaleffects` function to all the models using `lapply`
 mfx <- lapply(mod, marginaleffects)
 
-# build a table
 modelsummary(mfx)
+```
+
+The same results can be presented in a coefficient plot:
+
+```{r}
+modelplot(mfx) + ggplot2::xlab("Average Marginal Effects with 95% Confidence Intervals")
+```
+
+When the models include contrasts, we can use `modelsummary`'s `group` argument to display them cleanly:
+
+```{r}
+mod <- list(
+    "Logit" = glm(large_penguin ~ flipper_length_mm + species, data = dat, family = binomial),
+    "OLS" = lm(body_mass_g ~ flipper_length_mm + bill_length_mm + species, data = dat))
+
+mfx <- lapply(mod, marginaleffects)
+
+modelsummary(mfx, group = term + contrast ~ model)
 ```
 
 # Supporting new models
@@ -294,5 +314,5 @@ Create a file called `tests/testthat/test-PKGNAME.R` and write a few tests. Idea
 Add your new model class to the lists of supported models in:
 
 * The `sanity_model` function of the `R/sanity.R` file.
-* The supported models CSV table in `data-raw/supported_models.csv`. Then, run the `data-raw/supported_models.R` script to propagate your change throughout the package documentation.
+* The supported models CSV table in `data-raw/supported_models.csv`
 * The "Suggests" list in the `DESCRIPTION` file.

@@ -3,7 +3,6 @@
 get_predict.clm <- function(model,
                             newdata = insight::get_data(model),
                             type = "response",
-                            group_name = NULL,
                             ...) {
 
     checkmate::assert_choice(type, choices = c("response", "prob"))
@@ -30,15 +29,13 @@ get_predict.clm <- function(model,
     pred <- stats::predict(model,
                            newdata = newdata,
                            type = type)$fit
-    sanity_predict_numeric(pred = pred, model = model, newdata = newdata, type = type)
 
-    # numDeriv expects a vector
-    if (is.matrix(pred) && (!is.null(group_name) && group_name != "main_marginaleffect")) {
-        pred <- pred[, group_name, drop = TRUE]
-    }
+    out <- data.frame(
+        rowid = rep(1:nrow(pred), times = ncol(pred)),
+        group = rep(colnames(pred), each = nrow(pred)),
+        predicted = c(pred))
 
-    sanity_predict_vector(pred = pred, model = model, newdata = newdata, type = type)
-    return(pred)
+    return(out)
 }
 
 #' @include get_group_names.R

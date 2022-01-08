@@ -1,4 +1,4 @@
-#' Conditional adjusted predictions plot
+#' Plot Conditional Adjusted Predictions
 #'
 #' This function plots the adjusted predictions of the outcome (y-axis)
 #' against values of one or more predictors.
@@ -32,8 +32,7 @@ plot_cap <- function(model,
     # allow multiple conditions and/or effects
     checkmate::assert_character(condition, min.len = 1, max.len = 2)
 
-    ## not sure why this fails in testthat
-    # checkmate::assert_true(condition %in% colnames(dat))
+    checkmate::assert_true(all(condition %in% colnames(dat)))
 
     if (length(condition) == 1) {
         condition1 <- condition[1]
@@ -53,7 +52,7 @@ plot_cap <- function(model,
     at_list <- list()
 
     # condition 1
-    if (is.numeric(dat[[condition1]])) {
+    if (is.numeric(dat[[condition1]]) && !isTRUE(attr(dat[[condition1]], "factor"))) {
         at_list[[condition1]] <- seq(min(dat[[condition1]], na.rm = TRUE), 
                                      max(dat[[condition1]], na.rm = TRUE), 
                                      length.out = 25)
@@ -82,6 +81,7 @@ plot_cap <- function(model,
     # create data
     at_list[["model"]] = model
     nd <- do.call("typical", at_list)
+
     datplot <- predictions(model,
                            newdata = nd,
                            type = type,
@@ -103,10 +103,15 @@ plot_cap <- function(model,
     }
 
     # ggplot2
-    p <- ggplot2::ggplot(datplot, ggplot2::aes(x = condition1, 
-                                               y = predicted, 
-                                               ymin = conf.low, 
-                                               ymax = conf.high))
+    if ("conf.low" %in% colnames(datplot)) {
+        p <- ggplot2::ggplot(datplot, ggplot2::aes(x = condition1,
+                                                   y = predicted,
+                                                   ymin = conf.low,
+                                                   ymax = conf.high))
+    } else {
+        p <- ggplot2::ggplot(datplot, ggplot2::aes(x = condition1, y = predicted))
+    }
+
 
     # continuous x-axis
     if (is.numeric(datplot$condition1)) {

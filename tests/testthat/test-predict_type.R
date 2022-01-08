@@ -1,3 +1,19 @@
+test_that("type dictionary does not include duplicates", {
+    x <- marginaleffects:::type_dictionary
+    y <- type_dictionary_build()
+    expect_equal(x, y) # for codecov
+    dup <- x[!x$base %in% c("link", "prediction"), ]
+    dup <- stats::na.omit(dup)
+    expect_false(any(dup$base == dup$insight))
+    dup <- stats::na.omit(x[, c("class", "base")])
+    dup <- paste(dup$class, dup$base)
+    expect_true(anyDuplicated(dup) == 0)
+    dup <- stats::na.omit(x[, c("class", "insight")])
+    dup <- paste(dup$class, dup$insight)
+    expect_true(anyDuplicated(dup) == 0)
+})
+
+
 test_that("multiple prediction types", {
     skip_if_not_installed("pscl")
     requiet("pscl")
@@ -32,13 +48,6 @@ test_that("error: multivariate", {
     requiet("pscl")
     data("bioChemists", package = "pscl")
     model <- hurdle(art ~ phd + fem | ment, data = bioChemists, dist = "negbin")
-    expect_error(mfx <- marginaleffects(model, type = "prob"), regexp = "feature request")
-})
-
-
-test_that("error: character", {
-    skip_if_not_installed("MASS")
-    dat <- read.csv(test_path("stata/databases/MASS_polr_01.csv"))
-    mod <- MASS::polr(factor(y) ~ x1 + x2, data = dat)
-    expect_error(get_predict(mod, type = "class"), regexp = "differentiated")
+    mfx <- marginaleffects(model, type = "prob")
+    expect_true(all(as.character(0:19) %in% mfx$group))
 })

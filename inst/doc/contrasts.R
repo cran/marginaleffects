@@ -37,7 +37,7 @@ contrast(emm, method = "revpairwise")
 mod_int <- lm(mpg ~ am * factor(cyl), tmp)
 
 ## -----------------------------------------------------------------------------
-marginaleffects(mod_int, newdata = typical(cyl = tmp$cyl), variables = "am")
+marginaleffects(mod_int, newdata = datagrid(cyl = tmp$cyl), variables = "am")
 
 ## -----------------------------------------------------------------------------
 emm <- emmeans(mod_int, specs = "am", by = "cyl")

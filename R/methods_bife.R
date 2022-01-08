@@ -7,6 +7,8 @@ get_predict.bife <- function(model,
                              type = "response",
                              ...) {
 
+    type <- sanity_type(model, type)
+
     pred <- stats::predict(model,
                            X_new = newdata,
                            type = type)
@@ -14,7 +16,11 @@ get_predict.bife <- function(model,
     sanity_predict_vector(pred = pred, model = model, newdata = newdata, type = type)
     sanity_predict_numeric(pred = pred, model = model, newdata = newdata, type = type)
 
-    return(pred)
+    out <- data.frame(
+        rowid = 1:nrow(newdata),
+        predicted = pred)
+
+    return(out)
 }
 
 

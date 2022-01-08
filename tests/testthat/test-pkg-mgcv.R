@@ -1,7 +1,8 @@
-skip_if_not_installed("mgcv")
 requiet("mgcv")
+requiet("emmeans")
+requiet("broom")
 
-test_that("marginaleffects: no validity", {
+test_that("marginaleffects vs. emtrends", {
     skip_if_not_installed("insight", minimum_version = "0.14.4.1")
     set.seed(2)
     void <- capture.output(dat <- gamSim(1, n = 400, dist = "normal", scale = 2))
@@ -25,6 +26,13 @@ test_that("marginaleffects: no validity", {
     expect_marginaleffects(m7)
     expect_marginaleffects(m8)
     expect_marginaleffects(m9)
+
+    # emtrends
+    mfx <- marginaleffects(m1, variables = "x1", newdata = datagrid(x1 = 0, x2 = 0, x3 = 0), type = "link")
+    em <- emtrends(m1, ~x1, "x1", at = list(x1 = 0, x2 = 0, x3 = 0))
+    em <- tidy(em)
+    expect_equal(mfx$dydx, em$x1.trend)
+    expect_equal(mfx$std.error, em$std.error, tolerance = .0001)
 })
 
 
@@ -35,6 +43,6 @@ test_that("predictions: no validity", {
     mod <- gam(y ~ s(x0) + s(x1) + s(x2) + s(x3), data = dat)
     pred1 <- predictions(mod)
     pred2 <- predictions(mod, newdata = head(dat))
-    expect_predictions(pred1, n_row = 1)
+    expect_predictions(pred1, n_row = nrow(dat))
     expect_predictions(pred2, n_row = 6)
 })

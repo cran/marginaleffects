@@ -334,10 +334,10 @@ code > span.er { color: #a61717; background-color: #e3d2d2; }
 <div class="sourceCode" id="cb2"><pre class="sourceCode r"><code class="sourceCode r"><a class="sourceLine" id="cb2-1" title="1">mfx &lt;-<span class="st"> </span><span class="kw">marginaleffects</span>(mod)</a>
 <a class="sourceLine" id="cb2-2" title="2"><span class="kw">summary</span>(mfx)</a>
 <a class="sourceLine" id="cb2-3" title="3"><span class="co">#&gt; Average marginal effects </span></a>
-<a class="sourceLine" id="cb2-4" title="4"><span class="co">#&gt;       type         Term  Effect Std. Error z value   Pr(&gt;|z|)     2.5 % 97.5 %</span></a>
-<a class="sourceLine" id="cb2-5" title="5"><span class="co">#&gt; 1 response       amTRUE   2.560      1.298   1.973    0.04851   0.01675  5.103</span></a>
-<a class="sourceLine" id="cb2-6" title="6"><span class="co">#&gt; 2 response factor(cyl)6  -6.156      1.536  -4.009 6.1077e-05  -9.16608 -3.146</span></a>
-<a class="sourceLine" id="cb2-7" title="7"><span class="co">#&gt; 3 response factor(cyl)8 -10.068      1.452  -6.933 4.1147e-12 -12.91359 -7.222</span></a>
+<a class="sourceLine" id="cb2-4" title="4"><span class="co">#&gt;   Term     Contrast  Effect Std. Error z value   Pr(&gt;|z|)     2.5 % 97.5 %</span></a>
+<a class="sourceLine" id="cb2-5" title="5"><span class="co">#&gt; 1   am TRUE - FALSE   2.560      1.298   1.973    0.04851   0.01675  5.103</span></a>
+<a class="sourceLine" id="cb2-6" title="6"><span class="co">#&gt; 2  cyl        6 - 4  -6.156      1.536  -4.009 6.1077e-05  -9.16608 -3.146</span></a>
+<a class="sourceLine" id="cb2-7" title="7"><span class="co">#&gt; 3  cyl        8 - 4 -10.068      1.452  -6.933 4.1147e-12 -12.91359 -7.222</span></a>
 <a class="sourceLine" id="cb2-8" title="8"><span class="co">#&gt; </span></a>
 <a class="sourceLine" id="cb2-9" title="9"><span class="co">#&gt; Model type:  lm </span></a>
 <a class="sourceLine" id="cb2-10" title="10"><span class="co">#&gt; Prediction type:  response</span></a></code></pre></div>
@@ -365,12 +365,12 @@ code > span.er { color: #a61717; background-color: #e3d2d2; }
 <h1>Contrasts with interactions</h1>
 <p>In models with multiplicative interactions, the contrasts of a categorical variable will depend on the values of the interacted variable:</p>
 <div class="sourceCode" id="cb4"><pre class="sourceCode r"><code class="sourceCode r"><a class="sourceLine" id="cb4-1" title="1">mod_int &lt;-<span class="st"> </span><span class="kw">lm</span>(mpg <span class="op">~</span><span class="st"> </span>am <span class="op">*</span><span class="st"> </span><span class="kw">factor</span>(cyl), tmp)</a></code></pre></div>
-<p>We can now use the <code>newdata</code> argument of the <code>marginaleffects</code> function to compute contrasts for different values of the other regressors. As in <a href="https://vincentarelbundock.github.io/marginaleffects/articles/mfx.html">the marginal effects vignette</a>, the <code>typical</code> function can be handy. Since we only care about the logical <code>am</code> contrast, we use the <code>variables</code> to indicate the subset of results to report:</p>
-<div class="sourceCode" id="cb5"><pre class="sourceCode r"><code class="sourceCode r"><a class="sourceLine" id="cb5-1" title="1"><span class="kw">marginaleffects</span>(mod_int, <span class="dt">newdata =</span> <span class="kw">typical</span>(<span class="dt">cyl =</span> tmp<span class="op">$</span>cyl), <span class="dt">variables =</span> <span class="st">&quot;am&quot;</span>)</a>
-<a class="sourceLine" id="cb5-2" title="2"><span class="co">#&gt;   rowid     type   term     dydx std.error    am cyl predicted</span></a>
-<a class="sourceLine" id="cb5-3" title="3"><span class="co">#&gt; 1     1 response amTRUE 1.441667  2.315925 FALSE   6    19.125</span></a>
-<a class="sourceLine" id="cb5-4" title="4"><span class="co">#&gt; 2     2 response amTRUE 5.175000  2.052848 FALSE   4    22.900</span></a>
-<a class="sourceLine" id="cb5-5" title="5"><span class="co">#&gt; 3     3 response amTRUE 0.350000  2.315925 FALSE   8    15.050</span></a></code></pre></div>
+<p>We can now use the <code>newdata</code> argument of the <code>marginaleffects</code> function to compute contrasts for different values of the other regressors. As in <a href="https://vincentarelbundock.github.io/marginaleffects/articles/mfx.html">the marginal effects vignette</a>, the <code>datagrid</code> function can be handy. Since we only care about the logical <code>am</code> contrast, we use the <code>variables</code> to indicate the subset of results to report:</p>
+<div class="sourceCode" id="cb5"><pre class="sourceCode r"><code class="sourceCode r"><a class="sourceLine" id="cb5-1" title="1"><span class="kw">marginaleffects</span>(mod_int, <span class="dt">newdata =</span> <span class="kw">datagrid</span>(<span class="dt">cyl =</span> tmp<span class="op">$</span>cyl), <span class="dt">variables =</span> <span class="st">&quot;am&quot;</span>)</a>
+<a class="sourceLine" id="cb5-2" title="2"><span class="co">#&gt;   rowid     type term     contrast     dydx std.error    am cyl</span></a>
+<a class="sourceLine" id="cb5-3" title="3"><span class="co">#&gt; 1     1 response   am TRUE - FALSE 1.441667  2.315925 FALSE   6</span></a>
+<a class="sourceLine" id="cb5-4" title="4"><span class="co">#&gt; 2     2 response   am TRUE - FALSE 5.175000  2.052848 FALSE   4</span></a>
+<a class="sourceLine" id="cb5-5" title="5"><span class="co">#&gt; 3     3 response   am TRUE - FALSE 0.350000  2.315925 FALSE   8</span></a></code></pre></div>
 <p>Once again, we obtain the same results with <code>emmeans</code>:</p>
 <div class="sourceCode" id="cb6"><pre class="sourceCode r"><code class="sourceCode r"><a class="sourceLine" id="cb6-1" title="1">emm &lt;-<span class="st"> </span><span class="kw">emmeans</span>(mod_int, <span class="dt">specs =</span> <span class="st">&quot;am&quot;</span>, <span class="dt">by =</span> <span class="st">&quot;cyl&quot;</span>)</a>
 <a class="sourceLine" id="cb6-2" title="2"><span class="kw">contrast</span>(emm, <span class="dt">method =</span> <span class="st">&quot;revpairwise&quot;</span>)</a>

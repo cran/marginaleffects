@@ -653,12 +653,12 @@ Marginal means of am
 </table>
 <p>The marginal means of <code>am</code> and <code>cyl</code> are obtained by taking the mean of the adjusted predictions across cells. The <code>marginalmeans</code> function gives us the same results easily:</p>
 <div class="sourceCode" id="cb3"><pre class="sourceCode r"><code class="sourceCode r"><a class="sourceLine" id="cb3-1" title="1"><span class="kw">marginalmeans</span>(mod)</a>
-<a class="sourceLine" id="cb3-2" title="2"><span class="co">#&gt;   term value predicted std.error</span></a>
-<a class="sourceLine" id="cb3-3" title="3"><span class="co">#&gt; 1  cyl     4  22.88479 1.3566479</span></a>
-<a class="sourceLine" id="cb3-4" title="4"><span class="co">#&gt; 2  cyl     6  18.96022 1.0729360</span></a>
-<a class="sourceLine" id="cb3-5" title="5"><span class="co">#&gt; 3  cyl     8  19.35138 1.3770817</span></a>
-<a class="sourceLine" id="cb3-6" title="6"><span class="co">#&gt; 4   am FALSE  18.31987 0.7853925</span></a>
-<a class="sourceLine" id="cb3-7" title="7"><span class="co">#&gt; 5   am  TRUE  22.47772 0.8343346</span></a></code></pre></div>
+<a class="sourceLine" id="cb3-2" title="2"><span class="co">#&gt;   term value marginalmean std.error</span></a>
+<a class="sourceLine" id="cb3-3" title="3"><span class="co">#&gt; 1  cyl     4     22.88479 1.3566479</span></a>
+<a class="sourceLine" id="cb3-4" title="4"><span class="co">#&gt; 2  cyl     6     18.96022 1.0729360</span></a>
+<a class="sourceLine" id="cb3-5" title="5"><span class="co">#&gt; 3  cyl     8     19.35138 1.3770817</span></a>
+<a class="sourceLine" id="cb3-6" title="6"><span class="co">#&gt; 4   am FALSE     18.31987 0.7853925</span></a>
+<a class="sourceLine" id="cb3-7" title="7"><span class="co">#&gt; 5   am  TRUE     22.47772 0.8343346</span></a></code></pre></div>
 <p>The same results can be obtained using the <a href="https://cran.r-project.org/package=emmeans">very powerful <code>emmeans</code> package</a>:</p>
 <div class="sourceCode" id="cb4"><pre class="sourceCode r"><code class="sourceCode r"><a class="sourceLine" id="cb4-1" title="1"><span class="kw">library</span>(emmeans)</a>
 <a class="sourceLine" id="cb4-2" title="2"><span class="kw">emmeans</span>(mod, <span class="dt">specs =</span> <span class="st">&quot;cyl&quot;</span>)</a>
@@ -679,25 +679,25 @@ Marginal means of am
 <div id="tidy-summaries" class="section level1">
 <h1>Tidy summaries</h1>
 <p>The <code>summary</code>, <code>tidy</code>, and <code>glance</code> functions are also available to summarize and manipulate the results:</p>
-<div class="sourceCode" id="cb5"><pre class="sourceCode r"><code class="sourceCode r"><a class="sourceLine" id="cb5-1" title="1">me &lt;-<span class="st"> </span><span class="kw">marginalmeans</span>(mod)</a>
+<div class="sourceCode" id="cb5"><pre class="sourceCode r"><code class="sourceCode r"><a class="sourceLine" id="cb5-1" title="1">mm &lt;-<span class="st"> </span><span class="kw">marginalmeans</span>(mod)</a>
 <a class="sourceLine" id="cb5-2" title="2"></a>
-<a class="sourceLine" id="cb5-3" title="3"><span class="kw">tidy</span>(me)</a>
-<a class="sourceLine" id="cb5-4" title="4"><span class="co">#&gt;   term group estimate std.error statistic p.value conf.low conf.high</span></a>
+<a class="sourceLine" id="cb5-3" title="3"><span class="kw">tidy</span>(mm)</a>
+<a class="sourceLine" id="cb5-4" title="4"><span class="co">#&gt;   term value estimate std.error statistic p.value conf.low conf.high</span></a>
 <a class="sourceLine" id="cb5-5" title="5"><span class="co">#&gt; 1  cyl     4 22.88479 1.3566479  16.86863       0 20.22581  25.54378</span></a>
 <a class="sourceLine" id="cb5-6" title="6"><span class="co">#&gt; 2  cyl     6 18.96022 1.0729360  17.67134       0 16.85730  21.06313</span></a>
 <a class="sourceLine" id="cb5-7" title="7"><span class="co">#&gt; 3  cyl     8 19.35138 1.3770817  14.05246       0 16.65235  22.05041</span></a>
 <a class="sourceLine" id="cb5-8" title="8"><span class="co">#&gt; 4   am FALSE 18.31987 0.7853925  23.32575       0 16.78053  19.85921</span></a>
 <a class="sourceLine" id="cb5-9" title="9"><span class="co">#&gt; 5   am  TRUE 22.47772 0.8343346  26.94090       0 20.84246  24.11299</span></a>
 <a class="sourceLine" id="cb5-10" title="10"></a>
-<a class="sourceLine" id="cb5-11" title="11"><span class="kw">glance</span>(me)</a>
+<a class="sourceLine" id="cb5-11" title="11"><span class="kw">glance</span>(mm)</a>
 <a class="sourceLine" id="cb5-12" title="12"><span class="co">#&gt;   r.squared adj.r.squared   sigma statistic      p.value df    logLik      AIC</span></a>
 <a class="sourceLine" id="cb5-13" title="13"><span class="co">#&gt; 1  0.824875     0.7989306 2.70253   31.7939 7.400614e-10  4 -74.50167 161.0033</span></a>
 <a class="sourceLine" id="cb5-14" title="14"><span class="co">#&gt;        BIC deviance df.residual nobs       F</span></a>
 <a class="sourceLine" id="cb5-15" title="15"><span class="co">#&gt; 1 169.7978  197.199          27   32 31.7939</span></a>
 <a class="sourceLine" id="cb5-16" title="16"></a>
-<a class="sourceLine" id="cb5-17" title="17"><span class="kw">summary</span>(me)</a>
+<a class="sourceLine" id="cb5-17" title="17"><span class="kw">summary</span>(mm)</a>
 <a class="sourceLine" id="cb5-18" title="18"><span class="co">#&gt; Estimated marginal means </span></a>
-<a class="sourceLine" id="cb5-19" title="19"><span class="co">#&gt;   Term Group  Mean Std. Error z value   Pr(&gt;|z|) 2.5 % 97.5 %</span></a>
+<a class="sourceLine" id="cb5-19" title="19"><span class="co">#&gt;   Term Value  Mean Std. Error z value   Pr(&gt;|z|) 2.5 % 97.5 %</span></a>
 <a class="sourceLine" id="cb5-20" title="20"><span class="co">#&gt; 1  cyl     4 22.88     1.3566   16.87 &lt; 2.22e-16 20.23  25.54</span></a>
 <a class="sourceLine" id="cb5-21" title="21"><span class="co">#&gt; 2  cyl     6 18.96     1.0729   17.67 &lt; 2.22e-16 16.86  21.06</span></a>
 <a class="sourceLine" id="cb5-22" title="22"><span class="co">#&gt; 3  cyl     8 19.35     1.3771   14.05 &lt; 2.22e-16 16.65  22.05</span></a>
@@ -709,11 +709,11 @@ Marginal means of am
 <p>Thanks to those tidiers, we can also present the results in the style of a regression table <a href="https://vincentarelbundock.github.io/modelsummary/">using the <code>modelsummary</code> package:</a></p>
 <div class="sourceCode" id="cb6"><pre class="sourceCode r"><code class="sourceCode r"><a class="sourceLine" id="cb6-1" title="1"><span class="kw">library</span>(<span class="st">&quot;modelsummary&quot;</span>)</a>
 <a class="sourceLine" id="cb6-2" title="2"></a>
-<a class="sourceLine" id="cb6-3" title="3"><span class="kw">modelsummary</span>(me,</a>
+<a class="sourceLine" id="cb6-3" title="3"><span class="kw">modelsummary</span>(mm,</a>
 <a class="sourceLine" id="cb6-4" title="4">             <span class="dt">title =</span> <span class="st">&quot;Estimated Marginal Means&quot;</span>,</a>
 <a class="sourceLine" id="cb6-5" title="5">             <span class="dt">estimate =</span> <span class="st">&quot;{estimate} ({std.error}){stars}&quot;</span>,</a>
 <a class="sourceLine" id="cb6-6" title="6">             <span class="dt">statistic =</span> <span class="ot">NULL</span>,</a>
-<a class="sourceLine" id="cb6-7" title="7">             <span class="dt">group =</span> term <span class="op">+</span><span class="st"> </span>group <span class="op">~</span><span class="st"> </span>model)</a></code></pre></div>
+<a class="sourceLine" id="cb6-7" title="7">             <span class="dt">group =</span> term <span class="op">+</span><span class="st"> </span>value <span class="op">~</span><span class="st"> </span>model)</a></code></pre></div>
 <table class="table" style="width: auto !important; margin-left: auto; margin-right: auto;">
 <caption>
 Estimated Marginal Means
@@ -876,15 +876,14 @@ F
 <a class="sourceLine" id="cb7-15" title="15">void &lt;-<span class="st"> </span><span class="kw">capture.output</span>({</a>
 <a class="sourceLine" id="cb7-16" title="16">    mod &lt;-<span class="st"> </span><span class="kw">multinom</span>(y <span class="op">~</span><span class="st"> </span>., dat)</a>
 <a class="sourceLine" id="cb7-17" title="17">})</a></code></pre></div>
-<p>Try to compute marginal means, but realize that you are trying to get marginal means for the wrong type of prediction:</p>
-<div class="sourceCode" id="cb8"><pre class="sourceCode r"><code class="sourceCode r"><a class="sourceLine" id="cb8-1" title="1"><span class="kw">marginalmeans</span>(mod)</a></code></pre></div>
 <p>Try to compute marginal means, but realize that your grid won’t fit in memory:</p>
-<div class="sourceCode" id="cb9"><pre class="sourceCode r"><code class="sourceCode r"><a class="sourceLine" id="cb9-1" title="1"><span class="kw">marginalmeans</span>(mod, <span class="dt">type =</span> <span class="st">&quot;probs&quot;</span>)</a></code></pre></div>
+<div class="sourceCode" id="cb8"><pre class="sourceCode r"><code class="sourceCode r"><a class="sourceLine" id="cb8-1" title="1"><span class="kw">marginalmeans</span>(mod, <span class="dt">type =</span> <span class="st">&quot;probs&quot;</span>)</a>
+<a class="sourceLine" id="cb8-2" title="2"><span class="co">#&gt; Error in typical(..., model = model, newdata = newdata, FUN.character = FUN.character, : You are trying to create a prediction grid with more than 1 billion rows, which is likely to exceed the memory and computational power available on your local machine. Presumably this is because you are considering many variables with many levels. All of the functions in the `marginaleffects` package include arguments to specify a restricted list of variables over which to create a prediction grid.</span></a></code></pre></div>
 <p>Use the <code>variables</code> and <code>variables_grid</code> arguments to compute marginal means over a more reasonably sized grid:</p>
-<div class="sourceCode" id="cb10"><pre class="sourceCode r"><code class="sourceCode r"><a class="sourceLine" id="cb10-1" title="1"><span class="kw">marginalmeans</span>(mod,</a>
-<a class="sourceLine" id="cb10-2" title="2">              <span class="dt">type =</span> <span class="st">&quot;probs&quot;</span>,</a>
-<a class="sourceLine" id="cb10-3" title="3">              <span class="dt">variables =</span> <span class="kw">c</span>(<span class="st">&quot;x&quot;</span>, <span class="st">&quot;V1&quot;</span>),</a>
-<a class="sourceLine" id="cb10-4" title="4">              <span class="dt">variables_grid =</span> <span class="kw">paste0</span>(<span class="st">&quot;V&quot;</span>, <span class="dv">2</span><span class="op">:</span><span class="dv">5</span>))</a></code></pre></div>
+<div class="sourceCode" id="cb9"><pre class="sourceCode r"><code class="sourceCode r"><a class="sourceLine" id="cb9-1" title="1"><span class="kw">marginalmeans</span>(mod,</a>
+<a class="sourceLine" id="cb9-2" title="2">              <span class="dt">type =</span> <span class="st">&quot;probs&quot;</span>,</a>
+<a class="sourceLine" id="cb9-3" title="3">              <span class="dt">variables =</span> <span class="kw">c</span>(<span class="st">&quot;x&quot;</span>, <span class="st">&quot;V1&quot;</span>),</a>
+<a class="sourceLine" id="cb9-4" title="4">              <span class="dt">variables_grid =</span> <span class="kw">paste0</span>(<span class="st">&quot;V&quot;</span>, <span class="dv">2</span><span class="op">:</span><span class="dv">3</span>))</a></code></pre></div>
 </div>
 
 

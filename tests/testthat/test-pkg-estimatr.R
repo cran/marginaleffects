@@ -1,5 +1,7 @@
-skip_if_not_installed("estimatr")
 requiet("estimatr")
+requiet("emmeans")
+requiet("margins")
+requiet("broom")
 
 test_that("iv_robust vs. stata", {
     data(Kmenta, package = "ivreg")
@@ -14,25 +16,39 @@ test_that("iv_robust vs. stata", {
 })
 
 
-test_that("lm_robust vs. stata", {
-    model <- lm_robust(carb ~ wt + factor(cyl), 
-                       se_type = "stata",
+test_that("lm_robust vs. stata vs. emtrends", {
+    model <- lm_robust(carb ~ wt + factor(cyl),
+                       se_type = "HC2",
                        data = mtcars)
     stata <- readRDS(test_path("stata/stata.rds"))$estimatr_lm_robust
     mfx <- tidy(marginaleffects(model))
+    mfx$term <- ifelse(mfx$contrast == "6 - 4", "6.cyl", mfx$term)
+    mfx$term <- ifelse(mfx$contrast == "8 - 4", "8.cyl", mfx$term)
     mfx <- merge(mfx, stata)
     expect_equal(mfx$dydx, mfx$dydxstata)
-    expect_equal(mfx$std.error, mfx$std.errorstata, tolerance = .01)
+    expect_equal(mfx$std.error, mfx$std.errorstata)
+    # emtrends
+    mfx <- marginaleffects(model, newdata = datagrid(cyl = 4, wt = 2), variables = "wt")
+    em <- emtrends(model, ~wt, "wt", at = list(cyl = 4, wt = 2))
+    em <- tidy(em)
+    expect_equal(mfx$dydx, em$wt.trend)
+    expect_equal(mfx$std.error, em$std.error)
+    # margins does not support standard errors
+    tmp <- mtcars
+    tmp$cyl <- factor(tmp$cyl)
+    mod <- lm_robust(carb ~ wt + cyl, data = tmp, se_type = "stata")
+    mar <- margins(mod, data = head(tmp))
+    mfx <- marginaleffects(mod, newdata = head(tmp))
+    expect_true(test_against_margins(mfx, mar, se = FALSE))
 })
-
 
 test_that("iv_robust: predictions: no validity", {
     data(Kmenta, package = "ivreg")
     model <- iv_robust(Q ~ P + D | D + F + A, 
                        se_type = "stata",
                        data = Kmenta)
-    expect_predictions(predictions(model), se = FALSE, n_row = 1)
-    expect_predictions(predictions(model, newdata = head(Kmenta)), se = FALSE, n_row = 6)
+    expect_predictions(predictions(model), n_row = nrow(Kmenta))
+    expect_predictions(predictions(model, newdata = head(Kmenta)), n_row = 6)
 })
 
 test_that("lm_robust: marginalmeans predictions: no validity", {
@@ -42,7 +58,7 @@ test_that("lm_robust: marginalmeans predictions: no validity", {
     model <- lm_robust(carb ~ wt + am + cyl,
                        se_type = "stata",
                        data = tmp)
-    expect_predictions(predictions(model), se = FALSE, n_row = 1)
-    expect_predictions(predictions(model, newdata = head(tmp)), se = FALSE, n_row = 6)
-    expect_marginalmeans(marginalmeans(model), se = TRUE)
+    expect_predictions(predictions(model), n_row = nrow(tmp))
+    expect_predictions(predictions(model, newdata = head(tmp)), n_row = 6)
+    expect_marginalmeans(marginalmeans(model))
 })

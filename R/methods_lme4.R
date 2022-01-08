@@ -17,3 +17,20 @@ set_coef.merMod <- function(model, coefs) {
 get_coef.merMod <- function(model, ...) {
     lme4::fixef(model)
 }
+
+
+#' @rdname get_predict
+#' @export
+get_predict.merMod <- function(model,
+                               newdata = insight::get_data(model),
+                               type = "response",
+                               conf.level = NULL,
+                               ...) {
+
+    get_predict.default(model,
+                        newdata = newdata,
+                        type = type,
+                        conf.level = conf.level,
+                        ...)
+}
+

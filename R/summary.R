@@ -9,7 +9,6 @@
 summary.marginaleffects <- function(object, conf.level = 0.95, ...) {
     out <- tidy(object, conf.level = conf.level, ...)
     class(out) <- c("marginaleffects.summary", class(out))
-    attr(out, "numDeriv_method") <- attr(object, "numDeriv_method")
     attr(out, "type") <- attr(object, "type")
     attr(out, "model_type") <- attr(object, "model_type")
     return(out)
@@ -19,6 +18,7 @@ summary.marginaleffects <- function(object, conf.level = 0.95, ...) {
 #' Print a `marginaleffects` summary
 #'
 #' @export
+#' @noRd
 #' @inheritParams summary.marginaleffects
 #' @param x an object produced by the `marginaleffects` function.
 #' @param digits the number of significant digits to use when printing.
@@ -49,6 +49,15 @@ print.marginaleffects.summary <- function(x,
       alpha <- 100 * (1 - attr(x, "conf.level"))
   }
 
+  # contrast is sometimes useless
+  if ("contrast" %in% colnames(out) && all(out$contrast == "")) {
+      out$contrast <- NULL
+  }
+
+  if ("type" %in% colnames(out) && length(unique(out$type)) == 1) {
+      out$type <- NULL
+  }
+
   # rename
   dict <- c("group" = "Group",
             "term" = "Term",
@@ -67,6 +76,7 @@ print.marginaleffects.summary <- function(x,
   for (i in seq_along(dict)) {
     colnames(out)[colnames(out) == names(dict)[i]] <- dict[i]
   }
+
 
   # avoid infinite recursion by stripping marginaleffect.summary class
   out <- as.data.frame(out)
@@ -102,6 +112,7 @@ summary.marginalmeans <- function(object, conf.level = 0.95, ...) {
 #' Print a `marginalmeans` summary
 #'
 #' @export
+#' @noRd
 #' @inheritParams summary.marginalmeans
 #' @param x an object produced by the `marginaleffects` function.
 #' @param digits the number of significant digits to use when printing.
@@ -136,6 +147,7 @@ print.marginalmeans.summary <- function(x,
   dict <- c("group" = "Group",
             "term" = "Term",
             "contrast" = "Contrast",
+            "value" = "Value",
             "estimate" = "Mean",
             "std.error" = "Std. Error",
             "statistic" = "z value",

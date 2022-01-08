@@ -49,22 +49,22 @@ emmeans(mod, specs = "cyl")
 emmeans(mod, specs = "am")
 
 ## -----------------------------------------------------------------------------
-me <- marginalmeans(mod)
+mm <- marginalmeans(mod)
 
-tidy(me)
+tidy(mm)
 
-glance(me)
+glance(mm)
 
-summary(me)
+summary(mm)
 
 ## -----------------------------------------------------------------------------
 library("modelsummary")
 
-modelsummary(me,
+modelsummary(mm,
              title = "Estimated Marginal Means",
              estimate = "{estimate} ({std.error}){stars}",
              statistic = NULL,
-             group = term + group ~ model)
+             group = term + value ~ model)
 
 ## -----------------------------------------------------------------------------
 library(nnet)
@@ -85,15 +85,12 @@ void <- capture.output({
     mod <- multinom(y ~ ., dat)
 })
 
-## ---- eval=FALSE--------------------------------------------------------------
-#  marginalmeans(mod)
+## ---- error = TRUE------------------------------------------------------------
+marginalmeans(mod, type = "probs")
 
-## ---- eval=FALSE--------------------------------------------------------------
-#  marginalmeans(mod, type = "probs")
-
-## ---- eval=FALSE--------------------------------------------------------------
+## ---- eval = FALSE------------------------------------------------------------
 #  marginalmeans(mod,
 #                type = "probs",
 #                variables = c("x", "V1"),
-#                variables_grid = paste0("V", 2:5))
+#                variables_grid = paste0("V", 2:3))
 

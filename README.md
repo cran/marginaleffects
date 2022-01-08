@@ -1,5 +1,5 @@
 
-# The `marginaleffects` package for `R` <img src="https://user-images.githubusercontent.com/987057/134899484-e3392510-2e94-4c39-9830-53356fa5feed.png" align="right" alt="" height="150" />
+# The `marginaleffects` package for `R` <img src="https://user-images.githubusercontent.com/987057/134899484-e3392510-2e94-4c39-9830-53356fa5feed.png" align="right" alt="" width="120" />
 
 <!-- badges: start -->
 
@@ -16,7 +16,8 @@ status](https://www.r-pkg.org/badges/version/marginaleffects)](https://CRAN.R-pr
 ## What?
 
 The `marginaleffects` package allows `R` users to compute and plot four
-principal quantities of interest for a *wide* variety of models:
+principal quantities of interest for [a very wide variety of
+models:](https://vincentarelbundock.github.io/marginaleffects/articles/supported_models.html)
 
   - [*Marginal Effect*
     (Vignette)](https://vincentarelbundock.github.io/marginaleffects/articles/mfx.html)
@@ -36,6 +37,19 @@ principal quantities of interest for a *wide* variety of models:
     (Vignette)](https://vincentarelbundock.github.io/marginaleffects/articles/marginalmeans.html)
       - Adjusted predictions of a model, averaged across a “reference
         grid” of categorical predictors.
+
+The rest of this page includes a “Getting Started” tutorial with simple
+examples. To go beyond these simple examples, please read the vignettes
+linked above, for each of the four quantities. In addition, you can
+consult these pages:
+
+  - [List of supported
+    models](https://vincentarelbundock.github.io/marginaleffects/articles/supported_models.html)
+  - Case studies:
+      - [Bayesian analyses with
+        `brms`](https://vincentarelbundock.github.io/marginaleffects/articles/brms.html)
+      - [Mixed effects models with
+        `lme4`](https://vincentarelbundock.github.io/marginaleffects/articles/lme4.html)
 
 ## Why?
 
@@ -110,42 +124,6 @@ gradients and jacobians, and [the `insight`
 package](https://easystats.github.io/insight/) to extract information
 from model objects. That’s it. That’s the secret sauce.
 
-## Supported models
-
-#### Adjusted predictions and marginal means
-
-Under the hood, `marginaleffects`’s `predictions` function uses the
-`insight` package to retrieve adjusted predictions from a wide variety
-of models. Currently, `insight` [supports over 100 model
-types](https://easystats.github.io/insight/), and many should work
-out-of-the-box with the `predictions` function. If you run into
-problems, do not hesitate to report them on Github or via email.
-
-#### Marginal effects and contrasts
-
-This table shows the list of models supported by the `marginaleffects`
-function, and shows which numerical results – marginal effects (dY/dX)
-or standard errors (Std. Error) – have been checked against alternative
-software packages: Stata’s `margins` command and R’s `margins` package.
-Empty cells mean that the results of a model have not yet been validated
-against external software. Green cells indicate that the results of [at
-least one model from the test
-suite](https://github.com/vincentarelbundock/marginaleffects/tree/main/tests/testthat)
-match to a reasonable tolerance. Red cells mean that `marginaleffects`
-results do *not* match those produced by alternative software packages.
-Obviously, caution is especially warranted when working with estimates
-from red cells.
-
-I am *very* eager to add support for new models. Feel free to file a
-request on Github or – even better – submit some code.
-
-Warning: When using `marginaleffects` with different models, you will
-probably have to adjust the `type` argument. Refer to the documentation
-of your modeling package to see what `type` argument is allowed in the
-`predict` function.
-
-<img src="man/figures/README-supported_models.png" width="60%" />
-
 ## Installation
 
 You can install the released version of `marginaleffects` from CRAN:
@@ -186,11 +164,11 @@ full results with functions like `head`, as you would with any other
 mfx <- marginaleffects(mod)
 
 head(mfx, 4)
-#>   rowid     type term       dydx std.error  mpg  hp    wt am predicted
-#> 1     1 response   am  0.3251736  1.682202 21.0 110 2.620  1  22.48857
-#> 2     2 response   am -0.5438639  1.568211 21.0 110 2.875  1  20.80186
-#> 3     3 response   am  1.2007132  2.347558 22.8  93 2.320  1  25.26465
-#> 4     4 response   am -1.7025805  1.867130 21.4 110 3.215  0  20.25549
+#>   rowid     type term        dydx  std.error  mpg  hp    wt am
+#> 1     1 response   hp -0.03690556 0.01850168 21.0 110 2.620  1
+#> 2     2 response   hp -0.02868936 0.01562768 21.0 110 2.875  1
+#> 3     3 response   hp -0.04657166 0.02259121 22.8  93 2.320  1
+#> 4     4 response   hp -0.04227128 0.01328275 21.4 110 3.215  0
 ```
 
 The function `summary` calculates the “Average Marginal Effect,” that
@@ -199,10 +177,10 @@ is, the average of all unit-specific marginal effects:
 ``` r
 summary(mfx)
 #> Average marginal effects 
-#>       type Term   Effect Std. Error  z value   Pr(>|z|)    2.5 %   97.5 %
-#> 1 response   am -0.04811    1.85260 -0.02597 0.97928233 -3.67913  3.58291
-#> 2 response   hp -0.03807    0.01279 -2.97717 0.00290923 -0.06314 -0.01301
-#> 3 response   wt -3.93909    1.08596 -3.62728 0.00028642 -6.06754 -1.81065
+#>   Term   Effect Std. Error  z value   Pr(>|z|)    2.5 %   97.5 %
+#> 1   am -0.04811    1.85260 -0.02597 0.97928233 -3.67913  3.58291
+#> 2   hp -0.03807    0.01279 -2.97717 0.00290923 -0.06314 -0.01301
+#> 3   wt -3.93909    1.08596 -3.62728 0.00028642 -6.06754 -1.81065
 #> 
 #> Model type:  lm 
 #> Prediction type:  response
@@ -216,7 +194,7 @@ interaction):
 plot_cme(mod, effect = "hp", condition = c("wt", "am"))
 ```
 
-<img src="man/figures/README-unnamed-chunk-8-1.png" width="100%" />
+<img src="man/figures/README-unnamed-chunk-7-1.png" width="100%" />
 
 #### Adjusted predictions
 
@@ -240,12 +218,12 @@ predictions(mod, variables = c("am", "wt"))
 #> 10 response  5.901966 5.8149853 -6.099574  17.90351 146.6875  1 5.4240
 ```
 
-The [`typical` function gives us an even more powerful
-way](https://vincentarelbundock.github.io/marginaleffects/reference/typical.html)
+The [`datagrid` function gives us an even more powerful
+way](https://vincentarelbundock.github.io/marginaleffects/reference/datagrid.html)
 to customize the grid:
 
 ``` r
-predictions(mod, newdata = typical(am = 0, wt = c(2, 4)))
+predictions(mod, newdata = datagrid(am = 0, wt = c(2, 4)))
 #>       type predicted std.error conf.low conf.high       hp am wt
 #> 1 response  21.95621  2.038630 17.74868  26.16373 146.6875  0  2
 #> 2 response  16.60387  1.083201 14.36826  18.83949 146.6875  0  4
@@ -257,7 +235,7 @@ We can plot the adjusted predictions with the `plot_cap` function:
 plot_cap(mod, condition = c("hp", "wt"))
 ```
 
-<img src="man/figures/README-unnamed-chunk-11-1.png" width="100%" />
+<img src="man/figures/README-unnamed-chunk-10-1.png" width="100%" />
 
 Or you can work with the output of the `predictions` or
 `marginaleffects` directly to create your own plots. For example:
@@ -265,17 +243,17 @@ Or you can work with the output of the `predictions` or
 ``` r
 library(tidyverse)
 
-predictions(mod, 
-              newdata = typical(am = 0:1, 
-                                wt = fivenum(mtcars$wt), 
-                                hp = seq(100, 300, 10))) %>%
+predictions(mod,
+            newdata = datagrid(am = 0:1,
+                               wt = fivenum(mtcars$wt),
+                               hp = seq(100, 300, 10))) %>%
     ggplot(aes(x = hp, y = predicted, ymin = conf.low, ymax = conf.high)) +
     geom_ribbon(aes(fill = factor(wt)), alpha = .2) +
     geom_line(aes(color = factor(wt))) +
     facet_wrap(~am)
 ```
 
-<img src="man/figures/README-unnamed-chunk-12-1.png" width="100%" />
+<img src="man/figures/README-unnamed-chunk-11-1.png" width="100%" />
 
 And of course, categorical variables work too:
 
@@ -284,7 +262,7 @@ mod <- lm(mpg ~ factor(cyl), data = mtcars)
 plot_cap(mod, condition = "cyl")
 ```
 
-<img src="man/figures/README-unnamed-chunk-13-1.png" width="100%" />
+<img src="man/figures/README-unnamed-chunk-12-1.png" width="100%" />
 
 #### Marginal means
 
@@ -304,7 +282,7 @@ mod <- lm(mpg ~ am + cyl + hp, data = dat)
 mm <- marginalmeans(mod)
 summary(mm)
 #> Estimated marginal means 
-#>   Term Group  Mean Std. Error z value   Pr(>|z|) 2.5 % 97.5 %
+#>   Term Value  Mean Std. Error z value   Pr(>|z|) 2.5 % 97.5 %
 #> 1   am FALSE 18.32     0.7854   23.33 < 2.22e-16 16.78  19.86
 #> 2   am  TRUE 22.48     0.8343   26.94 < 2.22e-16 20.84  24.11
 #> 3  cyl     4 22.88     1.3566   16.87 < 2.22e-16 20.23  25.54

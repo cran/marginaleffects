@@ -12,7 +12,7 @@
 #'   predictors. This grid can be very large when there are many variables and
 #'   many response levels, so it is advisable to select a limited number of
 #'   variables in the `variables` and `variables_grid` arguments.
-#' @param type Type(s) of prediction as string or vector This can
+#' @param type Type(s) of prediction (string or character vector). This can
 #'   differ based on the model type, but will typically be a string such as:
 #'   "response", "link", "probs", or "zero".
 #' @details
@@ -21,7 +21,7 @@
 #'   includes all combinations of the categorical variables listed in the
 #'   `variables` and `variables_grid` arguments, or all combinations of the
 #'   categorical variables used to fit the model if `variables_grid` is `NULL`.
-#'   In the prediction grid, numeric variables are held at their means. 
+#'   In the prediction grid, numeric variables are held at their means.
 #'
 #'   After constructing the grid and filling the grid with adjusted predictions,
 #'   `marginalmeans` computes marginal means for the variables listed in the
@@ -34,7 +34,7 @@
 #'   The `marginaleffects` website compares the output of this function to the
 #'   popular `emmeans` package, which provides similar but more advanced
 #'   functionality: https://vincentarelbundock.github.io/marginaleffects/
-#' @return Data frame of marginal means with one row per variable-value 
+#' @return Data frame of marginal means with one row per variable-value
 #' combination.
 #' @export
 #' @examples
@@ -52,15 +52,22 @@
 marginalmeans <- function(model,
                           variables = NULL,
                           variables_grid = NULL,
-                          vcov = insight::get_varcov(model),
+                          vcov = NULL,
                           type = "response") {
 
-    dat <- insight::get_data(model)
+    newdata <- insight::get_data(model)
+
+    if (is.null(vcov)) {
+        vcov <- get_vcov(model)
+    }
 
     # sanity
+    if (inherits(model, "brmsfit")) {
+        stop("`brmsfit` objects are yet not supported by the `marginalmeans` function. Follow this link to track progress: https://github.com/vincentarelbundock/marginaleffects/issues/137")
+    }
     checkmate::assert_character(variables, min.len = 1, null.ok = TRUE)
     if (!is.null(variables)) {
-        bad <- setdiff(variables, colnames(dat))
+        bad <- setdiff(variables, colnames(newdata))
         if (length(bad) > 0) {
             stop(sprintf("Elements of the `variables` argument were not found as column names in the data used to fit the model: %s", paste(bad, collapse = ", ")))
         }
@@ -68,16 +75,23 @@ marginalmeans <- function(model,
 
     checkmate::assert_character(variables_grid, min.len = 1, null.ok = TRUE)
     if (!is.null(variables_grid)) {
-        bad <- setdiff(variables_grid, colnames(dat))
+        bad <- setdiff(variables_grid, colnames(newdata))
         if (length(bad) > 0) {
             stop(sprintf("Elements of the `variables_grid` argument were not found as column names in the data used to fit the model: %s", paste(bad, collapse = ", ")))
         }
     }
 
+    # interactions are not supported
+    # stats::terms does not work with brmsfit
+    interactions <- try(any(grepl(":", attr(stats::terms(model), "term.labels"))), silent = TRUE)
+    if (isTRUE(interactions)) {
+        warning("The `marginalmeans` function does not support models with interactions. The reported standard errors may be misleading.")
+    }
+
     # categorical variables, excluding response
-    column_labels <- colnames(dat)
+    column_labels <- colnames(newdata)
     term_labels <- insight::find_terms(model, flatten = TRUE)
-    variables_categorical <- find_categorical(dat)
+    variables_categorical <- find_categorical(newdata)
     variables_categorical <- setdiff(variables_categorical, insight::find_response(model, flatten = TRUE))
     variables_categorical <- intersect(variables_categorical, term_labels)
     if (length(variables_categorical) == 0) {
@@ -98,93 +112,95 @@ marginalmeans <- function(model,
     }
     variables_grid <- unique(c(variables, variables_grid))
 
-    # predictions for each cell of all categorical data, but not the response
-    dat <- predictions(model = model, variables = variables_grid, type = type)
+    args <- lapply(variables_grid, function(x) unique(newdata[[x]]))
+    args <- stats::setNames(args, variables_grid)
+    args[["newdata"]] <- newdata
+    newgrid <- do.call("datagrid", args)
 
-    # interactions are not supported
-    interactions <- any(grepl(":", attr(stats::terms(model), "term.labels")))
-    if (isTRUE(interactions)) {
-        warning("The `marginalmeans` function does not support models with interactions. The reported standard errors may be misleading.")
-    }
+    mm <- get_marginalmeans(model = model,
+                            newdata = newgrid,
+                            type = type,
+                            variables = variables)
 
-    # model.matrix requires a dataset with response
-    dat[[insight::find_response(model)[1]]] <- 0
-    modmat <- insight::get_modelmatrix(model, data = dat)
+    # we want consistent output, regardless of whether `data.table` is installed/used or not
+    out <- as.data.frame(mm)
 
-    # marginal means and standard errors for a single variable
-    get_mm_se <- function(v) {
-        modmat_tmp <- modmat
+    # standard errors via delta method
+    se <- standard_errors_delta(model,
+                                vcov = vcov,
+                                type = type,
+                                FUN = standard_errors_delta_marginalmeans,
+                                index = NULL,
+                                variables = variables,
+                                newdata = newgrid)
 
-        # assign columns of the matrix unrelated to v to their mean value
-        idx <- grep(match(v, attr(stats::terms(model), "term.labels")), attr(modmat_tmp, "assign"))
-        idx <- setdiff(1:ncol(modmat_tmp), idx)
-        for (i in idx) {
-            modmat_tmp[, i] <- mean(modmat_tmp[, i])
-        }
+    # get rid of attributes in column
+    out[["std.error"]] <- as.numeric(se)
 
-        # one row per combination of the categorical variable
-        idx <- duplicated(modmat_tmp)
-        modmat_tmp <- modmat_tmp[!idx, , drop = FALSE]
-
-        # marginal means
-        f <- stats::as.formula(paste("predicted ~", v))
-        yhat <- stats::aggregate(f, data = dat, FUN = mean)
-        colnames(yhat) <- c("value", "predicted")
-        yhat$term <- v
-
-        # variance: M V M'
-        # only supported on the links scale or for linear models
-        if (type == "link" || isTRUE(insight::model_info(model)$is_linear)) {
-            if (!all(colnames(vcov) %in% colnames(modmat_tmp)) || !all(colnames(vcov) %in% colnames(modmat_tmp))) {
-                stop("The column names produced by `insight::get_varcov(model)` and `insight::get_modelmatrix(model, data=dat)` do not match. This can sometimes happen when using character variables as a factor when fitting a model. A safer strategy is to convert character variables to factors before fitting the model. This makes it easier for `marginaleffects` to keep track of the reference category.")
-            }
-            modmat_tmp <- modmat_tmp[, colnames(vcov), drop = FALSE]
-            se <- dat[!idx, v, drop = FALSE]
-            colnames(se)[match(colnames(se), v)] <- "value"
-            se$term <- v
-            se$std.error <- sqrt(colSums(t(modmat_tmp %*% vcov) * t(modmat_tmp)))
-            out <- merge(yhat, se)
-        } else {
-            out <- yhat
-        }
-        idx <- intersect(c("term", "value", "predicted", "std.error"), colnames(out))
-        out <- out[, idx]
-        return(out)
-    }
-
-    out_list <- list()
-    for (v in variables) {
-        out_list[[v]] <- get_mm_se(v)
-    }
-    out_list <- out_list[sapply(out_list, function(x) !is.null(x))]
-
-    # try to preserve term-value class, but convert if needed to bind
-    if (length(out_list) > 1) {
-        value_types <- sapply(out_list, function(x) class(x$value)[1])
-        if (length(unique(value_types)) > 1) {
-            for (i in seq_along(out_list)) {
-                out_list[[i]]$value <- as.character(out_list[[i]]$value)
-            }
-        }
-    }
-    out <- do.call("rbind", out_list)
-    row.names(out) <- NULL
+    # column order
+    cols <- c("type", "group", "term", "value", "marginalmean", "std.error", sort(colnames(out)))
+    cols <- unique(cols)
+    cols <- intersect(cols, colnames(out))
+    out <- out[, cols, drop = FALSE]
 
     # attributes
-    if (isTRUE(check_dependency("modelsummary"))) {
-        gl <- suppressMessages(suppressWarnings(try(modelsummary::get_gof(model), silent = TRUE)))
-        if (inherits(gl, "data.frame")) {
-            attr(out, "glance") <- data.frame(gl)
-        } else {
-            attr(out, "glance") <- NULL
-        }
-    } else {
-        attr(out, "glance") <- NULL
-    }
     class(out) <- c("marginalmeans", class(out))
+    attr(out, "J") <- attr(se, "J")
+    attr(out, "model") <- model
     attr(out, "type") <- type
     attr(out, "model_type") <- class(model)[1]
     attr(out, "variables") <- variables
 
     return(out)
 }
+
+
+#' Workhorse function for `marginalmeans`
+#'
+#' Needs to be separate because we also need it in `delta_method`
+#' @inheritParams marginalmeans
+#' @inheritParams predictions
+#' @param ... absorb useless arguments from other get_* workhorse functions
+get_marginalmeans <- function(model,
+                              newdata,
+                              type,
+                              variables,
+                              ...) {
+
+    # predictions for each cell of all categorical data, but not the response
+    pred <- predictions(
+        model = model,
+        newdata = newdata,
+        type = type,
+        conf.level = NULL,
+        ...)
+
+    # marginal means
+    mm <- list()
+    for (v in variables) {
+        lhs <- "predicted ~"
+        rhs <- intersect(colnames(pred), c("group", v))
+        rhs <- paste(rhs, collapse = " + ")
+        f <- stats::as.formula(paste(lhs, rhs))
+        tmp <- stats::aggregate(f, data = pred, FUN = mean)
+        cols <- intersect(c("term", "group", v, "predicted"), colnames(tmp))
+        tmp <- tmp[, cols]
+        tmp[["term"]] <- v
+        colnames(tmp)[colnames(tmp) == v] <- "value"
+        colnames(tmp)[colnames(tmp) == "predicted"] <- "marginalmean"
+        mm[[v]] <- tmp
+    }
+
+    # try to preserve term-value class, but convert to character if needed to bind
+    classes <- sapply(mm, function(x) class(x$value)[1])
+    if (length(unique(classes)) > 1) {
+        for (i in seq_along(mm)) {
+            mm[[i]]$value <- as.character(mm[[i]]$value)
+        }
+    }
+    out <- bind_rows(mm)
+
+    return(out)
+}
+
+

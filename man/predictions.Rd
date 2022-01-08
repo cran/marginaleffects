@@ -36,8 +36,29 @@ differ based on the model type, but will typically be a string such as:
 \item{...}{Additional arguments are pushed forward to \code{predict()}.}
 }
 \value{
-A \code{data.frame} with a \code{predicted} column with predictions.
+A \code{data.frame} with one row per observation and several columns:
+\itemize{
+\item \code{rowid}: row number of the \code{newdata} data frame
+\item \code{type}: prediction type, as defined by the \code{type} argument
+\item \code{group}: (optional) value of the grouped outcome (e.g., categorical outcome models)
+\item \code{predicted}: predicted outcome
+\item \code{std.error}: standard errors computed by the \code{insight::get_predicted} function or, if unavailable, via \code{marginaleffects} delta method functionality.
+\item \code{conf.low}: lower bound of the confidence or highest density interval (for bayesian models)
+\item \code{conf.high}: upper bound of the confidence or highest density interval (for bayesian models)
+}
 }
 \description{
 Compute model-adjusted predictions (fitted values) for a "grid" of regressor values.
+}
+\examples{
+# Predicted outcomes for every row of the original dataset
+mod <- lm(mpg ~ hp + factor(cyl), data = mtcars)
+pred <- predictions(mod)
+head(pred)
+
+# Predicted outcomes for user-specified values of the regressors
+predictions(mod, newdata = datagrid(hp = c(100, 120), cyl = 4))
+
+# Plot of predicted outcomes for different values of the regressor
+plot_cap(mod, condition = "hp")
 }

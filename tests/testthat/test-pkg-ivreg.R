@@ -1,4 +1,3 @@
-skip_if_not_installed("ivreg")
 requiet("margins")
 requiet("dplyr")
 requiet("ivreg")
@@ -9,6 +8,13 @@ test_that("marginaleffects: vs. margins", {
     res <- marginaleffects(mod)
     mar <- data.frame(margins(mod, unit_ses = TRUE))
     expect_true(test_against_margins(res, mar, tolerance = .1, verbose = TRUE))
+})
+
+test_that("plot_cap: bugs stay dead", {
+    # broke when no conf.low available
+    data(Kmenta, package = "ivreg")
+    mod <- ivreg::ivreg(Q ~ P + D + I(D^2) | D + I(D^2) + F + A, data = Kmenta)
+    expect_error(plot_cap(mod, condition = "D"), NA)
 })
 
 test_that("marginaleffects: vs. Stata", {
@@ -28,8 +34,8 @@ test_that("predictions: no validity", {
     mod <- ivreg::ivreg(Q ~ P * D | D + F + A, data = Kmenta)
     pred1 <- predictions(mod)
     pred2 <- predictions(mod, newdata = head(Kmenta))
-    expect_predictions(pred1, n_row = 1, se = FALSE)
-    expect_predictions(pred2, n_row = 6, se = FALSE)
+    expect_predictions(pred1, n_row = nrow(Kmenta))
+    expect_predictions(pred2, n_row = 6)
 })
 
 test_that("marginalmeans: no validity", {

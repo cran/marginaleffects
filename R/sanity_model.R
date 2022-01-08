@@ -4,14 +4,12 @@
 #' @return A warning, an error, or nothing
 #' @rdname sanity_model_specific
 #' @keywords internal
-#' @export
 sanity_model_specific <- function (model, ...) {
     UseMethod("sanity_model_specific", model)
 }
 
 
 #' @rdname sanity_model_specific
-#' @export
 sanity_model_specific.default <- function(model, ...) {
     return(invisible(NULL))
 }
@@ -21,6 +19,7 @@ sanity_model_supported_class <- function(model) {
     supported <- list("betareg",
                       "bife",
                       "brglmFit",
+                      "brmsfit",
                       c("brnb", "negbin", "glm"),
                       "clm",
                       "coxph",
@@ -33,6 +32,8 @@ sanity_model_supported_class <- function(model) {
                       "gls",
                       "glmerMod",
                       "glmrob",
+                      c("glmmPQL", "lme"),
+                      "glimML",
                       "glmx",
                       "hurdle",
                       "hxlr",
@@ -52,6 +53,7 @@ sanity_model_supported_class <- function(model) {
                       "rq",
                       "speedglm",
                       "speedlm",
+                      "stanreg",
                       c("tobit", "survreg"),
                       "truncreg",
                       "zeroinfl")

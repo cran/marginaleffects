@@ -1,6 +1,7 @@
 mod <- glm(vs ~ hp * mpg, data = mtcars, family = binomial)
 mfx <- marginaleffects(mod)
 
+
 test_that("tidy: minimal", {
     ti <- tidy(mfx)
     expect_equal(dim(ti), c(2, 8))
@@ -37,23 +38,31 @@ test_that("tidy: with and without contrasts", {
     # logical only
     model <- lm(mpg ~ am, tmp)
     x <- tidy(marginaleffects(model))
-    expect_equal(dim(x), c(1, 8))
+    expect_equal(dim(x), c(1, 9))
 
     # factor only
     model <- lm(mpg ~ factor(gear), tmp)
     x <- tidy(marginaleffects(model))
-    expect_equal(dim(x), c(2, 8))
+    expect_equal(dim(x), c(2, 9))
 
     # combinations
     x <- tidy(marginaleffects(lm(mpg ~ hp + am, tmp)))
-    expect_equal(dim(x), c(2, 8))
+    expect_equal(dim(x), c(2, 9))
 
     x <- tidy(marginaleffects(lm(mpg ~ hp + factor(gear), tmp)))
-    expect_equal(dim(x), c(3, 8))
+    expect_equal(dim(x), c(3, 9))
 
     x <- tidy(marginaleffects(lm(mpg ~ am + factor(gear), tmp)))
-    expect_equal(dim(x), c(3, 8))
+    expect_equal(dim(x), c(3, 9))
 
     x <- tidy(marginaleffects(lm(mpg ~ hp + am + factor(gear), tmp)))
-    expect_equal(dim(x), c(4, 8))
+    expect_equal(dim(x), c(4, 9))
+})
+
+
+test_that("bugs stay dead: multi-type are not duplicated", {
+    mod <- glm(am ~ mpg, family = binomial, data = mtcars)
+    mfx <- marginaleffects(mod, type = c("response", "link"))
+    ti <- tidy(mfx)
+    expect_equal(nrow(ti), 2)
 })

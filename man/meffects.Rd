@@ -36,7 +36,15 @@ differ based on the model type, but will typically be a string such as:
 \item{...}{Additional arguments are pushed forward to \code{predict()}.}
 }
 \value{
-A data.frame of marginal effect estimates with one row per observation per marginal effect.
+A \code{data.frame} with one row per observation (per term/group) and several columns:
+\itemize{
+\item \code{rowid}: row number of the \code{newdata} data frame
+\item \code{type}: prediction type, as defined by the \code{type} argument
+\item \code{group}: (optional) value of the grouped outcome (e.g., categorical outcome models)
+\item \code{term}: the variable whose marginal effect is computed
+\item \code{dydx}: marginal effect of the term on the outcome for a given combination of regressor values
+\item \code{std.error}: standard errors computed by via the delta method.
+}
 }
 \description{
 A "marginal effect" is the partial derivative of the regression equation
@@ -44,8 +52,9 @@ with respect to a variable in the model. This function uses automatic
 differentiation to compute marginal effects for a vast array of models,
 including non-linear models with transformations (e.g., polynomials). The
 list of supported models and of models whose numerical results have been
-validated against external software (\code{Stata} or \code{margins}) is held in the
-\code{supported_models} dataset which accompanies this package.
+validated against external software (\code{Stata}, \code{margins}, and/or \code{emmeans})
+is reported on the package website:
+https://vincentarelbundock.github.io/marginaleffects/
 }
 \examples{
 
@@ -57,12 +66,10 @@ head(mfx)
 plot(mfx)
 
 # typical marginal effects
-marginaleffects(mod,
-                newdata = typical(hp = c(100, 110)))
+marginaleffects(mod, newdata = datagrid(hp = c(100, 110)))
 
 # counterfactual average marginal effects
-marginaleffects(mod,
-                newdata = counterfactual(hp = c(100, 110)))
+marginaleffects(mod, newdata = datagrid(hp = c(100, 110), grid.type = "counterfactual"))
 
 # heteroskedasticity robust standard errors
 marginaleffects(mod, vcov = sandwich::vcovHC(mod))

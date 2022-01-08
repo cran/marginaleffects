@@ -1,140 +1,104 @@
+#' Compute marginal effect for of single regressor, for a single prediction type
+#' @noRd
 get_dydx <- function(model,
                      variable,
-                     group_name,
-                     fitfram,
+                     newdata,
                      type,
-                     numDeriv_method) {
+                     ...) {
 
-    if (variable %in% find_categorical(fitfram)) {
-        dydx_fun <- get_dydx_categorical
+    if (variable %in% find_categorical(newdata) || isTRUE(attr(newdata[[variable]], "factor"))) {
+        dydx_fun <- get_contrasts
+    } else if (inherits(model, "brmsfit") || inherits(model, "stanreg")) {
+        dydx_fun <- get_dydx_via_contrasts
     } else {
         dydx_fun <- get_dydx_continuous
     }
 
     out <- dydx_fun(model = model,
-                    fitfram = fitfram,
-                    v = variable,
-                    group_name = group_name,
+                    newdata = newdata,
+                    variable = variable,
                     type = type,
-                    numDeriv_method = numDeriv_method)
+                    normalize_dydx = TRUE,
+                    ...)
+
+    # normalize names to merge when requesting dydx
+    if (all(c("contrast", "estimate") %in% colnames(out))) {
+        colnames(out)[colnames(out) == "estimate"] <- "dydx"
+    }
 
     return(out)
 }
 
 
-get_dydx_continuous <- function(model, 
+#' Compute marginal effect for a continuous regressor
+#' @noRd
+get_dydx_continuous <- function(model,
                                 variable,
-                                fitfram = insight::get_data(model),
-                                group_name = NULL,
+                                newdata = insight::get_data(model),
                                 type = "response",
-                                numDeriv_method = "simple",
+                                normalize_dydx = NULL, # do not push to ...
+                                vcov = NULL, # do not push to ...
+                                step_size = NULL, # do not push to ...
                                 ...) {
-    fitfram_tmp <- fitfram
-    inner <- function(x) {
-        fitfram_tmp[[variable]] <- x
-        pred <- get_predict(model = model,
-                            newdata = fitfram_tmp,
-                            type = type,
-                            group_name = group_name,
-                            ...)
 
-        # strip weird attributes added by some methods (e.g., predict.svyglm)
-        pred <- as.numeric(pred)
-        return(pred)
+    # we need to loop over group names because the input and output of grad()
+    # must be of the same dimensions. This is inefficient with
+    # grouped/categorical outcomes, but VAB cannot currently think of a good
+    # way to avoid this.
+    group_names <- get_group_names(model, type = type)
+
+    numDeriv_method <- sanitize_numDeriv_method()
+
+    out_list <- list()
+    for (gn in group_names) {
+        newdata_tmp <- newdata
+        inner <- function(x) {
+            newdata_tmp[[variable]] <- x
+
+            # some predict methods raise warnings on unused arguments
+            tmp <- get_predict(model = model,
+                               newdata = newdata_tmp,
+                               type = type,
+                               ...)
+
+            if (gn != "main_marginaleffect") {
+                tmp$predicted[tmp$group == gn]
+            } else {
+                tmp$predicted
+            }
+        }
+        gr <- numDeriv::grad(func = inner,
+                             x = newdata[[variable]],
+                             method = numDeriv_method)
+        out_list[[gn]] <- data.frame(rowid = 1:nrow(newdata),
+                                     group = gn,
+                                     term = variable,
+                                     dydx = gr)
     }
-    g <- numDeriv::grad(func = inner, 
-                        x = fitfram[[variable]], 
-                        method = numDeriv_method)
-    out <- data.frame(rowid = 1:nrow(fitfram),
-                      term = variable,
-                      dydx = g)
+    out <- bind_rows(out_list)
     return(out)
 }
 
 
-get_dydx_categorical <- function(model,
-                                 variable,
-                                 fitfram = insight::get_data(model),
-                                 group_name = NULL,
-                                 type = "response",
-                                 ...) {
-
-    # Create counterfactual datasets with different factor values and compare the predictions
-    if (!"rowid" %in% colnames(fitfram)) {
-        fitfram$rowid <- 1:nrow(fitfram)
-    }
-    baseline <- fitfram
-
-    if (is.logical(baseline[[variable]])) {
-        baseline[[variable]] <- FALSE
-        baseline_prediction <- get_predict(model,
-                                           newdata = baseline,
-                                           type = type,
-                                           group_name = group_name)
-        baseline[[variable]] <- TRUE
-        baseline$predicted <- get_predict(model = model,
-                                          newdata = baseline,
-                                          type = type,
-                                          group_name = group_name) - baseline_prediction
-        baseline$term <- paste0(variable, baseline[[variable]])
-        pred <- baseline[, c("rowid", "term", "predicted")]
-    }
-
-    if (is.factor(baseline[[variable]])) {
-        pred_list <- list()
-        baseline[[variable]] <- factor(levels(baseline[[variable]])[1], levels = levels(baseline[[variable]]))
-        baseline_prediction <- get_predict(model,
-                                           newdata = baseline,
-                                           type = type,
-                                           group_name = group_name)
-        for (i in 2:length(levels(baseline[[variable]]))) {
-            baseline[[variable]] <- factor(levels(baseline[[variable]])[i], levels = levels(baseline[[variable]]))
-            baseline$predicted <- get_predict(model = model,
-                                              newdata = baseline,
-                                              type = type,
-                                              group_name = group_name) - baseline_prediction
-            pred_list[[i]] <- baseline[, c("rowid", variable, "predicted")]
-        }
-        pred <- do.call("rbind", pred_list)
-
-        # two possible label formats for factor level coefficients: factor(cyl)4 vs. cyl4
-        levs <- levels(fitfram[[variable]])
-        levs <- levs[2:length(levs)]
-        lab_fmt1 <- sprintf("factor(%s)%s", variable, levs)
-        lab_fmt2 <- sprintf("%s%s", variable, levs)
-        if (all(lab_fmt1 %in% names(get_coef(model)))) {
-            pred$term <- sprintf("factor(%s)%s", variable, pred[[variable]])
-        } else if (all(lab_fmt2 %in% names(get_coef(model)))) {
-            pred$term <- sprintf("%s%s", variable, pred[[variable]])
-        } else {
-            pred$term <- pred[[variable]]
-        }
-        pred <- pred[, c("rowid", "term", "predicted")]
-    }
-
-    if (is.character(baseline[[variable]])) {
-        pred_list <- list()
-        levs <- unique(baseline[[variable]])
-        baseline[[variable]] <- levs[1]
-        baseline_prediction <- get_predict(model,
-                                           newdata = baseline,
-                                           type = type,
-                                           group_name = group_name)
-        for (i in 2:length(levs)) {
-            baseline[[variable]] <- levs[i]
-            baseline$predicted <- get_predict(model = model,
-                                              newdata = baseline,
-                                              type = type,
-                                              group_name = group_name) - baseline_prediction
-            baseline$term <- sprintf("%s%s", variable, baseline[[variable]])
-            pred_list[[i]] <- baseline[, c("rowid", "term", "predicted")]
-        }
-        pred <- do.call("rbind", pred_list)
-    }
-
-    # clean
-    colnames(pred) <- c("rowid", "term", "dydx")
-    row.names(pred) <- NULL
-
-    return(pred)
+#' In some cases (e.g., Bayesian models) the automatic differentiation approach
+#' with `numDeriv` does not apply straightforwardly. We use the `get_contrasts`
+#' function with a small step to get a very small contrast. Then normalize by
+#' dividing by the step via the `normalize_dydx` argument.
+#' @noRd
+get_dydx_via_contrasts <- function(model,
+                                   newdata,
+                                   variable,
+                                   type = "response",
+                                   normalize_dydx = TRUE,
+                                   ...) {
+    out <- get_contrasts(model = model,
+                  newdata = newdata,
+                  variable = variable,
+                  type = type,
+                  step_size = 1e-5,
+                  normalize_dydx = normalize_dydx,
+                  return_data = FALSE,
+                  ...)
+    return(out)
 }
+
