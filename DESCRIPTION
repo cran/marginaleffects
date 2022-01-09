@@ -1,6 +1,6 @@
 Package: marginaleffects
 Title: Marginal Effects, Marginal Means, Predictions, and Contrasts
-Version: 0.3.0
+Version: 0.3.1
 Authors@R: 
     c(person(given = "Vincent",
              family = "Arel-Bundock",
@@ -44,9 +44,9 @@ Collate: 'complete_levels.R' 'datagrid.R' 'get_coef.R'
         'summary.R' 'tidy.R' 'type_dictionary.R' 'utils.R'
 Language: en-US
 NeedsCompilation: no
-Packaged: 2022-01-08 14:35:23 UTC; vincent
+Packaged: 2022-01-09 02:32:58 UTC; vincent
 Author: Vincent Arel-Bundock [aut, cre, cph]
     (<https://orcid.org/0000-0003-2042-7063>)
 Maintainer: Vincent Arel-Bundock <vincent.arel-bundock@umontreal.ca>
 Repository: CRAN
-Date/Publication: 2022-01-08 14:52:44 UTC
+Date/Publication: 2022-01-09 22:52:41 UTC

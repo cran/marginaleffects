@@ -1,6 +1,6 @@
-0f1da6636f0a9c87d9db361ff68f9800 *DESCRIPTION
-d04a4cd39e5c89c2e9aad743e2f7f79d *NAMESPACE
-03801e1b70832916be0f6767591c0cbb *NEWS.md
+a2e824d71f01270051ed6fe51969411a *DESCRIPTION
+7294efeae3a2d83ec02aedc127637274 *NAMESPACE
+08d4e627f2498a38f4344e6ffa2a755e *NEWS.md
 499fe3f76ded79afa18c6f330a75e5a2 *R/complete_levels.R
 08db15ec4c9c523dc0432ec8ca1f61cd *R/datagrid.R
 02c1f9a0889748262c3487634268a7e7 *R/get_coef.R
@@ -14,7 +14,7 @@ a71fe16b71f0495044a29c9b9a26cb80 *R/get_vcov.R
 124f38c3d8099a968328f07ac264656e *R/marginalmeans.R
 1f0397632f289a02050282bb446cd134 *R/mean_or_mode.R
 a514722b7da604176757c9993118e9eb *R/methods_MASS.R
-06d72ee22b003df2b0cc6fdaafe11ae1 *R/methods_aod.R
+72efefc6db3219192f9df1dd9aff8821 *R/methods_aod.R
 305f93de881174e163285e47e8746fc3 *R/methods_betareg.R
 0f21cdcba82779862e428cf2daca84c6 *R/methods_bife.R
 dee7c26157894236d9d4ba6e629cacf4 *R/methods_brglm2.R
@@ -37,8 +37,8 @@ f968ecea2f586853f8e8dcccfbd476d6 *R/methods_quantreg.R
 8630aa5ce8a2650341e703a94aa3a300 *R/plot_cme.R
 be9bb9467cc96582066eb13ffd4f50f9 *R/poorman.R
 c3b57ef5198fc70e08dc56a69ca21e93 *R/posteriordraws.R
-5f59f86e15174c0f9f6d7c972951c5a5 *R/predictions.R
-dbfac4f9c45bc003b7c19be02e91da5a *R/sanity.R
+c93ec76d364c24659bd602aec6478c69 *R/predictions.R
+dacf71ec1428262aa2e10b56bd6a1430 *R/sanity.R
 44da3b5c6f6321c8fcc4e63755036856 *R/sanity_model.R
 96ec1e525306553b4fa1980aa6ba9926 *R/sanity_type.R
 0c493084ad71412c6bf733002a44d946 *R/set_coef.R
@@ -50,7 +50,7 @@ d328a26491f2ab00ddd24faeacf7512a *R/type_dictionary.R
 ee5b1373cb40b51cc6b060a2c87c4dc3 *README.md
 349d42e9a2acf9c3a56baba4163fd695 *build/vignette.rds
 5714c8158a4e362db8c6c17e948e5300 *inst/COPYRIGHTS
-dbfae99293110d951133dee1b1864fd5 *inst/WORDLIST
+51a30cb90f990b3a1d9f7d5c18ed193a *inst/WORDLIST
 cf759a5df1b8f893678b4690043ad628 *inst/doc/contrasts.R
 de2f392d418663f66bcf819a11b1347a *inst/doc/contrasts.Rmd
 1aadd8ef7de8ef8baf0b25b5f311dc6f *inst/doc/contrasts.html
@@ -91,7 +91,7 @@ c29b9676b64fb5cd6f97b39441003b4b *man/figures/README-unnamed-chunk-9-1.png
 957ff2b0a3897b367307ce0f76de5484 *man/get_group_names.Rd
 6eb73206ef91de7ec3a4872e76003258 *man/get_marginalmeans.Rd
 5dc27b558d2fb80e4a54b86f17c6169f *man/get_predict.Rd
-74409f51264d3c55a7f9dc679e439b6c *man/get_vcov.Rd
+d66f9f4ac96f8f56337d48e37720050c *man/get_vcov.Rd
 37eaef378a0c6514fcaf6b760e7f5792 *man/marginaleffects.Rd
 0f667bfdd3208ad100ba64342e841ef8 *man/marginalmeans.Rd
 338cb6683674198b4c5bf4392b4e7d68 *man/mean_or_mode.Rd
