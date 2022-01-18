@@ -70,6 +70,9 @@ marginaleffects(mod,
                                    species = c("Adelie", "Gentoo")))
 
 ## -----------------------------------------------------------------------------
+marginaleffects(mod, newdata = datagrid())
+
+## -----------------------------------------------------------------------------
 nd <- datagrid(flipper_length_mm = c(160, 180), model = mod, grid.type = "counterfactual")
 
 ## -----------------------------------------------------------------------------

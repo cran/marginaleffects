@@ -15,7 +15,6 @@ betareg,quantile,NA,TRUE,TRUE
 betareg,variance,NA,TRUE,TRUE
 bife,response,expectation,TRUE,TRUE
 bife,link,link,TRUE,TRUE
-bracl,class,classification,FALSE,TRUE
 bracl,probs,expectation,TRUE,TRUE
 brglmFit,link,link,TRUE,TRUE
 brglmFit,response,expectation,TRUE,TRUE
@@ -75,6 +74,8 @@ ivreg,response,expectation,TRUE,TRUE
 lmerMod,response,expectation,TRUE,TRUE
 lmrob,response,expectation,TRUE,TRUE
 lm_robust,response,expectation,TRUE,TRUE
+mblogit,response,expectation,TRUE,TRUE
+mblogit,link,link,TRUE,TRUE
 multinom,probs,expectation,TRUE,TRUE
 multinom,class,classification,FALSE,TRUE
 negbin,link,link,TRUE,TRUE
@@ -108,4 +109,5 @@ return(out)
 #' insight::get_predict accepts a `predict` argument
 #' stats::predict accepts a `type` argument
 #' this dictionary converts
+#' @noRd
 type_dictionary <- type_dictionary_build()

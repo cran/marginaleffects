@@ -65,6 +65,18 @@ ggplot(pred, aes(x = `0`, y = `1`)) +
     labs(x = "Predicted Pr(vs=1), when am = 0",
          y = "Predicted Pr(vs=1), when am = 1")
 
+## -----------------------------------------------------------------------------
+predictions(mod, newdata = datagrid(am = 0, grid.type = "counterfactual")) %>%
+    summarize(across(c(predicted, std.error), mean))
+
+## -----------------------------------------------------------------------------
+predictions(mod, newdata = datagrid(am = 0:1, grid.type = "counterfactual")) %>%
+    group_by(am) %>%
+    summarize(across(c(predicted, std.error), mean))
+
+## -----------------------------------------------------------------------------
+predictions(mod, newdata = datagrid())
+
 ## ---- message = FALSE---------------------------------------------------------
 library(tidyverse)
 dat <- read.csv("https://vincentarelbundock.github.io/Rdatasets/csv/ggplot2movies/movies.csv") %>%
