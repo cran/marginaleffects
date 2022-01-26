@@ -1,3 +1,19 @@
+# marginaleffects 0.3.3
+
+Supported models:
+
+* `mclogit::mclogit`
+* `robust::lmRob`
+* `robustlmm::rlmer`
+* `fixest` confidence intervals in `predictions`
+
+Misc:
+
+* Support `modelbased::visualisation_matrix` in `newdata` without having to specify `x` excplicitly. 
+* `tidy.predictions()` and `summary.predictions()` methods.
+* Documentation improvements.
+* CRAN test fixes
+
 # marginaleffects 0.3.2
 
 Support for new models and packages:

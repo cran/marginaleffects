@@ -1,15 +1,19 @@
-#' Marginal effects using numerical derivatives
+#' Marginal Effects
 #'
 #' This function calculates marginal effects (slopes) for each row of the
-#' dataset. The resulting object can processed by the `tidy()` or `summary()` ,
-#' which compute and print Average Marginal Effects (AME). The `datagrid()`
+#' dataset. The resulting object can processed by the `tidy()` or `summary()`
+#' functions, which compute Average Marginal Effects (AME). The `datagrid()`
 #' function and the `newdata` argument can be used to calculate Marginal
-#' Effects at the Mean. See below for details and examples.
+#' Effects at the Mean (MEM) or Marginal Effects at User-Specified values (aka
+#' Marginal Effects at Representative values, MER). Additional information can
+#' be found in the Details and Examples sections below, and in the vignette on
+#' the `marginaleffects` website.
 #'
 #' A "marginal effect" is the partial derivative of the regression equation
 #' with respect to a variable in the model. This function uses automatic
 #' differentiation to compute marginal effects for a vast array of models,
 #' including non-linear models with transformations (e.g., polynomials).
+#' Uncertainty estimates are computed using the delta method.
 #'
 #' A detailed vignette on marginal effects and a list of supported models can
 #' be found on the package website:
@@ -51,11 +55,18 @@
 #' # Marginal Effect at the Mean (MEM)
 #' marginaleffects(mod, newdata = datagrid())
 #'
-#' # Marginal Effect at User-Specified Values (Counterfactual)
-#' marginaleffects(mod, newdata = datagrid(hp = c(100, 110)))
+#' # Marginal Effect at User-Specified Values
+#' # Variables not explicitly included in `datagrid()` are held at their means
+#' marginaleffects(mod,
+#'                 newdata = datagrid(hp = c(100, 110)))
 #'
-#' # Marginal Effects at User-Specified Values (Counterfactual)
-#' mfx <- marginaleffects(mod, newdata = datagrid(hp = c(100, 110), grid.type = "counterfactual"))
+#' # Marginal Effects at User-Specified Values (counterfactual)
+#' # Variables not explicitly included in `datagrid()` are held at their
+#' # original values, and the whole dataset is duplicated once for each
+#' # combination of the values in `datagrid()`
+#' mfx <- marginaleffects(mod,
+#'                        newdata = datagrid(hp = c(100, 110),
+#'                                           grid.type = "counterfactual"))
 #' head(mfx)
 #'
 #' # Heteroskedasticity robust standard errors
@@ -68,15 +79,31 @@ marginaleffects <- function(model,
                             type = "response",
                             ...) {
 
-    # if `newdata` is a call to `datagrid`, `typical` or `counterfactual`, insert `model`
+
+    # order of the first few paragraphs is important
+    # if `newdata` is a call to `typical` or `counterfactual`, insert `model`
     scall <- substitute(newdata)
-    if (is.call(scall) && as.character(scall)[1] %in% c("datagrid", "typical", "counterfactual")) {
+    if (is.call(scall)) {
         lcall <- as.list(scall)
-        if (!any(c("model", "data") %in% names(lcall))) {
-            lcall <- c(lcall, list("model" = model))
-            newdata <- eval.parent(as.call(lcall))
+        fun_name <- as.character(scall)[1]
+        if (fun_name %in% c("datagrid", "typical", "counterfactual")) {
+            if (!any(c("model", "newdata") %in% names(lcall))) {
+                lcall <- c(lcall, list("model" = model))
+                newdata <- eval.parent(as.call(lcall))
+            }
+        } else if (fun_name == "visualisation_matrix") {
+            if (!"x" %in% names(lcall)) {
+                lcall <- c(lcall, list("x" = insight::get_data(model)))
+                newdata <- eval.parent(as.call(lcall))
+            }
         }
     }
+
+    # modelbased::visualisation_matrix attaches useful info for plotting
+    attributes_newdata <- attributes(newdata)
+    idx <- c("class", "row.names", "names", "data", "reference")
+    idx <- !names(attributes_newdata) %in% idx
+    attributes_newdata <- attributes_newdata[idx]
 
     # sanity checks and pre-processing
     model <- sanity_model(model = model,
@@ -86,7 +113,7 @@ marginaleffects <- function(model,
                           type = type,
                           return_data = return_data,
                           ...)
-
+    sanity_type(model = model, type = type, calling_function = "marginaleffects")
     newdata <- sanity_newdata(model, newdata)
     variables <- sanity_variables(model, newdata, variables)
     vcov <- sanitize_vcov(model, vcov)
@@ -228,6 +255,11 @@ marginaleffects <- function(model,
     attr(out, "J") <- J
     attr(out, "J_mean") <- J_mean
     attr(out, "se_at_mean_gradient") <- se_at_mean_gradient
+
+    # modelbased::visualisation_matrix attaches useful info for plotting
+    for (a in names(attributes_newdata)) {
+        attr(out, paste0("newdata_", a)) <- attributes_newdata[[a]]
+    }
 
     return(out)
 }
