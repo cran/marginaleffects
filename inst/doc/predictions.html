@@ -585,13 +585,13 @@ code > span.er { color: #a61717; background-color: #e3d2d2; }
 <span id="cb1-5"><a href="#cb1-5" aria-hidden="true"></a>pred &lt;-<span class="st"> </span><span class="kw">predictions</span>(mod)</span>
 <span id="cb1-6"><a href="#cb1-6" aria-hidden="true"></a></span>
 <span id="cb1-7"><a href="#cb1-7" aria-hidden="true"></a><span class="kw">head</span>(pred)</span>
-<span id="cb1-8"><a href="#cb1-8" aria-hidden="true"></a><span class="co">#&gt;       type predicted std.error conf.low conf.high  mpg  hp cyl</span></span>
-<span id="cb1-9"><a href="#cb1-9" aria-hidden="true"></a><span class="co">#&gt; 1 response  20.03819 1.2041405 17.57162  22.50476 21.0 110   6</span></span>
-<span id="cb1-10"><a href="#cb1-10" aria-hidden="true"></a><span class="co">#&gt; 2 response  20.03819 1.2041405 17.57162  22.50476 21.0 110   6</span></span>
-<span id="cb1-11"><a href="#cb1-11" aria-hidden="true"></a><span class="co">#&gt; 3 response  26.41451 0.9619738 24.44399  28.38502 22.8  93   4</span></span>
-<span id="cb1-12"><a href="#cb1-12" aria-hidden="true"></a><span class="co">#&gt; 4 response  20.03819 1.2041405 17.57162  22.50476 21.4 110   6</span></span>
-<span id="cb1-13"><a href="#cb1-13" aria-hidden="true"></a><span class="co">#&gt; 5 response  15.92247 0.9924560 13.88952  17.95543 18.7 175   8</span></span>
-<span id="cb1-14"><a href="#cb1-14" aria-hidden="true"></a><span class="co">#&gt; 6 response  20.15839 1.2186288 17.66214  22.65463 18.1 105   6</span></span></code></pre></div>
+<span id="cb1-8"><a href="#cb1-8" aria-hidden="true"></a><span class="co">#&gt;   rowid     type predicted std.error conf.low conf.high  mpg  hp cyl</span></span>
+<span id="cb1-9"><a href="#cb1-9" aria-hidden="true"></a><span class="co">#&gt; 1     1 response  20.03819 1.2041405 17.57162  22.50476 21.0 110   6</span></span>
+<span id="cb1-10"><a href="#cb1-10" aria-hidden="true"></a><span class="co">#&gt; 2     2 response  20.03819 1.2041405 17.57162  22.50476 21.0 110   6</span></span>
+<span id="cb1-11"><a href="#cb1-11" aria-hidden="true"></a><span class="co">#&gt; 3     3 response  26.41451 0.9619738 24.44399  28.38502 22.8  93   4</span></span>
+<span id="cb1-12"><a href="#cb1-12" aria-hidden="true"></a><span class="co">#&gt; 4     4 response  20.03819 1.2041405 17.57162  22.50476 21.4 110   6</span></span>
+<span id="cb1-13"><a href="#cb1-13" aria-hidden="true"></a><span class="co">#&gt; 5     5 response  15.92247 0.9924560 13.88952  17.95543 18.7 175   8</span></span>
+<span id="cb1-14"><a href="#cb1-14" aria-hidden="true"></a><span class="co">#&gt; 6     6 response  20.15839 1.2186288 17.66214  22.65463 18.1 105   6</span></span></code></pre></div>
 <p>In many cases, this is too limiting, and researchers will want to specify a grid of “typical” values over which to compute adjusted predictions.</p>
 <div id="adjusted-predictions-at-user-specified-values-aka-adjusted-predictions-at-representative-values-apr" class="section level1">
 <h1>Adjusted Predictions at User-Specified values (aka Adjusted Predictions at Representative values, APR)</h1>
@@ -600,22 +600,22 @@ code > span.er { color: #a61717; background-color: #e3d2d2; }
 <h2><code>variables</code>: Levels and Tukey’s 5 numbers</h2>
 <p>The <code>variables</code> argument is a handy shortcut to create grids of predictors. Each of the levels of factor/logical/character variables listed in the <code>variables</code> argument will be displayed. For numeric variables, <code>predictions</code> will compute adjusted predictions at Tukey’s 5 summary numbers. All other variables will be set at their means or modes.</p>
 <div class="sourceCode" id="cb2"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb2-1"><a href="#cb2-1" aria-hidden="true"></a><span class="kw">predictions</span>(mod, <span class="dt">variables =</span> <span class="kw">c</span>(<span class="st">&quot;cyl&quot;</span>, <span class="st">&quot;hp&quot;</span>))</span>
-<span id="cb2-2"><a href="#cb2-2" aria-hidden="true"></a><span class="co">#&gt;        type predicted std.error  conf.low conf.high cyl  hp</span></span>
-<span id="cb2-3"><a href="#cb2-3" aria-hidden="true"></a><span class="co">#&gt; 1  response  27.40010 1.0595843 25.229639  29.57056   4  52</span></span>
-<span id="cb2-4"><a href="#cb2-4" aria-hidden="true"></a><span class="co">#&gt; 2  response  21.43244 1.6083883 18.137810  24.72708   6  52</span></span>
-<span id="cb2-5"><a href="#cb2-5" aria-hidden="true"></a><span class="co">#&gt; 3  response  18.87925 2.5641372 13.626851  24.13165   8  52</span></span>
-<span id="cb2-6"><a href="#cb2-6" aria-hidden="true"></a><span class="co">#&gt; 4  response  26.34239 0.9707174 24.353966  28.33081   4  96</span></span>
-<span id="cb2-7"><a href="#cb2-7" aria-hidden="true"></a><span class="co">#&gt; 5  response  20.37474 1.2562453 17.801433  22.94804   6  96</span></span>
-<span id="cb2-8"><a href="#cb2-8" aria-hidden="true"></a><span class="co">#&gt; 6  response  17.82154 1.9364843 13.854831  21.78825   8  96</span></span>
-<span id="cb2-9"><a href="#cb2-9" aria-hidden="true"></a><span class="co">#&gt; 7  response  25.69334 1.1343184 23.369796  28.01689   4 123</span></span>
-<span id="cb2-10"><a href="#cb2-10" aria-hidden="true"></a><span class="co">#&gt; 8  response  19.72569 1.1892191 17.289682  22.16169   6 123</span></span>
-<span id="cb2-11"><a href="#cb2-11" aria-hidden="true"></a><span class="co">#&gt; 9  response  17.17249 1.5721502 13.952087  20.39289   8 123</span></span>
-<span id="cb2-12"><a href="#cb2-12" aria-hidden="true"></a><span class="co">#&gt; 10 response  24.32313 1.7749372 20.687334  27.95892   4 180</span></span>
-<span id="cb2-13"><a href="#cb2-13" aria-hidden="true"></a><span class="co">#&gt; 11 response  18.35547 1.4848895 15.313815  21.39713   6 180</span></span>
-<span id="cb2-14"><a href="#cb2-14" aria-hidden="true"></a><span class="co">#&gt; 12 response  15.80228 0.9537705 13.848567  17.75599   8 180</span></span>
-<span id="cb2-15"><a href="#cb2-15" aria-hidden="true"></a><span class="co">#&gt; 13 response  20.59711 4.0024363 12.398490  28.79573   4 335</span></span>
-<span id="cb2-16"><a href="#cb2-16" aria-hidden="true"></a><span class="co">#&gt; 14 response  14.62945 3.4865450  7.487590  21.77132   6 335</span></span>
-<span id="cb2-17"><a href="#cb2-17" aria-hidden="true"></a><span class="co">#&gt; 15 response  12.07626 2.1126445  7.748702  16.40381   8 335</span></span></code></pre></div>
+<span id="cb2-2"><a href="#cb2-2" aria-hidden="true"></a><span class="co">#&gt;    rowid     type predicted std.error  conf.low conf.high cyl  hp</span></span>
+<span id="cb2-3"><a href="#cb2-3" aria-hidden="true"></a><span class="co">#&gt; 1      1 response  27.40010 1.0595843 25.229639  29.57056   4  52</span></span>
+<span id="cb2-4"><a href="#cb2-4" aria-hidden="true"></a><span class="co">#&gt; 2      2 response  21.43244 1.6083883 18.137810  24.72708   6  52</span></span>
+<span id="cb2-5"><a href="#cb2-5" aria-hidden="true"></a><span class="co">#&gt; 3      3 response  18.87925 2.5641372 13.626851  24.13165   8  52</span></span>
+<span id="cb2-6"><a href="#cb2-6" aria-hidden="true"></a><span class="co">#&gt; 4      4 response  26.34239 0.9707174 24.353966  28.33081   4  96</span></span>
+<span id="cb2-7"><a href="#cb2-7" aria-hidden="true"></a><span class="co">#&gt; 5      5 response  20.37474 1.2562453 17.801433  22.94804   6  96</span></span>
+<span id="cb2-8"><a href="#cb2-8" aria-hidden="true"></a><span class="co">#&gt; 6      6 response  17.82154 1.9364843 13.854831  21.78825   8  96</span></span>
+<span id="cb2-9"><a href="#cb2-9" aria-hidden="true"></a><span class="co">#&gt; 7      7 response  25.69334 1.1343184 23.369796  28.01689   4 123</span></span>
+<span id="cb2-10"><a href="#cb2-10" aria-hidden="true"></a><span class="co">#&gt; 8      8 response  19.72569 1.1892191 17.289682  22.16169   6 123</span></span>
+<span id="cb2-11"><a href="#cb2-11" aria-hidden="true"></a><span class="co">#&gt; 9      9 response  17.17249 1.5721502 13.952087  20.39289   8 123</span></span>
+<span id="cb2-12"><a href="#cb2-12" aria-hidden="true"></a><span class="co">#&gt; 10    10 response  24.32313 1.7749372 20.687334  27.95892   4 180</span></span>
+<span id="cb2-13"><a href="#cb2-13" aria-hidden="true"></a><span class="co">#&gt; 11    11 response  18.35547 1.4848895 15.313815  21.39713   6 180</span></span>
+<span id="cb2-14"><a href="#cb2-14" aria-hidden="true"></a><span class="co">#&gt; 12    12 response  15.80228 0.9537705 13.848567  17.75599   8 180</span></span>
+<span id="cb2-15"><a href="#cb2-15" aria-hidden="true"></a><span class="co">#&gt; 13    13 response  20.59711 4.0024363 12.398490  28.79573   4 335</span></span>
+<span id="cb2-16"><a href="#cb2-16" aria-hidden="true"></a><span class="co">#&gt; 14    14 response  14.62945 3.4865450  7.487590  21.77132   6 335</span></span>
+<span id="cb2-17"><a href="#cb2-17" aria-hidden="true"></a><span class="co">#&gt; 15    15 response  12.07626 2.1126445  7.748702  16.40381   8 335</span></span></code></pre></div>
 <p>The <code>data.frame</code> produced by <code>predictions</code> is “tidy”, which makes it easy to manipulate with other <code>R</code> packages and functions:</p>
 <div class="sourceCode" id="cb3"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb3-1"><a href="#cb3-1" aria-hidden="true"></a><span class="kw">library</span>(kableExtra)</span>
 <span id="cb3-2"><a href="#cb3-2" aria-hidden="true"></a><span class="kw">library</span>(tidyverse)</span>
@@ -739,14 +739,14 @@ hp
 <span id="cb4-5"><a href="#cb4-5" aria-hidden="true"></a><span class="co">#&gt; 3 146.6875   8</span></span></code></pre></div>
 <p>We can also use this <code>datagrid</code> function in a <code>predictions</code> call (omitting the <code>model</code> argument):</p>
 <div class="sourceCode" id="cb5"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb5-1"><a href="#cb5-1" aria-hidden="true"></a><span class="kw">predictions</span>(mod, <span class="dt">newdata =</span> <span class="kw">datagrid</span>())</span>
-<span id="cb5-2"><a href="#cb5-2" aria-hidden="true"></a><span class="co">#&gt;       type predicted std.error conf.low conf.high       hp cyl</span></span>
-<span id="cb5-3"><a href="#cb5-3" aria-hidden="true"></a><span class="co">#&gt; 1 response  16.60307  1.278754 13.98366  19.22248 146.6875   8</span></span>
+<span id="cb5-2"><a href="#cb5-2" aria-hidden="true"></a><span class="co">#&gt;   rowid     type predicted std.error conf.low conf.high       hp cyl</span></span>
+<span id="cb5-3"><a href="#cb5-3" aria-hidden="true"></a><span class="co">#&gt; 1     1 response  16.60307  1.278754 13.98366  19.22248 146.6875   8</span></span>
 <span id="cb5-4"><a href="#cb5-4" aria-hidden="true"></a></span>
 <span id="cb5-5"><a href="#cb5-5" aria-hidden="true"></a><span class="kw">predictions</span>(mod, <span class="dt">newdata =</span> <span class="kw">datagrid</span>(<span class="dt">cyl =</span> <span class="kw">c</span>(<span class="dv">4</span>, <span class="dv">6</span>, <span class="dv">8</span>)))</span>
-<span id="cb5-6"><a href="#cb5-6" aria-hidden="true"></a><span class="co">#&gt;       type predicted std.error conf.low conf.high       hp cyl</span></span>
-<span id="cb5-7"><a href="#cb5-7" aria-hidden="true"></a><span class="co">#&gt; 1 response  25.12392  1.368888 22.31988  27.92796 146.6875   4</span></span>
-<span id="cb5-8"><a href="#cb5-8" aria-hidden="true"></a><span class="co">#&gt; 2 response  19.15627  1.247190 16.60151  21.71102 146.6875   6</span></span>
-<span id="cb5-9"><a href="#cb5-9" aria-hidden="true"></a><span class="co">#&gt; 3 response  16.60307  1.278754 13.98366  19.22248 146.6875   8</span></span></code></pre></div>
+<span id="cb5-6"><a href="#cb5-6" aria-hidden="true"></a><span class="co">#&gt;   rowid     type predicted std.error conf.low conf.high       hp cyl</span></span>
+<span id="cb5-7"><a href="#cb5-7" aria-hidden="true"></a><span class="co">#&gt; 1     1 response  25.12392  1.368888 22.31988  27.92796 146.6875   4</span></span>
+<span id="cb5-8"><a href="#cb5-8" aria-hidden="true"></a><span class="co">#&gt; 2     2 response  19.15627  1.247190 16.60151  21.71102 146.6875   6</span></span>
+<span id="cb5-9"><a href="#cb5-9" aria-hidden="true"></a><span class="co">#&gt; 3     3 response  16.60307  1.278754 13.98366  19.22248 146.6875   8</span></span></code></pre></div>
 <p>Users can change the summary function used to summarize each type of variables using the <code>FUN.numeric</code>, <code>FUN.factor</code>, and related arguments, for example substituting the mean for the median.</p>
 </div>
 <div id="counterfactual-data-grid" class="section level2">
@@ -779,8 +779,8 @@ hp
 <h1>Adjusted Prediction at the Mean (APM)</h1>
 <p>Some analysts may want to calculate an “Adjusted Prediction at the Mean,” that is, the predicted outcome when all the regressors are held at their mean (or mode). To achieve this, we use the <code>datagrid</code> function. By default, this function produces a grid of data with regressors at their means or modes, so all we need to do to get the APM is:</p>
 <div class="sourceCode" id="cb8"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb8-1"><a href="#cb8-1" aria-hidden="true"></a><span class="kw">predictions</span>(mod, <span class="dt">newdata =</span> <span class="kw">datagrid</span>())</span>
-<span id="cb8-2"><a href="#cb8-2" aria-hidden="true"></a><span class="co">#&gt;       type  predicted  std.error    conf.low conf.high       hp      am</span></span>
-<span id="cb8-3"><a href="#cb8-3" aria-hidden="true"></a><span class="co">#&gt; 1 response 0.06308965 0.08662801 0.003794253  0.543491 146.6875 0.40625</span></span></code></pre></div>
+<span id="cb8-2"><a href="#cb8-2" aria-hidden="true"></a><span class="co">#&gt;   rowid     type  predicted  std.error    conf.low conf.high       hp      am</span></span>
+<span id="cb8-3"><a href="#cb8-3" aria-hidden="true"></a><span class="co">#&gt; 1     1 response 0.06308965 0.08662801 0.003794253  0.543491 146.6875 0.40625</span></span></code></pre></div>
 </div>
 <div id="average-adjusted-predictions-aap" class="section level1">
 <h1>Average Adjusted Predictions (AAP)</h1>
@@ -853,13 +853,13 @@ hp
 <div class="sourceCode" id="cb16"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb16-1"><a href="#cb16-1" aria-hidden="true"></a>mod &lt;-<span class="st"> </span><span class="kw">glm</span>(am <span class="op">~</span><span class="st"> </span>mpg, <span class="dt">family =</span> binomial, <span class="dt">data =</span> mtcars)</span>
 <span id="cb16-2"><a href="#cb16-2" aria-hidden="true"></a>pred &lt;-<span class="st"> </span><span class="kw">predictions</span>(mod, <span class="dt">type =</span> <span class="kw">c</span>(<span class="st">&quot;response&quot;</span>, <span class="st">&quot;link&quot;</span>))</span>
 <span id="cb16-3"><a href="#cb16-3" aria-hidden="true"></a><span class="kw">head</span>(pred)</span>
-<span id="cb16-4"><a href="#cb16-4" aria-hidden="true"></a><span class="co">#&gt;       type predicted  std.error  conf.low conf.high am  mpg</span></span>
-<span id="cb16-5"><a href="#cb16-5" aria-hidden="true"></a><span class="co">#&gt; 1 response 0.4610951 0.11584004 0.2554723 0.6808686  1 21.0</span></span>
-<span id="cb16-6"><a href="#cb16-6" aria-hidden="true"></a><span class="co">#&gt; 2 response 0.4610951 0.11584004 0.2554723 0.6808686  1 21.0</span></span>
-<span id="cb16-7"><a href="#cb16-7" aria-hidden="true"></a><span class="co">#&gt; 3 response 0.5978984 0.13239819 0.3356711 0.8139794  1 22.8</span></span>
-<span id="cb16-8"><a href="#cb16-8" aria-hidden="true"></a><span class="co">#&gt; 4 response 0.4917199 0.11961263 0.2746560 0.7119512  0 21.4</span></span>
-<span id="cb16-9"><a href="#cb16-9" aria-hidden="true"></a><span class="co">#&gt; 5 response 0.2969009 0.10051954 0.1411369 0.5204086  0 18.7</span></span>
-<span id="cb16-10"><a href="#cb16-10" aria-hidden="true"></a><span class="co">#&gt; 6 response 0.2599331 0.09782666 0.1147580 0.4876032  0 18.1</span></span></code></pre></div>
+<span id="cb16-4"><a href="#cb16-4" aria-hidden="true"></a><span class="co">#&gt;   rowid     type predicted  std.error  conf.low conf.high am  mpg</span></span>
+<span id="cb16-5"><a href="#cb16-5" aria-hidden="true"></a><span class="co">#&gt; 1     1 response 0.4610951 0.11584004 0.2554723 0.6808686  1 21.0</span></span>
+<span id="cb16-6"><a href="#cb16-6" aria-hidden="true"></a><span class="co">#&gt; 2     2 response 0.4610951 0.11584004 0.2554723 0.6808686  1 21.0</span></span>
+<span id="cb16-7"><a href="#cb16-7" aria-hidden="true"></a><span class="co">#&gt; 3     3 response 0.5978984 0.13239819 0.3356711 0.8139794  1 22.8</span></span>
+<span id="cb16-8"><a href="#cb16-8" aria-hidden="true"></a><span class="co">#&gt; 4     4 response 0.4917199 0.11961263 0.2746560 0.7119512  0 21.4</span></span>
+<span id="cb16-9"><a href="#cb16-9" aria-hidden="true"></a><span class="co">#&gt; 5     5 response 0.2969009 0.10051954 0.1411369 0.5204086  0 18.7</span></span>
+<span id="cb16-10"><a href="#cb16-10" aria-hidden="true"></a><span class="co">#&gt; 6     6 response 0.2599331 0.09782666 0.1147580 0.4876032  0 18.1</span></span></code></pre></div>
 <p>Users who need more control over the type of adjusted predictions to compute, including a host of options for back-transformation, may want to consider the <a href="https://cran.r-project.org/package=emmeans"><code>emmeans</code> package.</a></p>
 <p>We can also plot predictions on different outcome scales:</p>
 <div class="sourceCode" id="cb17"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb17-1"><a href="#cb17-1" aria-hidden="true"></a><span class="kw">plot_cap</span>(mod, <span class="dt">condition =</span> <span class="st">&quot;mpg&quot;</span>, <span class="dt">type =</span> <span class="st">&quot;response&quot;</span>)</span></code></pre></div>

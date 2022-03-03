@@ -408,15 +408,15 @@ code > span.er { color: #a61717; background-color: #e3d2d2; }
 <div class="sourceCode" id="cb3"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb3-1"><a href="#cb3-1" aria-hidden="true"></a><span class="kw">summary</span>(mfx)</span>
 <span id="cb3-2"><a href="#cb3-2" aria-hidden="true"></a><span class="co">#&gt; Average marginal effects </span></span>
 <span id="cb3-3"><a href="#cb3-3" aria-hidden="true"></a><span class="co">#&gt;                Term           Contrast   Effect Std. Error z value   Pr(&gt;|z|)</span></span>
-<span id="cb3-4"><a href="#cb3-4" aria-hidden="true"></a><span class="co">#&gt; 1    bill_length_mm                     0.02757   0.005782   4.768 1.8613e-06</span></span>
-<span id="cb3-5"><a href="#cb3-5" aria-hidden="true"></a><span class="co">#&gt; 2 flipper_length_mm                     0.01058   0.002357   4.490 7.1312e-06</span></span>
-<span id="cb3-6"><a href="#cb3-6" aria-hidden="true"></a><span class="co">#&gt; 3           species Chinstrap - Adelie -0.28201   0.046253  -6.097 1.0800e-09</span></span>
-<span id="cb3-7"><a href="#cb3-7" aria-hidden="true"></a><span class="co">#&gt; 4           species    Gentoo - Adelie  0.19448   0.100429   1.936   0.052809</span></span>
+<span id="cb3-4"><a href="#cb3-4" aria-hidden="true"></a><span class="co">#&gt; 1    bill_length_mm                     0.02757   0.005782  4.7679 1.8613e-06</span></span>
+<span id="cb3-5"><a href="#cb3-5" aria-hidden="true"></a><span class="co">#&gt; 2 flipper_length_mm                     0.01058   0.002357  4.4897 7.1312e-06</span></span>
+<span id="cb3-6"><a href="#cb3-6" aria-hidden="true"></a><span class="co">#&gt; 3           species Chinstrap - Adelie -0.41479   0.056900 -7.2898 3.1042e-13</span></span>
+<span id="cb3-7"><a href="#cb3-7" aria-hidden="true"></a><span class="co">#&gt; 4           species    Gentoo - Adelie  0.06170   0.106856  0.5774    0.56367</span></span>
 <span id="cb3-8"><a href="#cb3-8" aria-hidden="true"></a><span class="co">#&gt;       2.5 %  97.5 %</span></span>
 <span id="cb3-9"><a href="#cb3-9" aria-hidden="true"></a><span class="co">#&gt; 1  0.016237  0.0389</span></span>
 <span id="cb3-10"><a href="#cb3-10" aria-hidden="true"></a><span class="co">#&gt; 2  0.005962  0.0152</span></span>
-<span id="cb3-11"><a href="#cb3-11" aria-hidden="true"></a><span class="co">#&gt; 3 -0.372665 -0.1914</span></span>
-<span id="cb3-12"><a href="#cb3-12" aria-hidden="true"></a><span class="co">#&gt; 4 -0.002359  0.3913</span></span>
+<span id="cb3-11"><a href="#cb3-11" aria-hidden="true"></a><span class="co">#&gt; 3 -0.526312 -0.3033</span></span>
+<span id="cb3-12"><a href="#cb3-12" aria-hidden="true"></a><span class="co">#&gt; 4 -0.147735  0.2711</span></span>
 <span id="cb3-13"><a href="#cb3-13" aria-hidden="true"></a><span class="co">#&gt; </span></span>
 <span id="cb3-14"><a href="#cb3-14" aria-hidden="true"></a><span class="co">#&gt; Model type:  glm </span></span>
 <span id="cb3-15"><a href="#cb3-15" aria-hidden="true"></a><span class="co">#&gt; Prediction type:  response</span></span></code></pre></div>
@@ -426,19 +426,19 @@ code > span.er { color: #a61717; background-color: #e3d2d2; }
 <span id="cb4-2"><a href="#cb4-2" aria-hidden="true"></a><span class="co">#&gt;       type              term           contrast    estimate   std.error</span></span>
 <span id="cb4-3"><a href="#cb4-3" aria-hidden="true"></a><span class="co">#&gt; 1 response    bill_length_mm                     0.02756962 0.005782306</span></span>
 <span id="cb4-4"><a href="#cb4-4" aria-hidden="true"></a><span class="co">#&gt; 2 response flipper_length_mm                     0.01058151 0.002356822</span></span>
-<span id="cb4-5"><a href="#cb4-5" aria-hidden="true"></a><span class="co">#&gt; 3 response           species Chinstrap - Adelie -0.28201057 0.046253122</span></span>
-<span id="cb4-6"><a href="#cb4-6" aria-hidden="true"></a><span class="co">#&gt; 4 response           species    Gentoo - Adelie  0.19447770 0.100428631</span></span>
-<span id="cb4-7"><a href="#cb4-7" aria-hidden="true"></a><span class="co">#&gt;   statistic      p.value    conf.low   conf.high</span></span>
-<span id="cb4-8"><a href="#cb4-8" aria-hidden="true"></a><span class="co">#&gt; 1  4.767928 1.861303e-06  0.01623651  0.03890273</span></span>
-<span id="cb4-9"><a href="#cb4-9" aria-hidden="true"></a><span class="co">#&gt; 2  4.489735 7.131187e-06  0.00596222  0.01520079</span></span>
-<span id="cb4-10"><a href="#cb4-10" aria-hidden="true"></a><span class="co">#&gt; 3 -6.097114 1.080003e-09 -0.37266502 -0.19135612</span></span>
-<span id="cb4-11"><a href="#cb4-11" aria-hidden="true"></a><span class="co">#&gt; 4  1.936477 5.280935e-02 -0.00235880  0.39131420</span></span>
+<span id="cb4-5"><a href="#cb4-5" aria-hidden="true"></a><span class="co">#&gt; 3 response           species Chinstrap - Adelie -0.41479008 0.056899735</span></span>
+<span id="cb4-6"><a href="#cb4-6" aria-hidden="true"></a><span class="co">#&gt; 4 response           species    Gentoo - Adelie  0.06169819 0.106855875</span></span>
+<span id="cb4-7"><a href="#cb4-7" aria-hidden="true"></a><span class="co">#&gt;    statistic      p.value    conf.low   conf.high</span></span>
+<span id="cb4-8"><a href="#cb4-8" aria-hidden="true"></a><span class="co">#&gt; 1  4.7679280 1.861303e-06  0.01623651  0.03890273</span></span>
+<span id="cb4-9"><a href="#cb4-9" aria-hidden="true"></a><span class="co">#&gt; 2  4.4897349 7.131187e-06  0.00596222  0.01520079</span></span>
+<span id="cb4-10"><a href="#cb4-10" aria-hidden="true"></a><span class="co">#&gt; 3 -7.2898420 3.104184e-13 -0.52631151 -0.30326865</span></span>
+<span id="cb4-11"><a href="#cb4-11" aria-hidden="true"></a><span class="co">#&gt; 4  0.5773963 5.636718e-01 -0.14773548  0.27113186</span></span>
 <span id="cb4-12"><a href="#cb4-12" aria-hidden="true"></a></span>
 <span id="cb4-13"><a href="#cb4-13" aria-hidden="true"></a><span class="kw">glance</span>(mfx)</span>
 <span id="cb4-14"><a href="#cb4-14" aria-hidden="true"></a><span class="co">#&gt;   null.deviance df.null    logLik      AIC      BIC deviance df.residual nobs</span></span>
 <span id="cb4-15"><a href="#cb4-15" aria-hidden="true"></a><span class="co">#&gt; 1      473.8202     341 -84.92257 179.8451 199.0192 169.8451         337  342</span></span>
-<span id="cb4-16"><a href="#cb4-16" aria-hidden="true"></a><span class="co">#&gt;          F</span></span>
-<span id="cb4-17"><a href="#cb4-17" aria-hidden="true"></a><span class="co">#&gt; 1 15.66122</span></span></code></pre></div>
+<span id="cb4-16"><a href="#cb4-16" aria-hidden="true"></a><span class="co">#&gt;          F      rmse</span></span>
+<span id="cb4-17"><a href="#cb4-17" aria-hidden="true"></a><span class="co">#&gt; 1 15.66122 0.7099236</span></span></code></pre></div>
 </div>
 <div id="marginal-effect-at-user-specified-values" class="section level1">
 <h1>Marginal Effect at User-Specified Values</h1>
@@ -459,9 +459,9 @@ code > span.er { color: #a61717; background-color: #e3d2d2; }
 <span id="cb6-7"><a href="#cb6-7" aria-hidden="true"></a><span class="co">#&gt; 3     1 response flipper_length_mm                     0.02328764 0.005498309</span></span>
 <span id="cb6-8"><a href="#cb6-8" aria-hidden="true"></a><span class="co">#&gt; 4     2 response flipper_length_mm                     0.03249469 0.008616513</span></span>
 <span id="cb6-9"><a href="#cb6-9" aria-hidden="true"></a><span class="co">#&gt; 5     1 response           species Chinstrap - Adelie -0.21105002 0.103178237</span></span>
-<span id="cb6-10"><a href="#cb6-10" aria-hidden="true"></a><span class="co">#&gt; 6     2 response           species Chinstrap - Adelie -0.37017113 0.344362949</span></span>
+<span id="cb6-10"><a href="#cb6-10" aria-hidden="true"></a><span class="co">#&gt; 6     2 response           species Chinstrap - Adelie -0.21105002 0.103178237</span></span>
 <span id="cb6-11"><a href="#cb6-11" aria-hidden="true"></a><span class="co">#&gt; 7     1 response           species    Gentoo - Adelie  0.15912111 0.303473386</span></span>
-<span id="cb6-12"><a href="#cb6-12" aria-hidden="true"></a><span class="co">#&gt; 8     2 response           species    Gentoo - Adelie  0.00000000 0.000000000</span></span>
+<span id="cb6-12"><a href="#cb6-12" aria-hidden="true"></a><span class="co">#&gt; 8     2 response           species    Gentoo - Adelie  0.15912111 0.303473386</span></span>
 <span id="cb6-13"><a href="#cb6-13" aria-hidden="true"></a><span class="co">#&gt;   bill_length_mm flipper_length_mm species</span></span>
 <span id="cb6-14"><a href="#cb6-14" aria-hidden="true"></a><span class="co">#&gt; 1       43.92193               180  Adelie</span></span>
 <span id="cb6-15"><a href="#cb6-15" aria-hidden="true"></a><span class="co">#&gt; 2       43.92193               180  Gentoo</span></span>
@@ -508,11 +508,11 @@ code > span.er { color: #a61717; background-color: #e3d2d2; }
 <span id="cb10-4"><a href="#cb10-4" aria-hidden="true"></a><span class="st">    </span><span class="kw">group_by</span>(term) <span class="op">%&gt;%</span></span>
 <span id="cb10-5"><a href="#cb10-5" aria-hidden="true"></a><span class="st">    </span><span class="kw">summarize</span>(<span class="kw">across</span>(dydx<span class="op">:</span>std.error, median))</span>
 <span id="cb10-6"><a href="#cb10-6" aria-hidden="true"></a><span class="co">#&gt; # A tibble: 3 × 3</span></span>
-<span id="cb10-7"><a href="#cb10-7" aria-hidden="true"></a><span class="co">#&gt;   term                 dydx std.error</span></span>
-<span id="cb10-8"><a href="#cb10-8" aria-hidden="true"></a><span class="co">#&gt;   &lt;chr&gt;               &lt;dbl&gt;     &lt;dbl&gt;</span></span>
-<span id="cb10-9"><a href="#cb10-9" aria-hidden="true"></a><span class="co">#&gt; 1 bill_length_mm    0.00985   0.00628</span></span>
-<span id="cb10-10"><a href="#cb10-10" aria-hidden="true"></a><span class="co">#&gt; 2 flipper_length_mm 0.00378   0.00144</span></span>
-<span id="cb10-11"><a href="#cb10-11" aria-hidden="true"></a><span class="co">#&gt; 3 species           0         0.0130</span></span></code></pre></div>
+<span id="cb10-7"><a href="#cb10-7" aria-hidden="true"></a><span class="co">#&gt;   term                   dydx std.error</span></span>
+<span id="cb10-8"><a href="#cb10-8" aria-hidden="true"></a><span class="co">#&gt;   &lt;chr&gt;                 &lt;dbl&gt;     &lt;dbl&gt;</span></span>
+<span id="cb10-9"><a href="#cb10-9" aria-hidden="true"></a><span class="co">#&gt; 1 bill_length_mm    0.00985     0.00628</span></span>
+<span id="cb10-10"><a href="#cb10-10" aria-hidden="true"></a><span class="co">#&gt; 2 flipper_length_mm 0.00378     0.00144</span></span>
+<span id="cb10-11"><a href="#cb10-11" aria-hidden="true"></a><span class="co">#&gt; 3 species           0.0000226   0.0902</span></span></code></pre></div>
 </div>
 <div id="conditional-marginal-effects-plot" class="section level1">
 <h1>Conditional Marginal Effects (Plot)</h1>
@@ -636,6 +636,11 @@ code > span.er { color: #a61717; background-color: #e3d2d2; }
 <td align="center">94.415</td>
 <td align="center">45.936</td>
 </tr>
+<tr class="even">
+<td align="left">RMSE</td>
+<td align="center">0.80</td>
+<td align="center">0.80</td>
+</tr>
 </tbody>
 </table>
 <p>The same results can be presented in a coefficient plot:</p>
@@ -674,26 +679,26 @@ code > span.er { color: #a61717; background-color: #e3d2d2; }
 <tr class="odd">
 <td align="left">species</td>
 <td align="left">Chinstrap - Adelie</td>
-<td align="center">-0.134</td>
-<td align="center">-632.250</td>
+<td align="center">-0.165</td>
+<td align="center">-748.562</td>
 </tr>
 <tr class="even">
 <td align="left"></td>
 <td align="left"></td>
-<td align="center">(0.034)</td>
-<td align="center">(58.271)</td>
+<td align="center">(0.043)</td>
+<td align="center">(81.534)</td>
 </tr>
 <tr class="odd">
 <td align="left"></td>
 <td align="left">Gentoo - Adelie</td>
-<td align="center">0.275</td>
-<td align="center">206.747</td>
+<td align="center">0.244</td>
+<td align="center">90.435</td>
 </tr>
 <tr class="even">
 <td align="left"></td>
 <td align="left"></td>
-<td align="center">(0.145)</td>
-<td align="center">(51.486)</td>
+<td align="center">(0.158)</td>
+<td align="center">(88.647)</td>
 </tr>
 <tr class="odd">
 <td align="left">bill_length_mm</td>
@@ -748,6 +753,12 @@ code > span.er { color: #a61717; background-color: #e3d2d2; }
 <td align="left"></td>
 <td align="center">19.252</td>
 <td align="center">389.713</td>
+</tr>
+<tr class="even">
+<td align="left">RMSE</td>
+<td align="left"></td>
+<td align="center">0.75</td>
+<td align="center">340.11</td>
 </tr>
 </tbody>
 </table>

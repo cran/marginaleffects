@@ -23,7 +23,7 @@ plot_cme(
 name to be displayed on the x-axis. The second is a variable whose values
 will be displayed in different colors.}
 
-\item{type}{Type(s) of prediction as string or vector This can
+\item{type}{Type(s) of prediction as string or character vector. This can
 differ based on the model type, but will typically be a string such as:
 "response", "link", "probs", or "zero".}
 
@@ -39,10 +39,10 @@ to 0.95, which corresponds to a 95 percent confidence interval.}
 A \code{ggplot2} object
 }
 \description{
-In models where two continuous variables are interacted, the marginal effect
-of one variable is conditional on the value of the other variable. This
-function draws a plot of the marginal effect of the \code{effect} variable for
-different values of the \code{condition} variable.
+This function plots marginal effects (y-axis) against values of predictor(s)
+variable(s) (x-axis and colors). This is especially useful in models with
+interactions, where the values of marginal effects depend on the values of
+"condition" variables.
 }
 \examples{
 mod <- lm(mpg ~ hp * wt, data = mtcars)

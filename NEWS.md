@@ -1,3 +1,7 @@
+# marginaleffects 0.3.4
+
+* Bug fixes
+
 # marginaleffects 0.3.3
 
 Supported models:
@@ -9,7 +13,7 @@ Supported models:
 
 Misc:
 
-* Support `modelbased::visualisation_matrix` in `newdata` without having to specify `x` excplicitly. 
+* Support `modelbased::visualisation_matrix` in `newdata` without having to specify `x` explicitly. 
 * `tidy.predictions()` and `summary.predictions()` methods.
 * Documentation improvements.
 * CRAN test fixes

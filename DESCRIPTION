@@ -1,6 +1,6 @@
 Package: marginaleffects
 Title: Marginal Effects, Marginal Means, Predictions, and Contrasts
-Version: 0.3.3
+Version: 0.3.4
 Authors@R: 
     c(person(given = "Vincent",
              family = "Arel-Bundock",
@@ -22,13 +22,13 @@ Depends: R (>= 3.5.0)
 Imports: checkmate, generics, insight (>= 0.14.5), methods
 Suggests: bench, brms, broom, data.table, dplyr, emmeans, ggdist,
         ggplot2, ggbeeswarm, gt, haven, kableExtra, knitr, magrittr,
-        margins, modelsummary, patchwork, rlang, rmarkdown, testthat
-        (>= 3.0.0), tidyverse, vdiffr, AER, aod, betareg, bife, brglm2,
-        crch, estimatr, fixest (>= 0.10.1), gam, geepack, glmx, ivreg,
-        lme4, MASS, mclogit, mgcv, nlme, nnet, ordinal, plm, pscl,
-        quantreg, rms, robust, robustbase, robustlmm, rstantools,
-        rstanarm, sandwich, scam, speedglm, survey, survival, truncreg,
-        covr, spelling
+        margins, modelsummary, systemfonts, patchwork, quantreg, rlang,
+        rmarkdown, testthat (>= 3.0.0), tidyverse, vdiffr, AER, aod,
+        betareg, bife, brglm2, crch, estimatr, fixest (>= 0.10.1), gam,
+        geepack, glmx, ivreg, lme4, lmerTest, MASS, mclogit, mgcv,
+        nlme, nnet, ordinal, plm, pscl, rms, robust, robustbase,
+        robustlmm, rstantools, rstanarm, sandwich, scam, speedglm,
+        survey, survival, truncreg, covr, spelling
 Collate: 'complete_levels.R' 'datagrid.R' 'get_coef.R'
         'get_contrasts.R' 'get_dydx.R' 'get_gradient.R'
         'get_group_names.R' 'get_hdi.R' 'get_jacobian.R'
@@ -43,14 +43,14 @@ Collate: 'complete_levels.R' 'datagrid.R' 'get_coef.R'
         'methods_robust.R' 'methods_robustlmm.R' 'methods_rstanarm.R'
         'methods_scam.R' 'methods_stats.R' 'methods_survival.R'
         'package.R' 'plot.R' 'plot_cap.R' 'plot_cme.R' 'poorman.R'
-        'posteriordraws.R' 'predictions.R' 'sanity.R' 'sanity_type.R'
-        'standard_errors_delta.R' 'summary.R' 'tidy.R'
+        'posteriordraws.R' 'predictions.R' 'sanity.R' 'sanity_dots.R'
+        'sanity_type.R' 'standard_errors_delta.R' 'summary.R' 'tidy.R'
         'type_dictionary.R' 'utils.R'
 Language: en-US
 NeedsCompilation: no
-Packaged: 2022-01-25 18:25:55 UTC; vincent
+Packaged: 2022-03-03 03:27:30 UTC; vincent
 Author: Vincent Arel-Bundock [aut, cre, cph]
     (<https://orcid.org/0000-0003-2042-7063>)
 Maintainer: Vincent Arel-Bundock <vincent.arel-bundock@umontreal.ca>
 Repository: CRAN
-Date/Publication: 2022-01-26 07:42:42 UTC
+Date/Publication: 2022-03-03 10:50:02 UTC

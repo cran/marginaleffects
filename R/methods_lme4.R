@@ -11,6 +11,7 @@ set_coef.merMod <- function(model, coefs) {
     model
 }
 
+
 #' @include get_coef.R
 #' @rdname @get_coef
 #' @export
@@ -33,4 +34,35 @@ get_predict.merMod <- function(model,
                         conf.level = conf.level,
                         ...)
 }
+
+
+#' @rdname set_coef
+#' @export
+set_coef.lmerModLmerTest <- set_coef.merMod
+
+
+#' @rdname get_coef
+#' @export
+get_coef.lmerModLmerTest <- get_coef.merMod
+
+
+#' @rdname get_predict
+#' @export
+get_predict.lmerModLmerTest <- get_predict.merMod
+
+
+#' @rdname set_coef
+#' @export
+set_coef.lmerMod <- set_coef.merMod
+
+
+#' @rdname get_coef
+#' @export
+get_coef.lmerMod <- get_coef.merMod
+
+
+#' @rdname get_predict
+#' @export
+get_predict.lmerMod <- get_predict.merMod
+
 
