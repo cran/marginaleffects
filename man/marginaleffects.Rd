@@ -24,7 +24,7 @@ calculates marginal effects for all terms in the model object.}
 
 \item{vcov}{Matrix or boolean
 \itemize{
-\item FALSE: does not compute unit-level standard errors.
+\item FALSE: does not compute unit-level standard errors. This can speed up computation considerably.
 \item TRUE: computes unit-level standard errors using the default \code{vcov(model)} variance-covariance matrix.
 \item Named square matrix: computes standard errors with a user-supplied variance-covariance matrix. This matrix must be square and have dimensions equal to the number of coefficients in \code{get_coef(model)}.
 }}
@@ -33,7 +33,14 @@ calculates marginal effects for all terms in the model object.}
 differ based on the model type, but will typically be a string such as:
 "response", "link", "probs", or "zero".}
 
-\item{...}{The "Model-Specific Arguments" section below gives a list of arguments which can modify the behavior of this function for certain models (e.g., mixed-effects or bayesian).}
+\item{...}{Additional arguments are passed to the \code{predict()} method used to
+compute adjusted predictions. These arguments are particularly useful for
+mixed-effects or bayesian models (see the online vignettes on the
+\code{marginaleffects} website). Available arguments can vary from model to
+model, depending on the range of supported arguments by each modeling
+package. See the "Model-Specific Arguments" section of the
+\code{?marginaleffects} document for a non-exhaustive list of available
+arguments.}
 }
 \value{
 A \code{data.frame} with one row per observation (per term/group) and several columns:
@@ -84,6 +91,8 @@ marginal effects, predictions, marginal means, and contrasts.\tabular{llll}{
 }
 
 \examples{
+\dontshow{if (interactive()) (if (getRversion() >= "3.4") withAutoprint else force)(\{ # examplesIf}
+\dontshow{\}) # examplesIf}
 
 mod <- glm(am ~ hp * wt, data = mtcars, family = binomial)
 mfx <- marginaleffects(mod)

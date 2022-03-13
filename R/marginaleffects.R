@@ -24,7 +24,7 @@
 #' @param variables Variables to consider (character vector). `NULL`
 #'   calculates marginal effects for all terms in the model object.
 #' @param vcov Matrix or boolean
-#'   + FALSE: does not compute unit-level standard errors.
+#'   + FALSE: does not compute unit-level standard errors. This can speed up computation considerably. 
 #'   + TRUE: computes unit-level standard errors using the default `vcov(model)` variance-covariance matrix.
 #'   + Named square matrix: computes standard errors with a user-supplied variance-covariance matrix. This matrix must be square and have dimensions equal to the number of coefficients in `get_coef(model)`.
 #' @param newdata A dataset over which to compute marginal effects. `NULL` uses
@@ -32,7 +32,14 @@
 #' @param type Type(s) of prediction as string or character vector. This can
 #'   differ based on the model type, but will typically be a string such as:
 #'   "response", "link", "probs", or "zero".
-#' @param ... The "Model-Specific Arguments" section below gives a list of arguments which can modify the behavior of this function for certain models (e.g., mixed-effects or bayesian).
+#' @param ... Additional arguments are passed to the `predict()` method used to
+#'   compute adjusted predictions. These arguments are particularly useful for
+#'   mixed-effects or bayesian models (see the online vignettes on the
+#'   `marginaleffects` website). Available arguments can vary from model to
+#'   model, depending on the range of supported arguments by each modeling
+#'   package. See the "Model-Specific Arguments" section of the
+#'   `?marginaleffects` document for a non-exhaustive list of available
+#'   arguments.
 #'
 #' @template model_specific_arguments
 #'
@@ -43,6 +50,7 @@
 #' * `term`: the variable whose marginal effect is computed
 #' * `dydx`: marginal effect of the term on the outcome for a given combination of regressor values
 #' * `std.error`: standard errors computed by via the delta method.
+#' @examplesIf interactive()
 #' @examples
 #'
 #' mod <- glm(am ~ hp * wt, data = mtcars, family = binomial)
@@ -122,7 +130,14 @@ marginaleffects <- function(model,
     }
 
     # variables is a list but we need a vector
-    variables_vec <- unlist(variables[names(variables) %in% c("conditional")])
+    variables_vec <- unique(unlist(variables))
+    # this won't be triggered for multivariate outcomes in `brms`, which
+    # produces a list of lists where top level names correspond to names of the
+    # outcomes. There should be a more robust way to handle those, but it seems
+    # to work for now.
+    if ("conditional" %in% names(variables)) {
+        variables_vec <- intersect(variables_vec, variables[["conditional"]])
+    }
 
     mfx_list <- list()
 
@@ -138,6 +153,8 @@ marginaleffects <- function(model,
                             variable = v,
                             newdata = newdata,
                             type = predt,
+                            vcov = vcov,
+                            internal_call = TRUE, # for group column in comparisons
                             ...)
             mfx$type <- predt
 
@@ -145,6 +162,7 @@ marginaleffects <- function(model,
             if (!is.null(attr(mfx, "posterior_draws"))) {
                 draws_list <- c(draws_list, list(attr(mfx, "posterior_draws")))
                 J <- J_mean <- NULL
+
             # standard errors via delta method
             } else if (!is.null(vcov)) {
                 idx <- intersect(colnames(mfx), c("type", "group", "term", "contrast"))
@@ -160,9 +178,12 @@ marginaleffects <- function(model,
                 mfx$std.error <- as.numeric(se)
                 J <- attr(se, "J")
                 J_mean <- attr(se, "J_mean")
+
+            # no standard error
             } else {
                 J <- J_mean <- NULL
             }
+
             mfx_list <- c(mfx_list, list(mfx))
             J_list <- c(J_list, list(J))
             J_mean_list <- c(J_mean_list, list(J_mean))

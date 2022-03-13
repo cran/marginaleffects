@@ -4,10 +4,11 @@ get_dydx <- function(model,
                      variable,
                      newdata,
                      type,
+                     vcov,
                      ...) {
 
-    if (variable %in% find_categorical(newdata) || isTRUE(attr(newdata[[variable]], "factor"))) {
-        dydx_fun <- get_contrasts
+    if (variable %in% find_categorical(newdata = newdata, model = model) || isTRUE(attr(newdata[[variable]], "factor"))) {
+        dydx_fun <- comparisons
     } else if (inherits(model, "brmsfit") || inherits(model, "stanreg")) {
         dydx_fun <- get_dydx_via_contrasts
     } else {
@@ -18,12 +19,13 @@ get_dydx <- function(model,
                     newdata = newdata,
                     variable = variable,
                     type = type,
-                    normalize_dydx = TRUE,
+                    contrast_numeric_slope = TRUE,
+                    vcov = vcov,
                     ...)
 
     # normalize names to merge when requesting dydx
-    if (all(c("contrast", "estimate") %in% colnames(out))) {
-        colnames(out)[colnames(out) == "estimate"] <- "dydx"
+    if (all(c("contrast", "comparison") %in% colnames(out))) {
+        colnames(out)[colnames(out) == "comparison"] <- "dydx"
     }
 
     return(out)
@@ -34,11 +36,10 @@ get_dydx <- function(model,
 #' @noRd
 get_dydx_continuous <- function(model,
                                 variable,
-                                newdata = insight::get_data(model),
+                                newdata,
                                 type = "response",
-                                normalize_dydx = NULL, # do not push to ...
-                                vcov = NULL, # do not push to ...
-                                step_size = NULL, # do not push to ...
+                                vcov, # do not push to ...
+                                contrast_numeric = 1e-5, # do not push to ...
                                 ...) {
 
     # we need to loop over group names because the input and output of grad()
@@ -79,24 +80,27 @@ get_dydx_continuous <- function(model,
 
 
 #' In some cases (e.g., Bayesian models) the automatic differentiation approach
-#' with `numDeriv` does not apply straightforwardly. We use the `get_contrasts`
+#' with `numDeriv` does not apply straightforwardly. We use the `comparisons`
 #' function with a small step to get a very small contrast. Then normalize by
 #' dividing by the step via the `normalize_dydx` argument.
 #' @noRd
 get_dydx_via_contrasts <- function(model,
                                    newdata,
                                    variable,
+                                   vcov,
                                    type = "response",
-                                   normalize_dydx = TRUE,
+                                   contrast_numeric = 1e-5,
                                    ...) {
-    out <- get_contrasts(model = model,
-                  newdata = newdata,
-                  variable = variable,
-                  type = type,
-                  step_size = 1e-5,
-                  normalize_dydx = normalize_dydx,
-                  return_data = FALSE,
-                  ...)
+
+    out <- comparisons(model = model,
+                       newdata = newdata,
+                       variables = variable,
+                       vcov = vcov,
+                       type = type,
+                       contrast_numeric = contrast_numeric,
+                       contrast_numeric_slope = TRUE,
+                       internal_call = TRUE,
+                       ...)
     return(out)
 }
 

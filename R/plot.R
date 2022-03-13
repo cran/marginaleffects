@@ -12,7 +12,7 @@
 #' mfx <- marginaleffects(mod)
 #' plot(mfx)
 #'
-plot.marginaleffects <- function(x, 
+plot.marginaleffects <- function(x,
                                  conf.int = TRUE,
                                  conf.level = 0.95,
                                  ...) {
@@ -21,12 +21,17 @@ plot.marginaleffects <- function(x,
 
     dat <- tidy(x, conf.int = conf.int, conf.level = conf.level)
 
+    # combine term and contrast to avoid overlap
+    if (all(c("term", "contrast") %in% colnames(dat))) {
+        dat$term <- sprintf("%s: %s", dat$term, dat$contrast)
+    }
+
     if ("conf.low" %in% colnames(dat)) {
         if ("group" %in% colnames(dat)) {
-            p <- ggplot2::ggplot(dat, ggplot2::aes(y = term, 
-                                                   x = estimate, 
-                                                   xmin = conf.low, 
-                                                   xmax = conf.high, 
+            p <- ggplot2::ggplot(dat, ggplot2::aes(y = term,
+                                                   x = estimate,
+                                                   xmin = conf.low,
+                                                   xmax = conf.high,
                                                    color = group))
         } else {
             p <- ggplot2::ggplot(dat, ggplot2::aes(y = term,
@@ -35,8 +40,8 @@ plot.marginaleffects <- function(x,
                                                    xmax = conf.high))
         }
         xlab <- sprintf("Estimates with %s%% confidence intervals", sprintf("%.0f", conf.level * 100))
-        p <- p + 
-             ggplot2::geom_pointrange() + 
+        p <- p +
+             ggplot2::geom_pointrange() +
              ggplot2::labs(x = xlab, y = "")
     } else {
         if ("group" %in% colnames(dat)) {
@@ -50,7 +55,11 @@ plot.marginaleffects <- function(x,
              ggplot2::labs(x = xlab, y = "")
     }
 
-    # theme and return
-    p <- p + ggplot2::theme_minimal()
-    return(p) 
+    # set a new theme only if the default is theme_grey. this prevents user's
+    # theme_set() from being overwritten
+    if (identical(ggplot2::theme_get(), ggplot2::theme_grey())) {
+        p <- p + ggplot2::theme_minimal()
+    }
+
+    return(p)
 }

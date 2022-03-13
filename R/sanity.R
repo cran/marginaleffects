@@ -44,7 +44,7 @@ sanity_newdata <- function(model, newdata) {
 
     # if there are no categorical variables in `newdata`, check the model terms
     # to find transformation and warn accordingly.
-    categorical_variables <- find_categorical(newdata)
+    categorical_variables <- find_categorical(newdata = newdata, model = model)
     flag <- FALSE
     if (length(categorical_variables) == 0) {
         termlabs <- try(attr(stats::terms(model), "term.labels"), silent = TRUE)
@@ -138,7 +138,7 @@ sanitize_vcov <- function(model, vcov) {
     # TRUE: try to extract a vcov
     if (isTRUE(vcov)) {
         vcov <- try(get_vcov(model), silent = TRUE)
-        if (inherits(vcov, "try-error")) {
+        if (inherits(vcov, "try-error") && !inherits(model, "brmsfit")) {
             warning(sprintf('Unable to extract a variance-covariance matrix from model of class "%s" using the `stats::vcov` function. The `vcov` argument was switched to `FALSE`. Please supply a named matrix to produce uncertainty estimates.', class(model)[1]))
             return(NULL)
             # dpoMatrix conversion

@@ -28,6 +28,7 @@ test_that("bugs stay dead: logit with transformations", {
 
 
 test_that("fixest::feols vs. Stata", {
+    requiet("plm")
     data(EmplUK, package = "plm")
     stata <- readRDS(test_path("stata/stata.rds"))$fixest_feols
     model <- feols(wage ~ capital * output | firm, EmplUK)
@@ -38,6 +39,7 @@ test_that("fixest::feols vs. Stata", {
 })
 
 test_that("fixest::fepois vs. Stata", {
+    requiet("plm")
     data(EmplUK, package = "plm")
     stata <- readRDS(test_path("stata/stata.rds"))$fixest_fepois
     model <- fepois(log(wage) ~ capital * output | firm, EmplUK)
@@ -130,4 +132,13 @@ test_that("bug stay dead: insight::get_data doesn't get all columns", {
     mfx2 <- marginaleffects(reg)
     expect_s3_class(mfx1, "marginaleffects")
     expect_s3_class(mfx2, "marginaleffects")
+})
+
+
+test_that("feols linear plot_cap includes confidence intervals", {
+    mod <- feols(mpg ~ hp, data = mtcars)
+    p <- plot_cap(mod, condition = "hp", conf.level = .5)
+    vdiffr::expect_doppelganger("plot_cap: feols small conf.level", p)
+    p <- plot_cap(mod, condition = "hp", conf.level = .99)
+    vdiffr::expect_doppelganger("plot_cap: feols large conf.level", p)
 })

@@ -30,6 +30,8 @@ void <- capture.output({
                    seed = 1024, iter = 1000, silent = 2, backend = "cmdstanr")
     mod_ran <- brm(rating ~ treat + period + (1 | subject), family = cumulative(), data = inhaler,
                    silent = 2, backend = "cmdstanr")
+    mod_mo1 <- brm(mpg ~ hp + mo(carb), data = mtcars, silent = 2, backend = "cmdstanr")
+    mod_mo2 <- brm(mpg ~ hp + factor(cyl) + mo(carb), data = mtcars, silent = 2, backend = "cmdstanr")
 })
 
 test_that("marginaleffects vs. emmeans", {
@@ -301,5 +303,53 @@ test_that("bugs stay dead: character regressors used to produce duplicates", {
     mfx <- marginaleffects(mod_character)
     ti <- tidy(mfx)
     expect_true(length(unique(ti$estimate)) == nrow(ti))
+})
+
+test_that("mo() recognized as factor: Issue #220", {
+    # marginaleffects
+    mfx1 <- marginaleffects(mod_mo1)
+    mfx2 <- marginaleffects(mod_mo1, variable = "carb")
+    expect_error(marginaleffects(mod_mo2), regexp = "cannot be used")
+    expect_s3_class(mfx1, "marginaleffects")
+    expect_s3_class(mfx2, "marginaleffects")
+
+    # comparisons
+    expect_error(comparisons(mod_mo2), regexp = "cannot be used")
+    contr1 <- tidy(comparisons(mod_mo1))
+    expect_true(all(paste(c(2, 3, 4, 6, 8), "-", 1) %in% contr1$contrast))
+    contr2 <- tidy(comparisons(mod_mo1, contrast_factor = "pairwise", variables = "carb"))
+    expect_equal(nrow(contr2), 15)
+})
+
+
+
+test_that("multivariate outcome", {
+    mod <- insight::download_model("brms_mv_1")
+
+    beta <- get_coef(mod)
+    expect_equal(length(beta), 12)
+
+    mfx <- marginaleffects(mod)
+    expect_s3_class(mfx, "marginaleffects")
+
+    pred <- predictions(mod)
+    expect_s3_class(pred, "predictions")
+
+    comp <- comparisons(mod)
+    expect_s3_class(comp, "comparisons")
+})
+
+
+test_that("categorical outcome", {
+    mod <- insight::download_model("brms_categorical_1_wt")
+
+    mfx <- marginaleffects(mod)
+    expect_s3_class(mfx, "marginaleffects")
+
+    pred <- predictions(mod)
+    expect_s3_class(pred, "predictions")
+
+    comp <- comparisons(mod)
+    expect_s3_class(comp, "comparisons")
 })
 

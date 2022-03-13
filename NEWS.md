@@ -1,3 +1,16 @@
+# marginaleffects 0.4.0
+
+New function:
+
+* `comparisons()` computes contrasts
+
+Misc:
+
+* Speed optimizations
+* `predictions()` and `plot_cap()` include confidence intervals for linear models
+* More robust handling of in-formula functions: factor(), strata(), mo()
+* Do not overwrite user's `ggplot2::theme_set()` call
+
 # marginaleffects 0.3.4
 
 * Bug fixes
