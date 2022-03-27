@@ -1,8 +1,8 @@
 requiet("brms")
-requiet("cmdstanr")
 requiet("emmeans")
 requiet("broom")
-skip_if_not_installed("data.table") # cmdstanr
+requiet("data.table") # cmdstanr
+requiet("cmdstanr")
 
 
 void <- capture.output({
@@ -111,14 +111,13 @@ test_that("brms: cumulative: predictions: no validity", {
     p2 <- predictions(mod_ran, re_formula = NA)
     expect_true(mean(p1$conf.low < p2$conf.low) > .99) # tolerance
     expect_true(mean(p1$conf.high > p2$conf.high) > .99) # tolerance
-    expect_error(predictions(mod_ran, include_random = FALSE)) # only for lme4
+    expect_warning(predictions(mod_ran, include_random = FALSE)) # only for lme4
 })
 
 test_that("marginaleffects: ordinal no validity", {
     mod <- insight::download_model("brms_ordinal_1")
     expect_marginaleffects(mod, se = FALSE)
 })
-
 
 test_that("predict new unit: no validity", {
     dat1 <- dat2 <- datagrid(model = mod_epi)
@@ -170,13 +169,11 @@ test_that("predictions: prediction vs. expectation vs. include_random", {
 
 
 test_that("marginaleffects vs. emmeans: multiple types are correctly aligned", {
-    skip_if_not_installed("ggplot2")
-    skip_if_not_installed("emmeans")
-    library(ggplot2)
+    requiet("ggplot2")
     mfx <- marginaleffects(mod_int, variables = "mpg", type = c("response", "link"),
                            newdata = datagrid(vs = 0:1, mpg = 20))
-    em_r <- emmeans::emtrends(mod_int, ~vs, var = "mpg", at = list(vs = c(0, 1), mpg = 20), epred = TRUE)
-    em_l <- emmeans::emtrends(mod_int, ~vs, var = "mpg", at = list(vs = c(0, 1), mpg = 20))
+    em_r <- emtrends(mod_int, ~vs, var = "mpg", at = list(vs = c(0, 1), mpg = 20), epred = TRUE)
+    em_l <- emtrends(mod_int, ~vs, var = "mpg", at = list(vs = c(0, 1), mpg = 20))
     em_r <- data.frame(em_r)
     em_l <- data.frame(em_l)
     expect_equal(mfx[mfx$type == "link", "dydx"], em_l$mpg.trend)
@@ -246,7 +243,7 @@ test_that("marginaleffects vs. emmeans", {
 
     ## one variable: response scale
     mfx1 <- marginaleffects(mod_one, variables = "hp", newdata = datagrid(hp = 110))
-    mfx2 <- as.data.frame(emmeans::emtrends(mod_one, ~hp, var = "hp", at = list(hp = 110), transform = "response"))
+    mfx2 <- as.data.frame(emtrends(mod_one, ~hp, var = "hp", at = list(hp = 110), regrid = "response"))
     expect_equal(mfx1$dydx, mfx2$hp.trend, tolerance = .001)
     expect_equal(mfx1$conf.low, mfx2$lower.HPD, tolerance = .001)
     expect_equal(mfx1$conf.high, mfx2$upper.HPD, tolerance = .001)
@@ -284,12 +281,10 @@ test_that("plot_cap: no validity", {
 
 
 test_that("factor in formula", {
-    skip("https://github.com/easystats/insight/issues/469")
-    # marginaleffects
-    expect_marginaleffects(mod_factor_formula, se = FALSE)
-    # predictions
-    pred <- predictions(mod_factor_formula, newdata = datagrid())
-    expect_predictions(pred, se = FALSE)
+    expect_error(marginaleffects(mod_factor_formula),
+                 regexp = "factor")
+    expect_error(predictions(mod_factor_formula),
+                 regexp = "factor")
 })
 
 
@@ -337,6 +332,10 @@ test_that("multivariate outcome", {
 
     comp <- comparisons(mod)
     expect_s3_class(comp, "comparisons")
+
+    draws <- posteriordraws(mfx)
+    expect_s3_class(draws, "data.frame")
+    expect_true(all(c("drawid", "draw", "rowid") %in% colnames(draws)))
 })
 
 
@@ -351,5 +350,17 @@ test_that("categorical outcome", {
 
     comp <- comparisons(mod)
     expect_s3_class(comp, "comparisons")
+
+    draws <- posteriordraws(mfx)
+    expect_s3_class(draws, "data.frame")
+    expect_true(all(c("drawid", "draw", "rowid") %in% colnames(draws)))
 })
 
+
+test_that("factor in formula errors", {
+    mod <- brm(mpg ~ hp + factor(cyl), data = mtcars, backend = "cmdstanr")
+    expect_error(marginaleffects(mod), regexp = "cannot be used")
+})
+
+
+    

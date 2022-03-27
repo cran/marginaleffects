@@ -3,7 +3,6 @@ requiet("emmeans")
 requiet("broom")
 
 test_that("marginaleffects vs. emtrends", {
-    skip_if_not_installed("insight", minimum_version = "0.14.4.1")
     set.seed(2)
     void <- capture.output(dat <- gamSim(1, n = 400, dist = "normal", scale = 2))
     void <- capture.output(dat2 <- gamSim(1, n = 2000, dist = "poisson", scale = .1))
@@ -37,7 +36,6 @@ test_that("marginaleffects vs. emtrends", {
 
 
 test_that("predictions: no validity", {
-    skip_if_not_installed("insight", minimum_version = "0.14.4.1")
     set.seed(2)
     void <- capture.output(dat <- gamSim(1, n = 400, dist = "normal", scale = 2))
     mod <- gam(y ~ s(x0) + s(x1) + s(x2) + s(x3), data = dat)
@@ -45,4 +43,23 @@ test_that("predictions: no validity", {
     pred2 <- predictions(mod, newdata = head(dat))
     expect_predictions(pred1, n_row = nrow(dat))
     expect_predictions(pred2, n_row = 6)
+})
+
+
+test_that("exclude a smooth", {
+    requiet("itsadug")
+    data(simdat)
+    simdat$Subject <- as.factor(simdat$Subject)
+    model <- bam(Y ~ Group + s(Time, by = Group) + s(Subject, bs = "re"), data = simdat)
+    nd <- datagrid(model = model,
+                   Subject = "a01",
+                   Group = "Adults")
+
+    expect_equal(predictions(model, newdata = nd)$predicted,
+                 predict(model, newdata = nd),
+                 ignore_attr = TRUE)
+
+    expect_equal(predictions(model, newdata = nd, exclude = "s(Subject)")$predicted,
+                 predict(model, newdata = nd, exclude = "s(Subject)"),
+                 ignore_attr = TRUE)
 })

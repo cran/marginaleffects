@@ -91,6 +91,7 @@ test_that("lm vs. emmeans: marginalmeans", {
 test_that('glm: marginalmeans vs. emmeans', {
     # factors seem to behave differently in model.matrix
     skip_if(getRversion() == "3.6.3")
+    skip_if_not_installed("emmeans", minimum_version = "1.7.3")
     dat <- guerry
     dat$binary <- dat$Crime_prop > median(dat$Crime_prop)
     # character variables sometimes break the order
@@ -114,7 +115,7 @@ test_that('glm: marginalmeans vs. emmeans', {
     expect_equal(mm$std.error, em$std.error)
 
     mm <- tidy(marginalmeans(mod, type = "response", variables = "MainCity"))
-    em <- tidy(emmeans::emmeans(mod, specs = "MainCity", transform = "response"))
+    em <- tidy(emmeans(mod, specs = "MainCity", regrid = "response"))
     expect_equal(as.character(mm$value), em$MainCity)
     expect_equal(mm$estimate, em$prob)
     expect_equal(mm$std.error, em$std.error, tolerance = .0001)
@@ -125,17 +126,21 @@ test_that('glm: marginalmeans vs. emmeans', {
 #  note sure if stats::loess should be supported  #
 ###################################################
 
-# test_that("vcov(loess) does not exist", {
-#     mod <- loess(mpg ~ wt, data = mtcars)
-#     expect_warning(marginaleffects(mod), regexp = "not yet supported")
-# })
+test_that("vcov(loess) does not exist", {
+    mod <- loess(mpg ~ wt, data = mtcars)
+    expect_warning(marginaleffects(mod), regexp = "vcov")
+})
 
+test_that("loess vs. margins", {
+    mod <- loess(mpg ~ wt, data = mtcars)
+    res <- marginaleffects(mod, vcov = FALSE)
+    mar <- data.frame(margins(mod))
+    matching <- cbind(res$dydx, mar$dydx)
+    matching <- na.omit(matching)
+    expect_equal(matching[, 1], matching[, 2], tolerance = 1e-3)
+})
 
-# test_that("loess error", {
-#     skip("loess produces different results under margins and marginaleffects")
-#     mod <- loess(mpg ~ wt, data = mtcars)
-#     res <- marginaleffects(mod, vcov = FALSE)
-#     mar <- data.frame(margins(mod))
-#     expect_true(test_against_margins(res, mar, tolerance = .8))
-# })
-
+test_that("loess predictions", {
+    mod <- loess(mpg ~ wt, data = mtcars)
+    expect_predictions(predictions(mod), se = FALSE)
+})

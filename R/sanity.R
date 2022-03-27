@@ -62,15 +62,17 @@ sanity_newdata <- function(model, newdata) {
     #     }
     # }
     if (isTRUE(flag)) {
-        warning("When using `marginaleffects`, it is safer to convert variables to factors or logicals in the dataset before fitting the model, rather than by wrapping terms in `factor()` or `as.logical() in the model formula.")
+        warning("When using `marginaleffects`, it is safer to convert variables to factors or logicals in the dataset before fitting the model, rather than by wrapping terms in `factor()` or `as.logical() in the model formula.",
+                call. = FALSE)
     }
 
     return(newdata)
 }
 
-sanity_variables <- function(model, newdata, variables) {
+sanitize_variables <- function(model, newdata, variables) {
     checkmate::assert_character(variables, min.len = 1, null.ok = TRUE)
     checkmate::assert_data_frame(newdata, min.row = 1, null.ok = TRUE)
+
 
     if (!is.null(model) & is.null(newdata)) {
         origindata <- insight::get_data(model)
@@ -90,6 +92,14 @@ sanity_variables <- function(model, newdata, variables) {
         variables_list <- list("conditional" = variables)
     }
     variables <- unique(unlist(variables_list))
+
+    # weights
+    if (!is.null(model)) {
+        w <- tryCatch(insight::find_weights(model), error = function(e) NULL)
+        w <- intersect(w, colnames(newdata))
+        variables <- unique(c(variables, w))
+        variables_list[["weights"]] <- w
+    }
 
     # check missing character levels
     # Character variables are treated as factors by model-fitting functions,
@@ -139,7 +149,8 @@ sanitize_vcov <- function(model, vcov) {
     if (isTRUE(vcov)) {
         vcov <- try(get_vcov(model), silent = TRUE)
         if (inherits(vcov, "try-error") && !inherits(model, "brmsfit")) {
-            warning(sprintf('Unable to extract a variance-covariance matrix from model of class "%s" using the `stats::vcov` function. The `vcov` argument was switched to `FALSE`. Please supply a named matrix to produce uncertainty estimates.', class(model)[1]))
+            warning(sprintf('Unable to extract a variance-covariance matrix from model of class "%s" using the `stats::vcov` function. The `vcov` argument was switched to `FALSE`. Please supply a named matrix to produce uncertainty estimates.', class(model)[1]),
+                    call. = FALSE)
             return(NULL)
             # dpoMatrix conversion
         }

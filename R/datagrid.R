@@ -202,14 +202,14 @@ prep_datagrid <- function(..., model = NULL, newdata = NULL) {
     # data: all variables
     if (!is.null(newdata)) {
         variables <- colnames(newdata)
-    # model: variables = NULL because otherwise `sanity_variables` excludes others
+    # model: variables = NULL because otherwise `sanitize_variables` excludes others
     } else {
         variables <- NULL
     }
 
-    variables_list <- sanity_variables(model = model,
-                                       newdata = newdata,
-                                       variables = variables)
+    variables_list <- sanitize_variables(model = model,
+                                         newdata = newdata,
+                                         variables = variables)
     variables_all <- unique(unlist(variables_list))
     variables_manual <- names(at)
     variables_automatic <- setdiff(variables_all, variables_manual)
@@ -223,7 +223,8 @@ prep_datagrid <- function(..., model = NULL, newdata = NULL) {
     variables_missing <- setdiff(names(at), variables_all)
     if (length(variables_missing) > 0) {
         warning(sprintf("Some of the variable names are missing from the model data: %s",
-                        paste(variables_missing, collapse = ", ")))
+                        paste(variables_missing, collapse = ", ")),
+                call. = FALSE)
     }
 
     # check `at` elements and convert them to factor as needed
@@ -253,7 +254,8 @@ prep_datagrid <- function(..., model = NULL, newdata = NULL) {
         idx <- sapply(variables_cluster, function(x) is.numeric(newdata[[x]]))
         if (any(idx)) {
             idx <- paste(sprintf('"%s"', variables_cluster[idx]), collapse = ", ")
-            warning(sprintf("Unless otherwise instructed, this function sets numeric variables to their mean. This is probably inappropriate in the case of cluster variables or group identifiers like %s. A safer strategy is to convert cluster variables to factors before fitting the model.", idx))
+            warning(sprintf("Unless otherwise instructed, this function sets numeric variables to their mean. This is probably inappropriate in the case of cluster variables or group identifiers like %s. A safer strategy is to convert cluster variables to factors before fitting the model.", idx),
+                    call. = FALSE)
         }
     }
 

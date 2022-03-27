@@ -456,7 +456,7 @@ code > span.er { color: #a61717; background-color: #e3d2d2; }
 </div>
 <div id="marginal-effects-and-contrasts" class="section level1">
 <h1>Marginal effects and contrasts</h1>
-<p>This table shows the list of model types for which the <code>marginaleffects</code> function can compute slopes and contrasts. There are three main alternative software packages to compute such slopes (1) <code>Stata</code>’s <code>margins</code> command, (2) <code>R</code>’s <code>margins::margins</code> function, and (3) <code>R</code>’s <code>emmeans::emtrends</code> function. The <a href="https://github.com/vincentarelbundock/marginaleffects/tree/main/tests/testthat">test suite hosted on Github</a> compares the numerical equivalence of results produced by <code>marginaleffects</code> to those produced by all 3 alternative software packages:</p>
+<p>This table shows the list of model types for which the <code>marginaleffects()</code> function can compute slopes and contrasts. There are three main alternative software packages to compute such slopes (1) <code>Stata</code>’s <code>margins</code> command, (2) <code>R</code>’s <code>margins::margins</code> function, and (3) <code>R</code>’s <code>emmeans::emtrends</code> function. The <a href="https://github.com/vincentarelbundock/marginaleffects/tree/main/tests/testthat">test suite hosted on Github</a> compares the numerical equivalence of results produced by <code>marginaleffects</code> to those produced by all 3 alternative software packages:</p>
 <ul>
 <li>✓: a green check means that the results of at least one model are equal to a reasonable tolerance.</li>
 <li>✖: a red cross means that the results are <em>not</em> identical; extra caution is warranted.</li>
@@ -574,6 +574,28 @@ glm
 </td>
 <td style="text-align:center;color: green !important;">
 ✓
+</td>
+</tr>
+<tr>
+<td style="text-align:left;">
+</td>
+<td style="text-align:left;">
+loess
+</td>
+<td style="text-align:center;color: grey !important;">
+</td>
+<td style="text-align:center;color: grey !important;">
+</td>
+<td style="text-align:center;color: green !important;">
+✓
+</td>
+<td style="text-align:center;color: grey !important;">
+</td>
+<td style="text-align:center;color: grey !important;">
+U
+</td>
+<td style="text-align:center;color: grey !important;">
+U
 </td>
 </tr>
 <tr>
@@ -1689,6 +1711,53 @@ U
 </td>
 <td style="text-align:center;color: green !important;">
 ✓
+</td>
+</tr>
+<tr>
+<td style="text-align:left;">
+sampleSelection
+</td>
+<td style="text-align:left;">
+selection
+</td>
+<td style="text-align:center;color: grey !important;">
+</td>
+<td style="text-align:center;color: grey !important;">
+</td>
+<td style="text-align:center;color: grey !important;">
+U
+</td>
+<td style="text-align:center;color: grey !important;">
+U
+</td>
+<td style="text-align:center;color: grey !important;">
+U
+</td>
+<td style="text-align:center;color: grey !important;">
+U
+</td>
+</tr>
+<tr>
+<td style="text-align:left;">
+</td>
+<td style="text-align:left;">
+heckit
+</td>
+<td style="text-align:center;color: grey !important;">
+</td>
+<td style="text-align:center;color: grey !important;">
+</td>
+<td style="text-align:center;color: grey !important;">
+U
+</td>
+<td style="text-align:center;color: grey !important;">
+U
+</td>
+<td style="text-align:center;color: grey !important;">
+U
+</td>
+<td style="text-align:center;color: grey !important;">
+U
 </td>
 </tr>
 <tr>

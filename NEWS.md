@@ -1,3 +1,18 @@
+# marginaleffects 0.4.1
+
+Supported models:
+
+* `stats::loess`
+* `sampleSelection::selection`
+* `sampleSelection::heckit`
+
+Misc:
+
+* `mgcv::bam` models allow `exclude` argument. 
+* Gam models allow `include_smooth` argument. 
+* New tests
+* Bug fixes
+
 # marginaleffects 0.4.0
 
 New function:

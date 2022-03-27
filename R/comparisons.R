@@ -93,8 +93,9 @@ comparisons <- function(model,
         checkmate::check_choice(contrast_numeric, choices = c("iqr", "minmax", "sd", "2sd")))
 
     # variables vector
-    variables_list <- sanity_variables(model = model, newdata = newdata, variables = variables)
+    variables_list <- sanitize_variables(model = model, newdata = newdata, variables = variables)
     variables <- unique(unlist(variables_list))
+    variables <- setdiff(variables, variables_list[["weights"]])
     # this won't be triggered for multivariate outcomes in `brms`, which
     # produces a list of lists where top level names correspond to names of the
     # outcomes. There should be a more robust way to handle those, but it seems
@@ -193,7 +194,8 @@ comparisons <- function(model,
         # aggressive check. probably needs to be relaxed.
         if (any(colnames(J_mean_mat) != colnames(vcov))) {
             tmp <- NULL
-            warning("The variance covariance matrix and the Jacobian do not match. `marginaleffects` is unable to compute standard errors using the delta method.")
+            warning("The variance covariance matrix and the Jacobian do not match. `marginaleffects` is unable to compute standard errors using the delta method.",
+                    call. = FALSE)
         } else {
             V <- colSums(t(J_mean_mat %*% vcov) * t(J_mean_mat))
             tmp$std.error <- sqrt(V)

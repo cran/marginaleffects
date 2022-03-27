@@ -121,7 +121,7 @@ marginaleffects <- function(model,
     sanity_dots(model = model, ...)
     sanity_type(model = model, type = type, calling_function = "marginaleffects")
     newdata <- sanity_newdata(model, newdata)
-    variables <- sanity_variables(model, newdata, variables)
+    variables <- sanitize_variables(model, newdata, variables)
     vcov <- sanitize_vcov(model, vcov)
 
     # rowid is required for later merge
@@ -136,7 +136,8 @@ marginaleffects <- function(model,
     # outcomes. There should be a more robust way to handle those, but it seems
     # to work for now.
     if ("conditional" %in% names(variables)) {
-        variables_vec <- intersect(variables_vec, variables[["conditional"]])
+        # unlist() needed for sampleSelection objects, which nest "outcome" and "selection" variables
+        variables_vec <- intersect(variables_vec, unlist(variables[["conditional"]]))
     }
 
     mfx_list <- list()
@@ -226,7 +227,8 @@ marginaleffects <- function(model,
         # aggressive check. probably needs to be relaxed.
         if (any(colnames(J_mean_mat) != colnames(vcov))) {
             tmp <- NULL
-            warning("The variance covariance matrix and the Jacobian do not match. `marginaleffects` is unable to compute standard errors using the delta method.")
+            warning("The variance covariance matrix and the Jacobian do not match. `marginaleffects` is unable to compute standard errors using the delta method.",
+                    call. = FALSE)
         } else {
             V <- colSums(t(J_mean_mat %*% vcov) * t(J_mean_mat))
             tmp$std.error <- sqrt(V)
