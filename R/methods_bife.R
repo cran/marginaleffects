@@ -4,6 +4,8 @@
 #' @export
 get_predict.bife <- function(model,
                              newdata = insight::get_data(model),
+                             vcov = FALSE,
+                             conf_level = 0.95,
                              type = "response",
                              ...) {
 
@@ -23,14 +25,3 @@ get_predict.bife <- function(model,
     return(out)
 }
 
-
-#' @include get_vcov.R
-#' @rdname @get_vcov
-#' @keywords internal
-#' @export
-get_vcov.bife <- function(model, ...) {
-    beta <- get_coef(model)
-    out <- stats::vcov(model)
-    colnames(out) <- row.names(out) <- names(beta)
-    return(out)
-}

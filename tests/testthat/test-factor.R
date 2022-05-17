@@ -1,3 +1,4 @@
+
 test_that("factor before fitting or in formula is the same", {
     tmp <- mtcars
     tmp$cyl <- factor(tmp$cyl)
@@ -21,14 +22,14 @@ test_that("smart detect factor() in formula", {
     requiet("estimatr")
     model <- lm_robust(carb ~ wt + factor(cyl), se_type = "stata", data = mtcars)
     k <- marginaleffects(model)
-    expect_true(all(c("", "8 - 4") %in% k$contrast))
+    expect_true(all(c("dY/dX", "8 - 4") %in% k$contrast))
 })
 
 test_that("factor in formula with incomplete newdata", {
     mod <- lm(mpg ~ factor(cyl), data = mtcars)
     mfx1 <- marginaleffects(mod, newdata = data.frame(cyl = 4))
     mfx2 <- marginaleffects(mod, newdata = datagrid(cyl = 4))
-    expect_equal(mfx1[, 1:6], mfx2[, 1:6], ignore_attr = TRUE)
+    expect_equal(mfx1[, 1:5], mfx2[, 1:5], ignore_attr = TRUE)
 })
 
 test_that("bugs stay dead: get_data.coxph() with strata()", {

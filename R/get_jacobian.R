@@ -1,6 +1,6 @@
 # adapted from the numDeriv package for R by Paul Gilbert published under GPL2 license
 
-get_jacobian <- function(func, x) {
+get_jacobian <- function(func, x, eps) {
 
     # global options are used to switch between homemade and numDeriv
     marginaleffects_numDeriv <- getOption("marginaleffects_numDeriv", default = NULL)
@@ -8,9 +8,8 @@ get_jacobian <- function(func, x) {
 
     # dependency-free
     if (isTRUE(flag)) {
-        eps <- 1e-4
         baseline <- func(x)
-        df <- matrix(NA, length(baseline), length(x))
+        df <- matrix(NA_real_, length(baseline), length(x))
         for (i in seq_along(x)) {
             dx <- x
             dx[i] <- dx[i] + eps

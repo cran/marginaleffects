@@ -36,24 +36,14 @@ get_group_names.polr <- function(model, ...) {
 }
 
 
-#' @include get_vcov.R
-#' @rdname get_vcov
-#' @export
-get_vcov.polr <- function(model, ...) {
-    # out <- suppressMessages(insight::get_varcov(model))
-    fun <- utils::getFromNamespace("vcov.polr", ns = "MASS")
-    out <- suppressMessages(fun(model))
-    return(out)
-}
-
-
 #' @include get_predict.R
 #' @rdname get_predict
 #' @export
 get_predict.polr <- function(model,
                              newdata = insight::get_data(model),
+                             vcov = FALSE,
+                             conf_level = 0.95,
                              type = "probs",
-                             conf.level = NULL,
                              ...) {
 
     type <- sanity_type(model, type)
@@ -62,19 +52,20 @@ get_predict.polr <- function(model,
     if (nrow(newdata) == 1) {
         hack <- TRUE
         newdata <- newdata[c(1, 1), , drop = FALSE]
+        newdata$rowid[1] <- -Inf
     } else {
         hack <- FALSE
     }
 
     out <- get_predict.default(model,
                                newdata = newdata,
+                               vcov = vcov,
+                               conf_level = conf_level,
                                type = type,
-                               conf.level = conf.level,
                                ...)
 
-    if (isTRUE(hack)) {
-        out <- out[out$rowid == 1, ]
-    }
+    # hack
+    out <- out[out$rowid != -Inf, ]
 
     return(out)
 }
@@ -93,8 +84,9 @@ set_coef.glmmPQL <- function(model, coefs) {
 #' @export
 get_predict.glmmPQL <- function(model,
                                 newdata = insight::get_data(model),
+                                vcov = FALSE,
+                                conf_level = 0.95,
                                 type = "response",
-                                conf.level = NULL,
                                 ...) {
 
     type <- sanity_type(model, type)

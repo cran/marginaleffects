@@ -5,14 +5,14 @@
 #' Examples below.)
 #' @param model Model object
 #' @param newdata data.frame (one and only one of the `model` and `newdata` arguments
-#' @param grid.type character
-#'   * "typical": variables whose values are not explicitly specified by the user in `...` are set to their mean or mode, or to the output of the functions supplied to `FUN.type` arguments.
+#' @param grid_type character
+#'   * "typical": variables whose values are not explicitly specified by the user in `...` are set to their mean or mode, or to the output of the functions supplied to `FUN_type` arguments.
 #'   * "counterfactual": the entire dataset is duplicated for each combination of the variable values specified in `...`. Variables not explicitly supplied to `datagrid()` are set to their observed values in the original dataset.
-#' @param FUN.character the function to be applied to character variables.
-#' @param FUN.factor the function to be applied to factor variables.
-#' @param FUN.logical the function to be applied to factor variables.
-#' @param FUN.numeric the function to be applied to numeric variables.
-#' @param FUN.other the function to be applied to other variable types.
+#' @param FUN_character the function to be applied to character variables.
+#' @param FUN_factor the function to be applied to factor variables.
+#' @param FUN_logical the function to be applied to factor variables.
+#' @param FUN_numeric the function to be applied to numeric variables.
+#' @param FUN_other the function to be applied to other variable types.
 #' @details
 #' If `datagrid` is used in a `marginaleffects` or `predictions` call as the
 #' `newdata` argument, users do not need to specify the `model` or `newdata`
@@ -42,52 +42,67 @@
 #' # The full dataset is duplicated with each observation given counterfactual
 #' # values of 100 and 110 for the `hp` variable. The original `mtcars` includes
 #' # 32 rows, so the resulting dataset includes 64 rows.
-#' dg <- datagrid(newdata = mtcars, hp = c(100, 110), grid.type = "counterfactual")
+#' dg <- datagrid(newdata = mtcars, hp = c(100, 110), grid_type = "counterfactual")
 #' nrow(dg)
 #'
 #' # We get the same result by feeding a model instead of a data.frame
 #' mod <- lm(mpg ~ hp, mtcars)
-#' dg <- datagrid(model = mod, hp = c(100, 110), grid.type = "counterfactual")
+#' dg <- datagrid(model = mod, hp = c(100, 110), grid_type = "counterfactual")
 #' nrow(dg)
 datagrid <- function(
     ...,
     model = NULL,
     newdata = NULL,
-    grid.type = "typical",
-    FUN.character = Mode,
+    grid_type = "typical",
+    FUN_character = Mode,
     # need to be explicit for numeric variables transfered to factor in model formula
-    FUN.factor = Mode,
-    FUN.logical = Mode,
-    FUN.numeric = function(x) mean(x, na.rm = TRUE),
-    FUN.other = function(x) mean(x, na.rm = TRUE)) {
+    FUN_factor = Mode,
+    FUN_logical = Mode,
+    FUN_numeric = function(x) mean(x, na.rm = TRUE),
+    FUN_other = function(x) mean(x, na.rm = TRUE)) {
 
-    checkmate::assert_choice(grid.type, choices = c("typical", "counterfactual"))
-    checkmate::assert_function(FUN.character)
-    checkmate::assert_function(FUN.factor)
-    checkmate::assert_function(FUN.logical)
-    checkmate::assert_function(FUN.numeric)
-    checkmate::assert_function(FUN.other)
+    # backward compatibility
+    dots <- list(...)
+    FUN_character <- arg_name_change(FUN_character, "FUN.character", dots)
+    FUN_factor <- arg_name_change(FUN_factor, "FUN.factor", dots)
+    FUN_logical <- arg_name_change(FUN_logical, "FUN.logical", dots)
+    FUN_numeric <- arg_name_change(FUN_numeric, "FUN.numeric", dots)
+    FUN_other <- arg_name_change(FUN_other, "FUN.other", dots)
+    grid_type <- arg_name_change(grid_type, "grid.type", dots)
+    idx <- !grepl("^FUN\\.|grid\\.type", names(dots))
+    dots <- dots[idx]
 
-    if (grid.type == "typical") {
-        out <- typical(...,
-                       model = model,
-                       newdata = newdata,
-                       FUN.character = FUN.character,
-                       FUN.factor = FUN.factor,
-                       FUN.logical = FUN.logical,
-                       FUN.numeric = FUN.numeric,
-                       FUN.other = FUN.other)
+    # sanity
+    checkmate::assert_choice(grid_type, choices = c("typical", "counterfactual"))
+    checkmate::assert_function(FUN_character)
+    checkmate::assert_function(FUN_factor)
+    checkmate::assert_function(FUN_logical)
+    checkmate::assert_function(FUN_numeric)
+    checkmate::assert_function(FUN_other)
+
+    if (grid_type == "typical") {
+        args <- list( # cleaned for backward compatibility
+            model = model,
+            newdata = newdata,
+            FUN_character = FUN_character,
+            FUN_factor = FUN_factor,
+            FUN_logical = FUN_logical,
+            FUN_numeric = FUN_numeric,
+            FUN_other = FUN_other)
+        args <- c(dots, args)
+        out <- do.call("typical", args)
     } else {
-        out <- counterfactual(...,
-                              model = model,
-                              newdata = newdata)
+        args <- list(
+            model = model,
+            newdata = newdata)
+        args <- c(dots, args)
+        out <- do.call("counterfactual", args)
     }
-
     return(out)
 }
 
 
-#' Superseded by datagrid(..., grid.type = "counterfactual")
+#' Superseded by datagrid(..., grid_type = "counterfactual")
 #'
 #' @inheritParams datagrid
 #' @keywords internal
@@ -103,9 +118,12 @@ counterfactual <- function(..., model = NULL, newdata = NULL) {
 
     # `at` -> `data.frame`
     at <- lapply(at, unique)
-    at <- expand.grid(at, stringsAsFactors = FALSE)
 
-    rowid <- data.frame(rowid_original = seq_len(nrow(dat)))
+    fun <- data.table::CJ
+    args <- c(at, list(sorted = FALSE))
+    at <- do.call("fun", args)
+
+    rowid <- data.frame(rowid_counterfactual = seq_len(nrow(dat)))
     if (length(variables_automatic) > 0) {
         dat_automatic <- dat[, variables_automatic, drop = FALSE]
         dat_automatic <- cbind(rowid, dat_automatic)
@@ -127,12 +145,12 @@ typical <- function(
     ...,
     model = NULL,
     newdata = NULL,
-    FUN.character = Mode,
+    FUN_character = Mode,
     # need to be explicit for numeric variables transfered to factor in model formula
-    FUN.factor = Mode,
-    FUN.logical = Mode,
-    FUN.numeric = function(x) mean(x, na.rm = TRUE),
-    FUN.other = function(x) mean(x, na.rm = TRUE)) {
+    FUN_factor = Mode,
+    FUN_logical = Mode,
+    FUN_numeric = function(x) mean(x, na.rm = TRUE),
+    FUN_other = function(x) mean(x, na.rm = TRUE)) {
 
     tmp <- prep_datagrid(..., model = model, newdata = newdata)
     at <- tmp$at
@@ -149,11 +167,11 @@ typical <- function(
         # created by insight::get_data
         for (n in names(dat_automatic)) {
             variable_class <- find_variable_class(n, newdata = dat_automatic, model = model)
-            if (variable_class == "factor") out[[n]] <- FUN.factor(dat_automatic[[n]])
-            if (variable_class == "logical") out[[n]] <- FUN.logical(dat_automatic[[n]])
-            if (variable_class == "character") out[[n]] <- FUN.character(dat_automatic[[n]])
-            if (variable_class == "numeric") out[[n]] <- FUN.numeric(dat_automatic[[n]])
-            if (variable_class == "other") out[[n]] <- FUN.other(dat_automatic[[n]])
+            if (variable_class == "factor") out[[n]] <- FUN_factor(dat_automatic[[n]])
+            if (variable_class == "logical") out[[n]] <- FUN_logical(dat_automatic[[n]])
+            if (variable_class == "character") out[[n]] <- FUN_character(dat_automatic[[n]])
+            if (variable_class == "numeric") out[[n]] <- FUN_numeric(dat_automatic[[n]])
+            if (variable_class == "other") out[[n]] <- FUN_other(dat_automatic[[n]])
         }
     } else {
         out <- list()
@@ -165,15 +183,20 @@ typical <- function(
         }
     }
 
+
+    # unique before counting
+    out <- lapply(out, unique)
+
     # warn on very large prediction grid
     num <- as.numeric(sapply(out, length)) # avoid integer overflow
     num <- Reduce(f = "*", num)
     if (num > 1e9) {
-        stop("You are trying to create a prediction grid with more than 1 billion rows, which is likely to exceed the memory and computational power available on your local machine. Presumably this is because you are considering many variables with many levels. All of the functions in the `marginaleffects` package include arguments to specify a restricted list of variables over which to create a prediction grid.")
+        stop("You are trying to create a prediction grid with more than 1 billion rows, which is likely to exceed the memory and computational power available on your local machine. Presumably this is because you are considering many variables with many levels. All of the functions in the `marginaleffects` package include arguments to specify a restricted list of variables over which to create a prediction grid.", call. = FALSE)
     }
 
-    out <- lapply(out, unique)
-    out <- expand.grid(out, stringsAsFactors = FALSE)
+    fun <- data.table::CJ
+    args <- c(out, list(sorted = FALSE))
+    out <- do.call("fun", args)
 
     # na.omit destroys attributes, and we need the "factor" attribute
     # created by insight::get_data
@@ -191,12 +214,14 @@ prep_datagrid <- function(..., model = NULL, newdata = NULL) {
 
     at <- list(...)
 
-    if (!is.null(model) & !is.null(newdata)) {
-        stop("One of the `model` or `newdata` arguments must be `NULL`.")
-    }
+    # if (!is.null(model) & !is.null(newdata)) {
+    #     msg <- "One of the `model` or `newdata` arguments must be `NULL`."
+    #     stop(msg, call. = FALSE)
+    # }
 
     if (is.null(model) & is.null(newdata)) {
-        stop("The `model` and `newdata` arguments should not both be `NULL`.")
+        msg <- "When calling `datagrid()` *inside* the `marginaleffects()` or `comparisons()` functions, the `model` and `newdata` arguments can both be omitted. However, when calling `datagrid()` on its own, users must specify either the `model` or the `newdata` argument (but not both)."
+        stop(msg, call. = FALSE)
     }
 
     # data: all variables
@@ -238,24 +263,37 @@ prep_datagrid <- function(..., model = NULL, newdata = NULL) {
             at[[n]] <- as.character(at[[n]])
             if (!all(at[[n]] %in% c(levs, NA))) {
                 msg <- sprintf('The "%s" element of the `at` list corresponds to a factor variable. The values entered in the `at` list must be one of the factor levels: "%s".', n, paste(levels(newdata[[n]]), collapse = '", "'))
-                stop(msg)
+                stop(msg, call. = FALSE)
             } else {
                 at[[n]] <- factor(at[[n]], levels = levs)
             }
         }
     }
 
-    # warn if cluster variables are numeric. users probably do not want to take
-    # their means, because this makes prediction impossible in many models
-    # (e.g., `fixest::feols(mpg ~ hp | cyl)`)
+    # warn if cluster variables after the | in the random effects formula are
+    # numeric. users probably do not want to take their means, because this
+    # makes prediction impossible in many models (e.g., `fixest::feols(mpg ~ hp
+    # | cyl)`)
+    # insight::find
     variables_cluster <- unlist(c(variables_list$cluster, variables_list$random))
-    variables_cluster <- intersect(variables_automatic, variables_cluster)
+    variables_cluster <- intersect(variables_cluster, variables_automatic)
     if (length(variables_cluster) > 0) {
-        idx <- sapply(variables_cluster, function(x) is.numeric(newdata[[x]]))
-        if (any(idx)) {
-            idx <- paste(sprintf('"%s"', variables_cluster[idx]), collapse = ", ")
-            warning(sprintf("Unless otherwise instructed, this function sets numeric variables to their mean. This is probably inappropriate in the case of cluster variables or group identifiers like %s. A safer strategy is to convert cluster variables to factors before fitting the model.", idx),
-                    call. = FALSE)
+        cluster_ids <- insight::find_random(model, flatten = TRUE)
+
+        # random effects component only cyl after pipe: hp ~ drat + (1 + mpg | cyl)
+        if (length(cluster_ids) > 0) {
+            idx <- sapply(cluster_ids, function(x) is.numeric(newdata[[x]]))
+            cluster_ids <- cluster_ids[idx]
+
+        # fixest et al. everything after the pipe: hp ~ drat | cyl + gear
+        } else {
+            idx <- sapply(variables_cluster, function(x) is.numeric(newdata[[x]]))
+            cluster_ids <- variables_cluster[idx]
+        }
+
+        if (length(cluster_ids) > 0) {
+            msg <- "Some cluster or group identifiers are numeric. Unless otherwise instructed, `datagrid()` sets all numeric variables to their mean. This is probably inappropriate in the case of cluster or group identifiers. A safer strategy is to convert them to factors before fitting the model."
+            warning(msg, call. = FALSE)
         }
     }
 

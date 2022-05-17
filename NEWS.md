@@ -1,6 +1,60 @@
+# marginaleffects 0.5.0
+
+Breaking changes:
+
+* `type` no longer accepts a character vector. Must be a single string.
+* `conf.int` argument deprecated. Use `vcov = FALSE` instead.
+
+New supported packages and models: 
+
+* `mlogit`
+* `mhurdle`
+* `tobit1`
+* `glmmTMB`
+
+New features:
+
+* `interaction` argument in `comparisons()` to compute interactions between contrasts (cross-contrasts).
+* `by` argument in `tidy()` and `summary()` computes group-average marginal effects and comparisons.
+* `transform_pre` argument can define custom contrasts between adjusted predictions (e.g., log adjusted risk ratios). Available in `comparisons()`.
+* `transform_post` argument allows back transformation before returning the final results. Available in `comparisons()`, `marginalmeans()`, `summary()`, `tidy()`.
+* The `variables` argument of the `comparisons()` function accepts a named list to specify variable-specific contrast types.
+* Robust standard errors with the `vcov` argument. This requires version 0.17.1 of the `insight` package.
+  - `sandwich` package shortcuts: `vcov = "HC3"`, `"HC2"`, `"NeweyWest"`, and more.
+  - Mixed effects models: `vcov = "satterthwaite"` or `"kenward-roger"`
+  - One-sided formula to clusters: `vcov = ~cluster_variable`
+  - Variance-covariance matrix
+  - Function which returns a named squared matrix
+* `marginalmeans()` allows interactions
+* Bayesian Model Averaging for `brms` models using `type = "average"`. See vignette on the `marginaleffects` website.
+* `eps` argument for step size of numerical derivative
+* `marginaleffects` and `comparisons` now report confidence intervals by default.
+* New dependency on the `data.table` package yields substantial performance improvements.
+* More informative error messages and warnings
+* Bug fixes and performance improvements
+
+New pages on the `marginaleffects` website: https://vincentarelbundock.github.io/marginaleffects/
+
+* Alternative software packages
+* Robust standard errors (and more)
+* Performance tips
+* Tables and plots
+* Multinomial Logit and Discrete Choice Models
+* Generalized Additive Models
+* Mixed effects models (Bayesian and Frequentist)
+* Transformations and Custom Contrasts: Adjusted Risk Ratio Example
+
+Argument name changes (backward compatibility is preserved:
+
+* Everywhere:
+    - `conf.level` -> `conf_level` 
+* `datagrid()`:
+    - `FUN.factor` -> `FUN_factor` (same for related arguments)
+    - `grid.type` -> `grid_type`
+
 # marginaleffects 0.4.1
 
-Supported models:
+New supported packages and models: 
 
 * `stats::loess`
 * `sampleSelection::selection`
@@ -32,7 +86,7 @@ Misc:
 
 # marginaleffects 0.3.3
 
-Supported models:
+New supported models:
 
 * `mclogit::mclogit`
 * `robust::lmRob`
@@ -76,7 +130,7 @@ Breaking changes:
 * `marginalmeans` objects have new column names, as do the corresponding `tidy`
   and `summary` outputs.
 
-Support for new models and packages:
+New supported packages and models:
 
 * `brms::brm`
 * `rstanarm::stanglm`
@@ -108,12 +162,12 @@ Breaking change:
 
 * `data` argument becomes `newdata` in all functions.
 
-`marginaleffects`:
+New supported packages and models:
 
-* Support `lme4:glmer.nb`
-* Support `mgcv::gam`
-* Support `ordinal::clm`
-* Support `mgcv`
+* `lme4:glmer.nb`
+* `mgcv::gam`
+* `ordinal::clm`
+* `mgcv`
 
 `marginalmeans`:
 

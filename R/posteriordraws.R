@@ -1,6 +1,6 @@
-#' Extract posterior draws from a `predictions` or `marginaleffects` object derived from Bayesian `brms` models
+#' Extract posterior draws from a `predictions` or `marginaleffects` object derived from Bayesian models
 #'
-#' @param x An object produced by the `predictions` or the `marginaleffects` functions
+#' @param x An object produced by the `marginaleffects`, `comparisons`, or `predictions` functions
 #' @return A data.frame with `drawid` and `draw` columns.
 #' @export
 posteriordraws <- function(x) {
@@ -8,8 +8,12 @@ posteriordraws <- function(x) {
     # long format can be very slow to merge, so we use `data.table`
     assert_dependency("data.table")
 
-    if (!inherits(x, "marginaleffects") && !inherits(x, "predictions")) {
-        warning('The `posteriordraws` function only supports objects of type "marginaleffects" or "predictions" produced by the `marginaleffects` package.',
+    # tidy.comparisons() saves draws in a nice format already
+    draws <- attr(x, "posterior_draws")
+    if (inherits(draws, "posterior_draws")) return(draws)
+
+    if (!inherits(x, "marginaleffects") && !inherits(x, "predictions") && !inherits(x, "comparisons")) {
+        warning('The `posteriordraws` function only supports objects of type "marginaleffects", "comparisons", or "predictions" produced by the `marginaleffects` package.',
                 call. = FALSE)
         return(x)
     }
@@ -20,32 +24,25 @@ posteriordraws <- function(x) {
     }
     draws <- attr(x, "posterior_draws")
     if (nrow(draws) != nrow(x)) {
-        stop('The number of parameters in the object does not match the number of parameters for which posterior draws are available.')
+        stop('The number of parameters in the object does not match the number of parameters for which posterior draws are available.', call. = FALSE)
     }
 
-    out <- x
-    idx <- lapply(unique(out$type), function(x) out$type == x)
-    names(idx) <- unique(out$type)
-    draws_by_type <- lapply(idx, function(x) draws[x, , drop = FALSE])
-    out_by_type <- lapply(idx, function(x) out[x, , drop = FALSE])
-    out_by_type <- lapply(out_by_type, function(x) transform(x, rowid_internal = 1:nrow(x)))
-    out <- data.table::rbindlist(out_by_type)
+    draws <- attr(x, "posterior_draws")
+    draws <- data.table(draws)
+    setnames(draws, as.character(seq_len(ncol(draws))))
 
-    reshape_draws <- function(k) {
-        z <- draws_by_type[[k]]
-        data.frame(
-            type = k,
-            rowid_internal = rep(1:nrow(z), by = ncol(z)),
-            drawid = rep(1:ncol(z),  each = nrow(z)),
-            draw = as.vector(z))
+    for (v in colnames(x)) {
+        draws[[v]] <- x[[v]]
     }
-    draws_by_type <- lapply(names(draws_by_type), reshape_draws)
-    draws_df <- data.table::rbindlist(draws_by_type)
 
-    out <- left_join(draws_df, out, all.x = TRUE, by = c("type", "rowid_internal"))
+    out <- melt(
+        draws,
+        id.vars = colnames(x),
+        variable.name = "drawid",
+        value.name = "draw")
 
-    # always return a data.frame, even when data.table is used to speed things up
-    out <- as.data.frame(out)
-
+    cols <- unique(c("drawid", "draw", "rowid", colnames(out)))
+    setcolorder(out, cols)
+    setDF(out)
     return(out)
 }

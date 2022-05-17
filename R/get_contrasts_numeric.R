@@ -1,79 +1,74 @@
-get_contrasts_numeric <- function(model,
-                                  newdata,
-                                  variable,
-                                  type = "response",
-                                  contrast_numeric = 1,
-                                  ...) {
+get_contrast_data_numeric <- function(model,
+                                      newdata,
+                                      variable,
+                                      contrast_numeric,
+                                      contrast_label,
+                                      eps,
+                                      ...) {
 
+    # contrast_label is designed for categorical predictors
+    # numeric contrasts first
     if (is.numeric(contrast_numeric) && length(contrast_numeric) == 1) {
-        low <- newdata[[variable]]
-        high <- newdata[[variable]] + contrast_numeric
-        lab <- sprintf("+%s", contrast_numeric)
+        low <- newdata[[variable]] - contrast_numeric / 2
+        high <- newdata[[variable]] + contrast_numeric / 2
+        lab <- sprintf("x + %s", contrast_numeric)
+        if (!isTRUE(grepl("mean", contrast_label))) {
+            lab <- sprintf("(%s)", lab)
+        }
+        lab <- sprintf(contrast_label, lab, "x")
+
     } else if (is.numeric(contrast_numeric) && length(contrast_numeric) == 2) {
         contrast_numeric <- sort(contrast_numeric)
         low <- contrast_numeric[1]
         high <- contrast_numeric[2]
         gap <- diff(contrast_numeric)
-        lab  <- paste(contrast_numeric[2], "-", contrast_numeric[1])
-    } else if (contrast_numeric == "sd") {
+        lab <- sprintf(contrast_label, contrast_numeric[2], contrast_numeric[1])
+
+    # character contrasts
+    # slope
+    } else if (isTRUE(contrast_numeric == "dydx")) {
+        low <- newdata[[variable]]
+        high <- newdata[[variable]] + eps
+        lab <- "dydx"
+
+    # other contrasts
+    } else if (isTRUE(contrast_numeric == "sd")) {
         low <- mean(newdata[[variable]], na.rm = TRUE) - stats::sd(newdata[[variable]], na.rm = TRUE) / 2
         high <- mean(newdata[[variable]], na.rm = TRUE) + stats::sd(newdata[[variable]], na.rm = TRUE) / 2
-        lab <- "sd"
-    } else if (contrast_numeric == "2sd") {
+        lab <- c("x - sd/2", "x + sd/2")
+        if (!isTRUE(grepl("mean", contrast_label))) {
+            lab <- sprintf("(%s)", lab)
+        }
+        lab <- sprintf(contrast_label, lab[2], lab[1])
+
+    } else if (isTRUE(contrast_numeric == "2sd")) {
         low <- mean(newdata[[variable]], na.rm = TRUE) - stats::sd(newdata[[variable]], na.rm = TRUE)
         high <- mean(newdata[[variable]], na.rm = TRUE) + stats::sd(newdata[[variable]], na.rm = TRUE)
-        lab <- "2sd"
-    } else if (contrast_numeric == "iqr") {
+        lab <- c("x - sd", "x + sd")
+        if (!isTRUE(grepl("mean", contrast_label))) {
+            lab <- sprintf("(%s)", lab)
+        }
+        lab <- sprintf(contrast_label, lab[2], lab[1])
+
+    } else if (isTRUE(contrast_numeric == "iqr")) {
         low <- stats::quantile(newdata[[variable]], probs = .25, na.rm = TRUE)
         high <- stats::quantile(newdata[[variable]], probs = .75, na.rm = TRUE)
-        lab <- "IQR"
-    } else if (contrast_numeric == "minmax") {
+        lab <- sprintf(contrast_label, "Q3", "Q1")
+
+    } else if (isTRUE(contrast_numeric == "minmax")) {
         low <- min(newdata[[variable]], na.rm = TRUE)
         high <- max(newdata[[variable]], na.rm = TRUE)
-        lab <- "Max - Min"
-    }
-    gap <- high - low
-
-    baseline <- newdata
-
-    baseline[[variable]] <- low
-    pred_baseline <- get_predict(model,
-                                 newdata = baseline,
-                                 type = type,
-                                 ...)
-
-    baseline[[variable]] <- high
-    pred_increment <- get_predict(model,
-                                  newdata = baseline,
-                                  type = type,
-                                  ...)
-
-    contr <- as.vector(pred_increment$predicted) - as.vector(pred_baseline$predicted)
-
-    pred_increment$term <- variable
-
-    # secret argument
-    if (isTRUE(list(...)[["contrast_numeric_slope"]])) {
-        contr <- contr / gap
-        pred_increment$contrast <- "dydx"
-        pred_increment$comparison <- contr
-    } else {
-        pred_increment$contrast <- lab
-        pred_increment$comparison <- contr
-    }
-    pred_increment$predicted <- NULL
-
-    out <- pred_increment
-
-    # bayes: posterior draws and credible intervals
-    if ("posterior_draws" %in% names(attributes(pred_increment))) {
-        draws <- attr(pred_increment, "posterior_draws") - attr(pred_baseline, "posterior_draws")
-        if (isTRUE(list(...)[["contrast_numeric_slope"]])) {
-            attr(out, "posterior_draws") <- draws / contrast_numeric
-        } else {
-            attr(out, "posterior_draws") <- draws
-        }
+        lab <- sprintf(contrast_label, "Max", "Min")
     }
 
+    lo <- hi <- newdata
+    lo[[variable]] <- low
+    hi[[variable]] <- high
+    out <- list(rowid = seq_len(nrow(newdata)),
+                lo = lo,
+                hi = hi,
+                original = newdata,
+                ter = rep(variable, nrow(newdata)),
+                lab = rep(lab, nrow(newdata)))
     return(out)
 }

@@ -6,6 +6,59 @@ requiet("emmeans")
 requiet("broom")
 
 
+test_that("satterthwaite (no validity)", {
+    skip_if_not_installed("insight", minimum_version = "0.17.1")
+    dat <- mtcars
+    dat$cyl <- factor(dat$cyl)
+    mod <- lmer(mpg ~ hp + (1 | cyl), data = dat)
+    x <- predictions(mod)
+    y <- predictions(mod, vcov = "satterthwaite")
+    z <- predictions(mod, vcov = "kenward-roger")
+    expect_true(all(x$conf.low != y$conf.low))
+    expect_true(all(x$conf.low != z$conf.low))
+    expect_true(all(y$conf.low != z$conf.low))
+    # kenward-roger adjusts vcov but not satterthwaite
+    expect_true(all(x$std.error == y$std.error))
+    expect_true(all(x$std.error != z$std.error))
+    expect_true(all(y$std.error != z$std.error))
+
+    x <- plot_cap(mod, condition = "hp", draw = FALSE)
+    y <- plot_cap(mod, condition = "hp", vcov = "satterthwaite", draw = FALSE)
+    z <- plot_cap(mod, condition = "hp", vcov = "kenward-roger", draw = FALSE)
+    expect_true(all(x$conf.low != y$conf.low))
+    expect_true(all(x$conf.low != z$conf.low))
+    expect_true(all(y$conf.low != z$conf.low))
+    expect_true(all(x$std.error == y$std.error))
+    expect_true(all(x$std.error != z$std.error))
+    expect_true(all(y$std.error != z$std.error))
+
+    # comparisons
+    x <- comparisons(mod)
+    y <- comparisons(mod, vcov = "satterthwaite")
+    z <- comparisons(mod, vcov = "kenward-roger")
+    expect_true(all(x$conf.low != y$conf.low))
+    expect_true(all(x$conf.low != z$conf.low))
+    expect_true(all(y$conf.low != z$conf.low))
+    expect_true(all(x$std.error == y$std.error))
+    expect_true(all(x$std.error != z$std.error))
+    expect_true(all(y$std.error != z$std.error))
+
+    # at the mean (regression test)
+    mfx <- marginaleffects(
+        mod,
+        newdata = datagrid(),
+        vcov = "satterthwaite")
+    expect_s3_class(mfx, "marginaleffects")
+
+    # GLM not supported
+    mod <- glmer(am ~ hp + (1 | cyl), family = binomial, data = dat)
+    expect_error(comparisons(mod, vcov = "satterthwaite"), regexp = "Satter")
+    expect_error(comparisons(mod, vcov = "kenward-roger"), regexp = "Satter")
+    expect_error(predictions(mod, vcov = "satterthwaite"), regexp = "Satter")
+    expect_error(predictions(mod, vcov = "kenward-roger"), regexp = "Satter")
+})
+
+
 test_that("get_predict: low-level tests", {
 
     dat <- haven::read_dta(test_path("stata/databases/lme4_02.dta"))
@@ -69,7 +122,7 @@ test_that("glmer vs. stata vs. emtrends", {
     em <- emtrends(mod, ~x1, "x1", at = list(x1 = 0, x2 = 0, clus = 1))
     em <- tidy(em)
     expect_equal(mfx$dydx, em$x1.trend)
-    expect_equal(mfx$std.error, em$std.error)
+    expect_equal(mfx$std.error, em$std.error, tolerance = 1e-6)
 })
 
 test_that("lmer vs. stata", {
@@ -107,7 +160,7 @@ test_that("vs. margins (dydx only)", {
 test_that("sanity check on dpoMatrix", {
     dat <- haven::read_dta(test_path("stata/databases/lme4_02.dta"))
     mod <- lme4::glmer(y ~ x1 * x2 + (1 | clus), data = dat, family = binomial)
-    k <- marginaleffects(mod, vcov = stats::vcov(mod))
+    k <- marginaleffects(mod, vcov = as.matrix(stats::vcov(mod)))
     expect_s3_class(k, "data.frame")
 })
 
@@ -150,7 +203,7 @@ test_that("glmer.nb: marginaleffects vs. emtrends", {
     em <- emtrends(mod, ~x, "x", at = list(g = 2))
     em <- tidy(em)
     expect_equal(mfx$dydx, em$x.trend)
-    expect_equal(mfx$std.error, em$std.error)
+    expect_equal(mfx$std.error, em$std.error, tolerance = 1e-6)
 
     # margins
     mar <- tidy(margins(mod))

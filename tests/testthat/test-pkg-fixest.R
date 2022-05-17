@@ -1,4 +1,5 @@
 requiet("fixest")
+fixest::setFixest_nthreads(1)
 
 test_that("bugs stay dead: logit with transformations", {
     dat <- mtcars
@@ -142,3 +143,24 @@ test_that("feols linear plot_cap includes confidence intervals", {
     p <- plot_cap(mod, condition = "hp", conf.level = .99)
     vdiffr::expect_doppelganger("plot_cap: feols large conf.level", p)
 })
+
+
+test_that("regression test Issue #232: namespace collision with `rep()`", {
+  # can't override global binding for `rep()`
+  skip("works interactively") 
+  rep <- data.frame(Y = runif(100) > .5, X = rnorm(100))
+  mod <- feglm(Y ~ X, data = rep, family = binomial)
+  mfx <- marginaleffects(mod)
+  expect_s3_class(mfx, "marginaleffects")
+})
+
+
+test_that("Issue #229", {
+    skip_if_not_installed("fixest", minimum_version = "0.10.5")
+    requiet("fixest")
+    data(trade)
+    dat <<- trade
+    mod <- feNmlm(Euros ~ log(dist_km) | Product, data = dat)
+    expect_marginaleffects(mod)
+})
+

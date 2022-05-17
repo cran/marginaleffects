@@ -1,0 +1,440 @@
+<!DOCTYPE html>
+
+<html>
+
+<head>
+
+<meta charset="utf-8" />
+<meta name="generator" content="pandoc" />
+<meta http-equiv="X-UA-Compatible" content="IE=EDGE" />
+
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+
+
+
+<title>Technical notes</title>
+
+
+<style type="text/css">
+  code{white-space: pre-wrap;}
+  span.smallcaps{font-variant: small-caps;}
+  span.underline{text-decoration: underline;}
+  div.column{display: inline-block; vertical-align: top; width: 50%;}
+  div.hanging-indent{margin-left: 1.5em; text-indent: -1.5em;}
+  ul.task-list{list-style: none;}
+    </style>
+
+
+
+<style type="text/css">
+  code {
+    white-space: pre;
+  }
+  .sourceCode {
+    overflow: visible;
+  }
+</style>
+<style type="text/css" data-origin="pandoc">
+a.sourceLine { display: inline-block; line-height: 1.25; }
+a.sourceLine { pointer-events: none; color: inherit; text-decoration: inherit; }
+a.sourceLine:empty { height: 1.2em; }
+.sourceCode { overflow: visible; }
+code.sourceCode { white-space: pre; position: relative; }
+div.sourceCode { margin: 1em 0; }
+pre.sourceCode { margin: 0; }
+@media screen {
+div.sourceCode { overflow: auto; }
+}
+@media print {
+code.sourceCode { white-space: pre-wrap; }
+a.sourceLine { text-indent: -1em; padding-left: 1em; }
+}
+pre.numberSource a.sourceLine
+  { position: relative; left: -4em; }
+pre.numberSource a.sourceLine::before
+  { content: attr(title);
+    position: relative; left: -1em; text-align: right; vertical-align: baseline;
+    border: none; pointer-events: all; display: inline-block;
+    -webkit-touch-callout: none; -webkit-user-select: none;
+    -khtml-user-select: none; -moz-user-select: none;
+    -ms-user-select: none; user-select: none;
+    padding: 0 4px; width: 4em;
+    color: #aaaaaa;
+  }
+pre.numberSource { margin-left: 3em; border-left: 1px solid #aaaaaa;  padding-left: 4px; }
+div.sourceCode
+  {  }
+@media screen {
+a.sourceLine::before { text-decoration: underline; }
+}
+code span.al { color: #ff0000; font-weight: bold; } /* Alert */
+code span.an { color: #60a0b0; font-weight: bold; font-style: italic; } /* Annotation */
+code span.at { color: #7d9029; } /* Attribute */
+code span.bn { color: #40a070; } /* BaseN */
+code span.bu { } /* BuiltIn */
+code span.cf { color: #007020; font-weight: bold; } /* ControlFlow */
+code span.ch { color: #4070a0; } /* Char */
+code span.cn { color: #880000; } /* Constant */
+code span.co { color: #60a0b0; font-style: italic; } /* Comment */
+code span.cv { color: #60a0b0; font-weight: bold; font-style: italic; } /* CommentVar */
+code span.do { color: #ba2121; font-style: italic; } /* Documentation */
+code span.dt { color: #902000; } /* DataType */
+code span.dv { color: #40a070; } /* DecVal */
+code span.er { color: #ff0000; font-weight: bold; } /* Error */
+code span.ex { } /* Extension */
+code span.fl { color: #40a070; } /* Float */
+code span.fu { color: #06287e; } /* Function */
+code span.im { } /* Import */
+code span.in { color: #60a0b0; font-weight: bold; font-style: italic; } /* Information */
+code span.kw { color: #007020; font-weight: bold; } /* Keyword */
+code span.op { color: #666666; } /* Operator */
+code span.ot { color: #007020; } /* Other */
+code span.pp { color: #bc7a00; } /* Preprocessor */
+code span.sc { color: #4070a0; } /* SpecialChar */
+code span.ss { color: #bb6688; } /* SpecialString */
+code span.st { color: #4070a0; } /* String */
+code span.va { color: #19177c; } /* Variable */
+code span.vs { color: #4070a0; } /* VerbatimString */
+code span.wa { color: #60a0b0; font-weight: bold; font-style: italic; } /* Warning */
+
+</style>
+<script>
+// apply pandoc div.sourceCode style to pre.sourceCode instead
+(function() {
+  var sheets = document.styleSheets;
+  for (var i = 0; i < sheets.length; i++) {
+    if (sheets[i].ownerNode.dataset["origin"] !== "pandoc") continue;
+    try { var rules = sheets[i].cssRules; } catch (e) { continue; }
+    for (var j = 0; j < rules.length; j++) {
+      var rule = rules[j];
+      // check if there is a div.sourceCode rule
+      if (rule.type !== rule.STYLE_RULE || rule.selectorText !== "div.sourceCode") continue;
+      var style = rule.style.cssText;
+      // check if color or background-color is set
+      if (rule.style.color === '' && rule.style.backgroundColor === '') continue;
+      // replace div.sourceCode by a pre.sourceCode rule
+      sheets[i].deleteRule(j);
+      sheets[i].insertRule('pre.sourceCode{' + style + '}', j);
+    }
+  }
+})();
+</script>
+
+
+
+
+<style type="text/css">body {
+background-color: #fff;
+margin: 1em auto;
+max-width: 700px;
+overflow: visible;
+padding-left: 2em;
+padding-right: 2em;
+font-family: "Open Sans", "Helvetica Neue", Helvetica, Arial, sans-serif;
+font-size: 14px;
+line-height: 1.35;
+}
+#TOC {
+clear: both;
+margin: 0 0 10px 10px;
+padding: 4px;
+width: 400px;
+border: 1px solid #CCCCCC;
+border-radius: 5px;
+background-color: #f6f6f6;
+font-size: 13px;
+line-height: 1.3;
+}
+#TOC .toctitle {
+font-weight: bold;
+font-size: 15px;
+margin-left: 5px;
+}
+#TOC ul {
+padding-left: 40px;
+margin-left: -1.5em;
+margin-top: 5px;
+margin-bottom: 5px;
+}
+#TOC ul ul {
+margin-left: -2em;
+}
+#TOC li {
+line-height: 16px;
+}
+table {
+margin: 1em auto;
+border-width: 1px;
+border-color: #DDDDDD;
+border-style: outset;
+border-collapse: collapse;
+}
+table th {
+border-width: 2px;
+padding: 5px;
+border-style: inset;
+}
+table td {
+border-width: 1px;
+border-style: inset;
+line-height: 18px;
+padding: 5px 5px;
+}
+table, table th, table td {
+border-left-style: none;
+border-right-style: none;
+}
+table thead, table tr.even {
+background-color: #f7f7f7;
+}
+p {
+margin: 0.5em 0;
+}
+blockquote {
+background-color: #f6f6f6;
+padding: 0.25em 0.75em;
+}
+hr {
+border-style: solid;
+border: none;
+border-top: 1px solid #777;
+margin: 28px 0;
+}
+dl {
+margin-left: 0;
+}
+dl dd {
+margin-bottom: 13px;
+margin-left: 13px;
+}
+dl dt {
+font-weight: bold;
+}
+ul {
+margin-top: 0;
+}
+ul li {
+list-style: circle outside;
+}
+ul ul {
+margin-bottom: 0;
+}
+pre, code {
+background-color: #f7f7f7;
+border-radius: 3px;
+color: #333;
+white-space: pre-wrap; 
+}
+pre {
+border-radius: 3px;
+margin: 5px 0px 10px 0px;
+padding: 10px;
+}
+pre:not([class]) {
+background-color: #f7f7f7;
+}
+code {
+font-family: Consolas, Monaco, 'Courier New', monospace;
+font-size: 85%;
+}
+p > code, li > code {
+padding: 2px 0px;
+}
+div.figure {
+text-align: center;
+}
+img {
+background-color: #FFFFFF;
+padding: 2px;
+border: 1px solid #DDDDDD;
+border-radius: 3px;
+border: 1px solid #CCCCCC;
+margin: 0 5px;
+}
+h1 {
+margin-top: 0;
+font-size: 35px;
+line-height: 40px;
+}
+h2 {
+border-bottom: 4px solid #f7f7f7;
+padding-top: 10px;
+padding-bottom: 2px;
+font-size: 145%;
+}
+h3 {
+border-bottom: 2px solid #f7f7f7;
+padding-top: 10px;
+font-size: 120%;
+}
+h4 {
+border-bottom: 1px solid #f7f7f7;
+margin-left: 8px;
+font-size: 105%;
+}
+h5, h6 {
+border-bottom: 1px solid #ccc;
+font-size: 105%;
+}
+a {
+color: #0033dd;
+text-decoration: none;
+}
+a:hover {
+color: #6666ff; }
+a:visited {
+color: #800080; }
+a:visited:hover {
+color: #BB00BB; }
+a[href^="http:"] {
+text-decoration: underline; }
+a[href^="https:"] {
+text-decoration: underline; }
+
+code > span.kw { color: #555; font-weight: bold; } 
+code > span.dt { color: #902000; } 
+code > span.dv { color: #40a070; } 
+code > span.bn { color: #d14; } 
+code > span.fl { color: #d14; } 
+code > span.ch { color: #d14; } 
+code > span.st { color: #d14; } 
+code > span.co { color: #888888; font-style: italic; } 
+code > span.ot { color: #007020; } 
+code > span.al { color: #ff0000; font-weight: bold; } 
+code > span.fu { color: #900; font-weight: bold; } 
+code > span.er { color: #a61717; background-color: #e3d2d2; } 
+</style>
+
+
+
+
+</head>
+
+<body>
+
+
+
+
+<h1 class="title toc-ignore">Technical notes</h1>
+
+
+
+<div id="standard-error-of-the-average-marginal-effect" class="section level1">
+<h1>Standard Error of the Average Marginal Effect</h1>
+<p>The <code>summary()</code> and <code>tidy()</code> functions compute the average marginal effect (or contrast) when they are applied to an object produced by <code>marginaleffects()</code> (or <code>comparisons()</code>). This is done in 3 steps:</p>
+<ol style="list-style-type: decimal">
+<li>Extract the Jacobian used to compute unit-level standard errors.</li>
+<li>Take the average of that Jacobian.</li>
+<li>Estimate the standard error of the average marginal effect as the square root of the diagonal of J’VJ, where V is the variance-covariance matrix.</li>
+</ol>
+<p>As <a href="https://stats.stackexchange.com/a/331311/4874">explained succinctly on Stack Exchange:</a></p>
+<blockquote>
+<p>we want the variance of the Average Marginal Effect (AME) and hence our transformed function is: <span class="math inline">\(AME = \frac{1}{N} \sum_{i=1}^N g_i(x_i,\hat{\beta})\)</span> Then using the delta method we have <span class="math inline">\(Var \left( g(\hat{\beta}) \right) = J_g&#39; \Omega_{\hat{\beta}} J_g\)</span> where <span class="math inline">\(\Omega_{\hat{\beta}} = Var(\hat{\beta})\)</span> and <span class="math inline">\(J_g&#39; = \frac{\partial\left[\frac{1}{N}\sum_{i=1}^N g (x_i,\hat{\beta})\right]}{\partial \hat\beta} = \frac{1}{N}{\left[\sum_{i=1}^N \frac{\partial \left (g (x_i,\hat{\beta})\right)}{\partial \hat\beta}\right]}\)</span> Which justifies using the “average Jacobian” in the delta method to calculate variance of the AME.</p>
+</blockquote>
+<p>References:</p>
+<ul>
+<li>Dowd, Bryan E, William H Greene, and Edward C Norton. “Computation of Standard Errors.” Health Services Research 49, no. 2 (April 2014): 731–50. <a href="https://doi.org/10.1111/1475-6773.12122" class="uri">https://doi.org/10.1111/1475-6773.12122</a>.</li>
+<li><a href="https://stats.stackexchange.com/questions/283831/delta-method-for-marginal-effects-of-generalized-linear-model?rq=1" class="uri">https://stats.stackexchange.com/questions/283831/delta-method-for-marginal-effects-of-generalized-linear-model?rq=1</a></li>
+</ul>
+</div>
+<div id="contrasts-and-marginal-effects-unit-level-vs.-average-vs.-at-mean-vs.-marginal-means" class="section level1">
+<h1>Contrasts and Marginal Effects: “Unit-Level” vs. “Average” vs. “At Mean” vs. “Marginal Means”</h1>
+<p>This section compares 4 quantities:</p>
+<ol style="list-style-type: decimal">
+<li>Unit-Level Contrasts</li>
+<li>Average Contrast</li>
+<li>Contrast at the Mean</li>
+<li>Contrast Between Marginal Means</li>
+</ol>
+<p>The ideas discussed in this section focus on contrasts, but they carry over directly to analogous types of marginal effects.</p>
+<div id="unit-level-contrasts" class="section level2">
+<h2>Unit-level contrasts</h2>
+<p>In models with interactions or non-linear components (e.g., link function), the value of a contrast or marginal effect can depend on the value of all the predictors in the model. As a result, contrasts and marginal effects are fundamentally <em>unit-level</em> quantities. The effect of a 1 unit increase in <span class="math inline">\(X\)</span> can be different for Mary or John. Every row of a dataset has a different contrast and marginal effect.</p>
+<p>The <code>mtcars</code> dataset has 32 rows, so the <code>comparisons()</code> function produces 32 contrast estimates:</p>
+<div class="sourceCode" id="cb1"><pre class="sourceCode r"><code class="sourceCode r"><a class="sourceLine" id="cb1-1" title="1"><span class="kw">library</span>(marginaleffects)</a>
+<a class="sourceLine" id="cb1-2" title="2">mod &lt;-<span class="st"> </span><span class="kw">glm</span>(vs <span class="op">~</span><span class="st"> </span><span class="kw">factor</span>(gear) <span class="op">+</span><span class="st"> </span>mpg, <span class="dt">family =</span> binomial, <span class="dt">data =</span> mtcars)</a>
+<a class="sourceLine" id="cb1-3" title="3">cmp &lt;-<span class="st"> </span><span class="kw">comparisons</span>(mod, <span class="dt">variables =</span> <span class="st">&quot;mpg&quot;</span>)</a>
+<a class="sourceLine" id="cb1-4" title="4"><span class="kw">nrow</span>(cmp)</a>
+<a class="sourceLine" id="cb1-5" title="5"><span class="co">#&gt; [1] 32</span></a></code></pre></div>
+</div>
+<div id="average-contrasts" class="section level2">
+<h2>Average contrasts</h2>
+<p>By default, the <code>marginaleffects()</code> and <code>comparisons()</code> functions compute marginal effects and contrasts for every row of the original dataset. These unit-level estimates can be unwieldy and hard to interpret. To help interpretation, the <code>summary()</code> function computes the “Average Marginal Effect” or “Average Contrast,” by taking the mean of all the unit-level estimates.</p>
+<div class="sourceCode" id="cb2"><pre class="sourceCode r"><code class="sourceCode r"><a class="sourceLine" id="cb2-1" title="1"><span class="kw">summary</span>(cmp)</a>
+<a class="sourceLine" id="cb2-2" title="2"><span class="co">#&gt; Average contrasts </span></a>
+<a class="sourceLine" id="cb2-3" title="3"><span class="co">#&gt;   Term Contrast  Effect Std. Error z value   Pr(&gt;|z|)   2.5 %  97.5 %</span></a>
+<a class="sourceLine" id="cb2-4" title="4"><span class="co">#&gt; 1  mpg       +1 0.06081    0.01284   4.737 2.1714e-06 0.03565 0.08597</span></a>
+<a class="sourceLine" id="cb2-5" title="5"><span class="co">#&gt; </span></a>
+<a class="sourceLine" id="cb2-6" title="6"><span class="co">#&gt; Model type:  glm </span></a>
+<a class="sourceLine" id="cb2-7" title="7"><span class="co">#&gt; Prediction type:  response</span></a></code></pre></div>
+<p>which is equivalent to:</p>
+<div class="sourceCode" id="cb3"><pre class="sourceCode r"><code class="sourceCode r"><a class="sourceLine" id="cb3-1" title="1"><span class="kw">mean</span>(cmp<span class="op">$</span>comparison)</a>
+<a class="sourceLine" id="cb3-2" title="2"><span class="co">#&gt; [1] 0.06080995</span></a></code></pre></div>
+<p>We could also show the full distribution of contrasts across our dataset with a histogram:</p>
+<div class="sourceCode" id="cb4"><pre class="sourceCode r"><code class="sourceCode r"><a class="sourceLine" id="cb4-1" title="1"><span class="kw">library</span>(ggplot2)</a>
+<a class="sourceLine" id="cb4-2" title="2"></a>
+<a class="sourceLine" id="cb4-3" title="3">cmp &lt;-<span class="st"> </span><span class="kw">comparisons</span>(mod, <span class="dt">variables =</span> <span class="st">&quot;gear&quot;</span>)</a>
+<a class="sourceLine" id="cb4-4" title="4"></a>
+<a class="sourceLine" id="cb4-5" title="5"><span class="kw">ggplot</span>(cmp, <span class="kw">aes</span>(comparison)) <span class="op">+</span></a>
+<a class="sourceLine" id="cb4-6" title="6"><span class="st">    </span><span class="kw">geom_histogram</span>(<span class="dt">bins =</span> <span class="dv">30</span>) <span class="op">+</span></a>
+<a class="sourceLine" id="cb4-7" title="7"><span class="st">    </span><span class="kw">facet_wrap</span>(<span class="op">~</span>contrast, <span class="dt">scale =</span> <span class="st">&quot;free_x&quot;</span>) <span class="op">+</span></a>
+<a class="sourceLine" id="cb4-8" title="8"><span class="st">    </span><span class="kw">labs</span>(<span class="dt">x =</span> <span class="st">&quot;Distribution of unit-level contrasts&quot;</span>)</a></code></pre></div>
+<p><img src="data:image/png;base64,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" /><!-- --></p>
+<p>This graph display the effect of a change of 1 unit in the <code>mpg</code> variable, for each individual in the observed data.</p>
+</div>
+<div id="contrasts-at-the-mean" class="section level2">
+<h2>Contrasts at the mean</h2>
+<p>An alternative which used to be very common but has now fallen into a bit of disfavor is to compute “Contrasts at the mean.” The idea is to create a “synthetic” or “hypothetical” individual (row of the dataset) whose characteristics are completely average. Then, we compute and report the contrast for this specific hypothetical individual.</p>
+<p>This can be achieved by calling using the <code>newdata</code> argument and the <code>datagrid()</code> function, which fixes variables to their mean by default:</p>
+<div class="sourceCode" id="cb5"><pre class="sourceCode r"><code class="sourceCode r"><a class="sourceLine" id="cb5-1" title="1"><span class="kw">comparisons</span>(mod, <span class="dt">variables =</span> <span class="st">&quot;mpg&quot;</span>, <span class="dt">newdata =</span> <span class="kw">datagrid</span>())</a>
+<a class="sourceLine" id="cb5-2" title="2"><span class="co">#&gt;   rowid     type term contrast comparison  std.error statistic     p.value</span></a>
+<a class="sourceLine" id="cb5-3" title="3"><span class="co">#&gt; 1     1 response  mpg       +1  0.1664787 0.06245542   2.66556 0.007686022</span></a>
+<a class="sourceLine" id="cb5-4" title="4"><span class="co">#&gt;     conf.low conf.high gear      mpg</span></a>
+<a class="sourceLine" id="cb5-5" title="5"><span class="co">#&gt; 1 0.04406829  0.288889    3 20.09062</span></a></code></pre></div>
+<p>Contrasts at the mean can differ substantially from average contrasts.</p>
+<p>The advantage of this approach is that it is very cheap and fast computationally. The disadvantage is that the interpretation is somewhat ambiguous. Often times, there simply does not exist an individual who is perfectly average across all dimensions of the dataset. It is also not clear why the analyst should be particularly interested in the contrast for this one, synthetic, perfectly average individual.</p>
+</div>
+<div id="contrasts-between-marginal-means" class="section level2">
+<h2>Contrasts between marginal means</h2>
+<p>Yet another type of contrast is the “Contrast between marginal means.” This type of contrast is closely related to the “Contrast at the mean”, with a few wrinkles. It is the default approach used by the <code>emmeans</code> package for <code>R</code>.</p>
+<p>Roughly speaking, the procedure is as follows:</p>
+<ol style="list-style-type: decimal">
+<li>Create a prediction grid with one cell for each combination of categorical predictors in the model, and all numeric variables held at their means.</li>
+<li>Make adjusted predictions in each cell of the prediction grid.</li>
+<li>Take the average of those predictions (marginal means) for each combination of <code>btype</code> (focal variable) and <code>resp</code> (group <code>by</code> variable).</li>
+<li>Compute pairwise differences (contrasts) in marginal means across different levels of the focal variable <code>btype</code>.</li>
+</ol>
+<p>The contrast obtained through this approach has two critical characteristics:</p>
+<ol style="list-style-type: lower-alpha">
+<li>It is the contrast for a synthetic individual with perfectly average qualities on every (numeric) predictor.</li>
+<li>It is a weighted average of unit-level contrasts that assumes a perfectly balanced experiment.</li>
+</ol>
+<p>With respect to (a), the analyst should ask themselves: Is my quantity of interest the contrast for a perfectly average hypothetical individual? With respect to (b), the analyst should ask themselves: Is my quantity of interest the contrast in a model estimated using unbalanced data, but interpreted as if the data were perfectly balanced?</p>
+<p>If the answer to both questions is “yes”, then it is easy to use the <code>comparisons()</code> to estimate contrasts between marginal means. The <a href="https://vincentarelbundock.github.io/marginaleffects/articles/alternative_software.html#emmeans"><code>emmeans</code> section of the Alternative Software vignette</a> shows several examples with parallel code examples to highlight parallels between <code>marginaleffects</code> and <code>emmeans</code>.</p>
+<p>The <a href="https://cran.r-project.org/web/packages/emmeans/vignettes/basics.html">excellent vignette of the <code>emmeans</code> package</a> discuss the same issue in a slightly different way:</p>
+<blockquote>
+<p>The point is that the marginal means of cell.means give equal weight to each cell. In many situations (especially with experimental data), that is a much fairer way to compute marginal means, in that they are not biased by imbalances in the data. We are, in a sense, estimating what the marginal means would be, had the experiment been balanced. Estimated marginal means (EMMs) serve that need.</p>
+</blockquote>
+<blockquote>
+<p>All this said, there are certainly situations where equal weighting is not appropriate. Suppose, for example, we have data on sales of a product given different packaging and features. The data could be unbalanced because customers are more attracted to some combinations than others. If our goal is to understand scientifically what packaging and features are inherently more profitable, then equally weighted EMMs may be appropriate; but if our goal is to predict or maximize profit, the ordinary marginal means provide better estimates of what we can expect in the marketplace.</p>
+</blockquote>
+</div>
+</div>
+
+
+
+<!-- code folding -->
+
+
+<!-- dynamically load mathjax for compatibility with self-contained -->
+<script>
+  (function () {
+    var script = document.createElement("script");
+    script.type = "text/javascript";
+    script.src  = "https://mathjax.rstudio.com/latest/MathJax.js?config=TeX-AMS-MML_HTMLorMML";
+    document.getElementsByTagName("head")[0].appendChild(script);
+  })();
+</script>
+
+</body>
+</html>

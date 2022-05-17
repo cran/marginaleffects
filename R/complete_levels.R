@@ -6,7 +6,14 @@
 #' factor levels are inevitably missing.
 #' @keywords internal
 complete_levels <- function(x, levels_character = NULL) {
+
     checkmate::assert_data_frame(x)
+
+    # fixest returned an empty list()
+    if (is.null(levels_character) || length(levels_character) == 0) {
+        return(data.frame())
+    }
+
     # store variables with missing factors or characters
     vault <- list()
     for (v in colnames(x)) {
@@ -24,6 +31,7 @@ complete_levels <- function(x, levels_character = NULL) {
     # create padding
     if (length(vault) > 0) {
         padding <- utils::head(x, 1)
+        setDF(padding) # not sure why, but this is needed
         for (v in names(vault)) {
             padding[[v]] <- NULL
         }
@@ -31,11 +39,6 @@ complete_levels <- function(x, levels_character = NULL) {
         padding <- padding[, colnames(x)]
     } else {
         padding <- data.frame()
-    }
-
-    # negative rowid for easy drop
-    if (nrow(padding) > 0) {
-        padding$rowid_internal <- -1 * 1:nrow(padding)
     }
 
     return(padding)

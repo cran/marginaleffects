@@ -41,6 +41,7 @@ sanity_model_supported_class <- function(model) {
                       "gls",
                       "glmerMod",
                       "glmrob",
+                      "glmmTMB",
                       c("glmmPQL", "lme"),
                       "glimML",
                       "glmx",
@@ -59,6 +60,8 @@ sanity_model_supported_class <- function(model) {
                       c("lrm", "rms", "glm"),
                       c("mblogit", "mclogit"),
                       c("mclogit", "lm"),
+                      "mhurdle",
+                      "mlogit",
                       c("multinom", "nnet"),
                       c("negbin", "glm", "lm"),
                       c("plm", "panelmodel"),
@@ -71,11 +74,12 @@ sanity_model_supported_class <- function(model) {
                       "speedlm",
                       "stanreg",
                       c("tobit", "survreg"),
+                      "tobit1",
                       "truncreg",
                       "zeroinfl")
     flag <- FALSE
     for (sup in supported) {
-        if (all(sup %in% class(model))) {
+        if (!is.null(sup) && isTRUE(all(sup %in% class(model)))) {
             flag <- TRUE
         }
     }
@@ -88,14 +92,15 @@ Supported model classes include: %s.
 
 New modeling packages can usually be supported by `marginaleffects` if they include a working `predict()` method. If you believe that this is the case, please file a feature request on Github: https://github.com/vincentarelbundock/marginaleffects/issues'
         msg <- sprintf(msg, class(model)[1], support)
-        stop(msg)
+        stop(msg, call. = FALSE)
     }
 }
 
 
-sanity_model <- function(model,
-                         ...) {
-    sanity_model_specific(model, ...)
+sanitize_model <- function(model,
+                           newdata,
+                           ...) {
+    sanity_model_specific(model, newdata = newdata, ...)
     sanity_model_supported_class(model)
     return(model)
 }

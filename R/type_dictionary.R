@@ -21,6 +21,7 @@ brglmFit,response,expectation,TRUE,TRUE
 brmsfit,response,expectation,TRUE,TRUE
 brmsfit,link,link,TRUE,TRUE
 brmsfit,prediction,prediction,TRUE,TRUE
+brmsfit,average,NA,TRUE,TRUE
 brmultinom,class,classification,FALSE,TRUE
 brmultinom,probs,expectation,TRUE,TRUE
 clm,prob,response,TRUE,TRUE
@@ -80,7 +81,10 @@ mblogit,link,link,TRUE,TRUE
 mclogit,link,link,TRUE,TRUE
 mclogit,response,expectation,FALSE,TRUE
 multinom,probs,expectation,TRUE,TRUE
-multinom,class,classification,FALSE,TRUE
+mhurdle,E,NA,TRUE,TRUE
+mhurdle,Ep,NA,TRUE,TRUE
+mhurdle,p,NA,TRUE,TRUE
+mlogit,response,NA,TRUE,TRUE
 negbin,link,link,TRUE,TRUE
 negbin,response,expectation,TRUE,TRUE
 polr,probs,expectation,TRUE,TRUE
@@ -96,6 +100,9 @@ stanreg,response,expectation,TRUE,TRUE
 svyglm,response,expectation,TRUE,TRUE
 svyglm,link,link,TRUE,TRUE
 tobit,response,expectation,TRUE,TRUE
+tobit1,linpred,NA,TRUE,TRUE
+tobit1,expvalue,NA,TRUE,TRUE
+tobit1,prob,NA,TRUE,TRUE
 zeroinfl,response,expectation,TRUE,TRUE
 zeroinfl,prob,NA,TRUE,TRUE
 zeroinfl,count,NA,TRUE,TRUE

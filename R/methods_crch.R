@@ -15,19 +15,15 @@ set_coef.crch <- function(model, coefs) {
 }
 
 
-#' @include get_vcov.R
-#' @rdname get_vcov
-#' @export
-get_vcov.crch <- function(model, ...) {
-    cn <- names(get_coef(model))
-    stats::vcov(model)
-}
-
-
 #' @include get_predict.R
 #' @rdname get_predict
 #' @export
-get_predict.crch <- function(model, newdata = NULL, type = "location", ...) {
+get_predict.crch <- function(model,
+                             newdata = NULL,
+                             vcov = FALSE,
+                             conf_level = 0.95,
+                             type = "location", ...) {
+
     pred <- stats::predict(model, newdata = newdata, type = type)
     sanity_predict_vector(pred = pred, model = model, newdata = newdata, type = type)
     sanity_predict_numeric(pred = pred, model = model, newdata = newdata, type = type)
@@ -59,5 +55,4 @@ set_coef.hlxr <- function(model, coefs) {
 }
 
 
-get_vcov.hlxr <- get_vcov.crch
 get_predict.hlxr <- get_predict.crch

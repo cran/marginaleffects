@@ -2,45 +2,38 @@ standard_errors_delta_marginalmeans <- function(model,
                                                 variables,
                                                 newdata,
                                                 type,
+                                                eps = 1e-4, # avoid pushing through ...
+                                                interaction = FALSE,
                                                 ...) {
     get_marginalmeans(model = model,
                       variables = variables,
                       newdata = newdata,
                       type = type,
+                      interaction = interaction,
                       ...)$marginalmean
 }
 
 
 standard_errors_delta_contrasts <- function(model,
-                                            variable,
+                                            variables,
                                             newdata,
                                             type,
+                                            transform_pre,
                                             contrast_factor,
                                             contrast_numeric,
+                                            eps,
                                             ...) {
     get_contrasts(model,
                   newdata = newdata,
-                  variable = variable,
+                  variables = variables,
                   type = type,
+                  transform_pre = transform_pre,
                   contrast_factor = contrast_factor,
                   contrast_numeric = contrast_numeric,
-                  vcov = FALSE,
+                  eps = eps,
                   ...)$comparison
 }
 
-
-standard_errors_delta_marginaleffects <- function(model,
-                                                  variable,
-                                                  newdata,
-                                                  type,
-                                                  ...) {
-    get_dydx(model = model,
-             variable = variable,
-             newdata = newdata,
-             type = type,
-             vcov = FALSE,
-             ...)$dydx
-}
 
 
 #' Compute standard errors using the delta method
@@ -57,9 +50,8 @@ standard_errors_delta <- function(model,
                                   newdata,
                                   FUN,
                                   index = NULL,
+                                  eps = 1e-4,
                                   ...) {
-
-    numDeriv_method <- sanitize_numDeriv_method()
 
     # delta method does not work for these models
     bad <- c("brmsfit", "stanreg")
@@ -67,36 +59,33 @@ standard_errors_delta <- function(model,
         return(NULL)
     }
 
-    # TODO: this is a terrible sanity check
     coefs <- get_coef(model)
-    vcov <- vcov[names(coefs), names(coefs), drop = FALSE]
+
+    # TODO: this is a terrible sanity check
+    # some vcov methods return an unnamed matrix
+    if (!is.null(dimnames(vcov)) && all(names(coefs) %in% colnames(vcov))) {
+        vcov <- vcov[names(coefs), names(coefs), drop = FALSE]
+    }
 
     # input: named vector of coefficients
     # output: gradient
     inner <- function(x) {
         model_tmp <- set_coef(model, stats::setNames(x, names(coefs)))
-        g <- FUN(model = model_tmp, newdata = newdata, type = type, ...)
+        g <- FUN(model = model_tmp, newdata = newdata, type = type, eps = eps, ...)
         return(g)
     }
 
-    J <- get_jacobian(func = inner, x = coefs)
+    J <- get_jacobian(func = inner, x = coefs, eps = eps)
 
     colnames(J) <- names(get_coef(model))
-
-    if (!is.null(index)) {
-        J_mean <- stats::aggregate(J, by = index, FUN = mean, na.rm = TRUE)
-    } else {
-        J_mean <- NULL
-    }
 
     # Var(dydx) = J Var(beta) J'
     # computing the full matrix is memory-expensive, and we only need the diagonal
     # algebra trick: https://stackoverflow.com/a/42569902/342331
-    se <- sqrt(colSums(t(J %*% vcov) * t(J)))
+    JV <- align_J_V(J, vcov)
+    se <- sqrt(colSums(t(JV$J %*% JV$V) * t(JV$J)))
 
-
-    attr(se, "J") <- J
-    attr(se, "J_mean") <- J_mean
+    attr(se, "J") <- JV$J
 
     return(se)
 }

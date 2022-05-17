@@ -8,7 +8,7 @@
 #' @inheritParams marginaleffects
 #' @keywords internal
 #' @export
-get_predict <- function(model, newdata, type, ...) {
+get_predict <- function(model, newdata, vcov, conf_level, type, ...) {
     UseMethod("get_predict", model)
 }
 
@@ -17,10 +17,10 @@ get_predict <- function(model, newdata, type, ...) {
 #' @export
 get_predict.default <- function(model,
                                 newdata = insight::get_data(model),
+                                vcov = FALSE,
+                                conf_level = 0.95,
                                 type = "response",
-                                conf.level = NULL,
                                 ...) {
-
 
     type <- sanity_type(model, type)
     type_base <- unname(type)
@@ -28,19 +28,19 @@ get_predict.default <- function(model,
 
     dots <- list(...)
 
-    # some predict methods raise warnings on unused arguments 
-    unused <- c("normalize_dydx", "step_size", "numDeriv_method", "internal_call", "contrast_numeric_slope")
+    # some predict methods raise warnings on unused arguments
+    unused <- c("normalize_dydx", "eps", "numDeriv_method", "internal_call", "contrast_numeric_slope")
     dots <- dots[setdiff(names(dots), unused)]
 
     # incompatible arguments
     if (any(c("include_smooth", "include_random") %in% names(dots)) &&
         any(c("re.form", "re_formula") %in% names(dots))) {
-        stop("The `include_random` and `include_smooth` arguments can be used together, but not with `re.form` or `re_formula`.")
+        stop("The `include_random` and `include_smooth` arguments can be used together, but not with `re.form` or `re_formula`.", call. = FALSE)
     }
 
     # should we try to compute predictions with `insight::get_predicted()`?
     # confidence interval with known `predict` argument
-    is_insight <- (!is.null(conf.level) && !is.na(type_insight)) ||
+    is_insight <- (!isFALSE(vcov) && !is.na(type_insight)) ||
                   any(c("include_random", "include_smooth") %in% names(dots))
 
     # `insight::get_predicted` yields back-transformed confidence intervals
@@ -64,7 +64,22 @@ get_predict.default <- function(model,
             x = model,
             data = newdata,
             predict = type_insight,
-            ci = conf.level)
+            ci = conf_level)
+
+        # `get_predicted` issues a warning even with `vcov=NULL` when the
+        # argument is not supported, so we do this here instead of in `predictions`
+        if (isTRUE(vcov == "satterthwaite") || isTRUE(vcov == "kenward-roger")) {
+            args[["ci_method"]] <- vcov
+            # lmerTest predict method fails when the DV is not there
+            dv <- insight::find_response(model)
+            newdata_tmp <- newdata
+            newdata_tmp[[dv]] <- mean(insight::get_response(model))
+            args[["data"]] <- newdata_tmp
+        } else if (is.logical(vcov)) {
+            args[["vcov"]] <- NULL
+        } else if (!is.logical(vcov) && !is.null(vcov)) {
+            args[["vcov"]] <- get_vcov(model, vcov = vcov)
+        }
 
         args <- c(args, dots)
 
@@ -73,14 +88,11 @@ get_predict.default <- function(model,
 
         # return immediately if this worked
         if (inherits(pred, "get_predicted")) {
-            out <- data.frame(pred)
+            out <- data.frame(pred) # cannot use data.table because insight has no as.data.table method
             colnames(out)[colnames(out) == "Row"] <- "rowid"
             colnames(out)[colnames(out) == "Response"] <- "group"
             colnames(out)[colnames(out) == "SE"] <- "std.error"
             colnames(out)[colnames(out) == "Predicted"] <- "predicted"
-            if (!"rowid" %in% colnames(out)) {
-                out$rowid <- seq_len(nrow(out))
-            }
             return(out)
         }
     }
@@ -110,21 +122,36 @@ get_predict.default <- function(model,
 
     # atomic vector
     if (isTRUE(checkmate::check_atomic_vector(pred))) {
-        out <- data.frame(
-            rowid = 1:nrow(newdata),
-            # strip weird attributes added by some methods (e.g., predict.svyglm)
-            predicted = as.numeric(pred))
+        # strip weird attributes added by some methods (e.g., predict.svyglm)
+        if (length(pred) == nrow(newdata)) {
+            if ("rowid" %in% colnames(newdata)) {
+                out <- data.table(predicted = as.numeric(pred),
+                                  rowid = newdata$rowid)
+            } else {
+                out <- data.table(predicted = as.numeric(pred),
+                                  rowid = seq_len(length(pred)))
+            }
+        }
 
     # matrix with outcome levels as columns
     } else if (is.matrix(pred)) {
-        out <- data.frame(
-            rowid = rep(1:nrow(pred), times = ncol(pred)),
-            group = rep(colnames(pred), each = nrow(pred)),
-            predicted = c(pred))
-
+        # internal calls always includes "rowid" as a column in `newdata`
+        if ("rowid" %in% colnames(newdata)) {
+            out <- data.table(
+                rowid = rep(newdata[["rowid"]], times = ncol(pred)),
+                group = rep(colnames(pred), each = nrow(pred)),
+                predicted = c(pred))
+        } else {
+            out <- data.table(
+                rowid = rep(seq_len(nrow(pred)), times = ncol(pred)),
+                group = rep(colnames(pred), each = nrow(pred)),
+                predicted = c(pred))
+        }
     } else {
-        stop(sprintf("Unable to extract predictions of type %s from a model of class %s. Please report this problem, along with reproducible code and data on Github: https://github.com/vincentarelbundock/marginaleffects/issues", type, class(model)[1]))
+        stop(sprintf("Unable to extract predictions of type %s from a model of class %s. Please report this problem, along with reproducible code and data on Github: https://github.com/vincentarelbundock/marginaleffects/issues", type, class(model)[1]), call. = FALSE)
     }
+
+    setDF(out)
 
     return(out)
 }

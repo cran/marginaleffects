@@ -25,21 +25,6 @@ set_coef.multinom <- function(model, coefs) {
 }
 
 
-#' @include get_vcov.R
-#' @rdname get_vcov
-#' @export
-get_vcov.multinom <- function(model, ...) {
-    out <- suppressMessages(insight::get_varcov(model))
-    coefs <- get_coef(model)
-    if (ncol(out) == length(coefs)) {
-        row.names(out) <- names(coefs)
-        colnames(out) <- names(coefs)
-    } else {
-        out <- NULL
-    }
-    return(out)
-}
-
 
 #' @include get_group_names.R
 #' @rdname get_group_names
@@ -60,6 +45,8 @@ get_group_names.multinom <- function(model, ...) {
 #' @export
 get_predict.multinom <- function(model,
                                  newdata = insight::get_data(model),
+                                 vcov = FALSE,
+                                 conf_level = 0.95,
                                  type = "probs",
                                  ...) {
 
@@ -78,9 +65,15 @@ get_predict.multinom <- function(model,
 
     # matrix with outcome levels as columns
     out <- data.frame(
-        rowid = rep(1:nrow(pred), times = ncol(pred)),
         group = rep(colnames(pred), each = nrow(pred)),
         predicted = c(pred))
+
+    # usually when `newdata` is supplied by `comparisons`
+    if ("rowid" %in% colnames(newdata)) {
+        out$rowid <- rep(newdata$rowid, times = ncol(pred))
+    } else {
+        out$rowid <- rep(seq_len(nrow(pred)), times = ncol(pred))
+    }
 
     return(out)
 }

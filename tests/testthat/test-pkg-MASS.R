@@ -3,6 +3,8 @@ requiet("margins")
 requiet("MASS")
 requiet("emmeans")
 requiet("broom")
+tol <- 0.0001
+tol_se <- 0.001
 
 
 ### marginaleffects
@@ -11,10 +13,9 @@ test_that("rlm: marginaleffects: vs. margins vs. emmeans", {
     expect_marginaleffects(model, n_unique = 1)
 
     # margins
-    mfx <- tidy(marginaleffects(model))
-    mar <- tidy(margins(model))
-    expect_equal(mfx$estimate, mar$estimate, ignore_attr = TRUE)
-    expect_equal(mfx$std.error, mar$std.error, ignore_attr = TRUE, tolerance = .00001)
+    mfx <- marginaleffects(model)
+    mar <- margins(model, unit_ses = TRUE)
+    expect_true(test_against_margins(mfx, mar, verbose = TRUE, tolerance = tol_se))
 
     # emmeans
     mfx <- marginaleffects(model, newdata = datagrid(drat = 3.9, hp = 110))
@@ -23,36 +24,36 @@ test_that("rlm: marginaleffects: vs. margins vs. emmeans", {
     em1 <- tidy(em1)
     em2 <- tidy(em2)
     expect_equal(mfx$dydx[1], em1$hp.trend)
-    expect_equal(mfx$std.error[1], em1$std.error, tolerance = .001)
+    expect_equal(mfx$std.error[1], em1$std.error, tolerance = .002)
     expect_equal(mfx$dydx[2], em2$drat.trend)
     expect_equal(mfx$std.error[2], em2$std.error, tolerance = .002)
 })
 
 test_that("glm.nb: marginaleffects: vs. margins vs. emmeans", {
 
-    # margins does not support unit-level standard errors
     model <- suppressWarnings(MASS::glm.nb(carb ~ wt + factor(cyl), data = mtcars))
+
+    # margins does not support unit-level standard errors
     mfx <- marginaleffects(model)
     mar <- margins(model)
     expect_equal(mfx$dydx[mfx$term == "wt"], mar$dydx_wt, tolerance = .0001, ignore_attr = TRUE)
     expect_equal(mfx$dydx[mfx$contrast == "6 - 4"], mar$dydx_cyl6, tolerance = .0001, ignore_attr = TRUE)
     expect_equal(mfx$dydx[mfx$contrast == "8 - 4"], mar$dydx_cyl8, tolerance = .0001, ignore_attr = TRUE)
 
-    mfx <- marginaleffects(model)
-    mar <- margins(model)
-
     # margins: standard errors at mean gradient
-    mfx <- tidy(mfx)
-    mar <- tidy(mar)
-    expect_equal(mfx$estimate, mar$estimate, ignore_attr = TRUE, tolerance = .0001)
-    expect_equal(mfx$std.error, mar$std.error, ignore_attr = TRUE, tolerance = .001)
+    mfx_tid <- tidy(mfx)
+    mar_tid <- tidy(mar)[, c("term", "estimate", "std.error")]
+    mar_tid <- setNames(mar_tid, c("term", "mar_estimate", "mar_std.error"))
+    tmp <- merge(mfx_tid, mar_tid)
+    expect_equal(tmp$estimate, tmp$mar_estimate, ignore_attr = TRUE, tolerance = .0001)
+    expect_equal(tmp$std.error, tmp$mar_std.error, ignore_attr = TRUE, tolerance = .001)
 
     # emmeans::emtrends
     mfx <- marginaleffects(model, newdata = datagrid(wt = 2.6, cyl = 4), type = "link")
     em <- emtrends(model, ~wt, "wt", at = list(wt = 2.6, cyl = 4))
     em <- tidy(em)
     expect_equal(mfx$dydx[1], em$wt.trend)
-    expect_equal(mfx$std.error[1], em$std.error)
+    expect_equal(mfx$std.error[1], em$std.error, tolerance = 1e-3)
 
     # emmeans contrasts
     mfx <- marginaleffects(model, type = "link", newdata = datagrid(wt = 3, cyl = 4))
@@ -87,8 +88,8 @@ test_that("polr: marginaleffects: vs. Stata", {
     mfx <- marginaleffects(mod, type = "probs")
     mfx <- tidy(mfx)
     mfx <- merge(mfx, stata)
-    expect_equal(mfx$estimate, mfx$dydxstata, tolerance = .001)
-    expect_equal(mfx$std.error, mfx$std.errorstata, tolerance = .001)
+    expect_equal(mfx$estimate, mfx$dydxstata, tolerance = .01)
+    expect_equal(mfx$std.error, mfx$std.errorstata, tolerance = .01)
     expect_marginaleffects(mod, type = "probs")
 })
 
@@ -109,7 +110,7 @@ test_that("marginaleffects vs. emmeans", {
     mod <- MASS::polr(y ~ x1 + x2, data = dat, Hess = TRUE)
     em <- emmeans::emtrends(mod, ~y, var = "x1", mode = "prob", at = list(x1 = 0, x2 = 0))
     em <- tidy(em)
-    mfx <- marginaleffects(mod, newdata = datagrid(x1 = 0, x2 = 0), 
+    mfx <- marginaleffects(mod, newdata = datagrid(x1 = 0, x2 = 0),
                            type = "probs", variables = "x1")
     expect_equal(mfx$dydx, em$x1.trend, tolerance = .01)
     expect_equal(mfx$std.error, em$std.error, tolerance = .01)

@@ -4,22 +4,22 @@
 \alias{summary.marginaleffects}
 \title{Summarize a \code{marginaleffects} object}
 \usage{
-\method{summary}{marginaleffects}(object, conf.level = 0.95, ...)
+\method{summary}{marginaleffects}(object, conf_level = 0.95, by = NULL, ...)
 }
 \arguments{
 \item{object}{An object produced by the \code{marginaleffects} function}
 
-\item{conf.level}{The confidence level to use for the confidence interval if
-\code{conf.int=TRUE}. Must be strictly greater than 0 and less than 1. Defaults
-to 0.95, which corresponds to a 95 percent confidence interval.}
+\item{conf_level}{numeric value between 0 and 1. Confidence level to use to build a confidence interval.}
 
-\item{...}{Additional arguments are passed to the \code{predict()} method used to
-compute adjusted predictions. These arguments are particularly useful for
-mixed-effects or bayesian models (see the online vignettes on the
+\item{by}{Character vector of variable names over which to compute group-averaged marginal effects.}
+
+\item{...}{Additional arguments are passed to the \code{predict()} method
+supplied by the modeling package.These arguments are particularly useful
+for mixed-effects or bayesian models (see the online vignettes on the
 \code{marginaleffects} website). Available arguments can vary from model to
 model, depending on the range of supported arguments by each modeling
 package. See the "Model-Specific Arguments" section of the
-\code{?marginaleffects} document for a non-exhaustive list of available
+\code{?marginaleffects} documentation for a non-exhaustive list of available
 arguments.}
 }
 \value{
@@ -28,4 +28,14 @@ Data frame of summary statistics for an object produced by the
 }
 \description{
 Summarize a \code{marginaleffects} object
+}
+\examples{
+mod <- lm(mpg ~ hp * wt + factor(gear), data = mtcars)
+mfx <- marginaleffects(mod)
+
+# average marginal effects
+summary(mfx)
+
+# average marginal effects by group
+summary(mfx, by = "gear")
 }

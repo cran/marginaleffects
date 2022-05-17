@@ -9,13 +9,13 @@
 \arguments{
 \item{object}{An object produced by the \code{predictions} function}
 
-\item{...}{Additional arguments are passed to the \code{predict()} method used to
-compute adjusted predictions. These arguments are particularly useful for
-mixed-effects or bayesian models (see the online vignettes on the
+\item{...}{Additional arguments are passed to the \code{predict()} method
+supplied by the modeling package.These arguments are particularly useful
+for mixed-effects or bayesian models (see the online vignettes on the
 \code{marginaleffects} website). Available arguments can vary from model to
 model, depending on the range of supported arguments by each modeling
 package. See the "Model-Specific Arguments" section of the
-\code{?marginaleffects} document for a non-exhaustive list of available
+\code{?marginaleffects} documentation for a non-exhaustive list of available
 arguments.}
 }
 \value{

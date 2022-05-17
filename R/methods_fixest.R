@@ -2,8 +2,9 @@
 #' @export
 get_predict.fixest <- function(model,
                                newdata = insight::get_data(model),
+                               vcov = FALSE,
+                               conf_level = 0.95,
                                type = "response",
-                               conf.level = NULL,
                                ...) {
 
     assert_dependency("fixest")
@@ -22,13 +23,24 @@ get_predict.fixest <- function(model,
         newdata = newdata,
         type = type)
 
-    if (!is.null(conf.level)) {
-        args[["level"]] <- conf.level
+    if (!is.null(conf_level)) {
+        args[["level"]] <- conf_level
         # interval can be "none", "confidence", or "prediction"
         if (!"interval" %in% names(dots)) {
             args[["interval"]] <- "confidence"
         } else {
             args[["interval"]] <- dots[["interval"]]
+        }
+
+        # vcov
+        if (!isTRUE(checkmate::check_matrix(vcov, null.ok = TRUE))) {
+            V <- get_vcov(model, vcov = vcov)
+        } else {
+            V <- NULL
+        }
+
+        if (isTRUE(checkmate::check_matrix(V))) {
+            args[["vcov"]] <- V
         }
     }
 
@@ -37,7 +49,7 @@ get_predict.fixest <- function(model,
     pred <- try(do.call("fun", args), silent = TRUE)
 
     # unable to compute confidence intervals; try again
-    if (!is.null(conf.level) && inherits(pred, "try-error")) {
+    if (!is.null(conf_level) && inherits(pred, "try-error")) {
         args[["interval"]] <- "none"
         args[["level"]] <- NULL
         pred <- try(do.call("fun", args), silent = TRUE)
@@ -56,7 +68,7 @@ get_predict.fixest <- function(model,
             rowid = 1:nrow(newdata),
             predicted = as.numeric(pred))
     } else {
-        stop("Unable to extract predictions from a model of type `fixest`. Please report this problem, along with replicable code, on the `marginaleffects` issue tracker: https://github.com/vincentarelbundock/marginaleffects/issues")
+        stop("Unable to extract predictions from a model of type `fixest`. Please report this problem, along with replicable code, on the `marginaleffects` issue tracker: https://github.com/vincentarelbundock/marginaleffects/issues", call. = FALSE)
     }
 
     return(out)

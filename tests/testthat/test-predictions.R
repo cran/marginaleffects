@@ -12,19 +12,12 @@ test_that("insight > 0.14.1 allows us to support `type`", {
 })
 
 
-test_that("default predicts for all observations", {
-    logit <- glm(am ~ hp + wt, data = mtcars, family = binomial)
-    pred <- predictions(logit)
-    expect_equal(nrow(pred), nrow(mtcars))
-    pred <- predictions(logit, type = c("link", "response"))
-    expect_equal(nrow(pred), 2 * nrow(mtcars))
-})
 
 test_that("bugfix: counterfactual predictions keep rowid", {
   mod <- lm(mpg ~ hp + am, mtcars)
   pred <- predictions(mod, newdata = datagrid(am = 0:1, grid.type = "counterfactual"))
   expect_predictions(pred, n_row = 64)
-  expect_true("rowid_original" %in% colnames(pred))
+  expect_true("rowid_counterfactual" %in% colnames(pred))
 })
 
 
@@ -137,3 +130,6 @@ test_that("hurdle predictions", {
     expect_s3_class(pred, "data.frame")
     expect_true("predicted" %in% colnames(pred))
 })
+
+
+

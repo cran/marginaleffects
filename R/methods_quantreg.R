@@ -1,27 +1,15 @@
-#' @include get_vcov.R
-#' @rdname @get_vcov
-#' @export
-get_vcov.rq <- function(model, ...) {
-    out <- insight::get_varcov(model)
-    if (is.null(row.names(out))) {
-        termnames <- names(stats::coef(model))
-        colnames(out) <- termnames
-        row.names(out) <- termnames
-    }
-    return(out)
-}
-
-
 #' @rdname get_predict
 #' @export
 get_predict.rq <- function(model,
                            newdata = insight::get_data(model),
+                           vcov = NULL,
+                           conf_level = 0.95,
                            type = NULL,
-                           conf.level = NULL,
                            ...) {
-    assert_dependency("quantreg")
+
     # type argument of the method is used to specify confidence interval type
     # TODO: add support for this in `insight`
+    assert_dependency("quantreg") # predict method must be available
     out <- quantreg::predict.rq(model,
                                 newdata = newdata,
                                 ...)
@@ -35,5 +23,5 @@ get_predict.rq <- function(model,
 #' @rdname sanity_model_specific
 #' @keywords internal
 sanity_model_specific.rqs <- function(model, ...) {
-    stop("`marginaleffects` only supports `quantreg::rq` models with a single `tau` value.")
+    stop("`marginaleffects` only supports `quantreg::rq` models with a single `tau` value.", call. = FALSE)
 }

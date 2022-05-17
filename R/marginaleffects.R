@@ -1,13 +1,25 @@
-#' Marginal Effects
+#' Marginal Effects (Slopes)
 #'
 #' This function calculates marginal effects (slopes) for each row of the
 #' dataset. The resulting object can processed by the `tidy()` or `summary()`
-#' functions, which compute Average Marginal Effects (AME). The `datagrid()`
-#' function and the `newdata` argument can be used to calculate Marginal
-#' Effects at the Mean (MEM) or Marginal Effects at User-Specified values (aka
-#' Marginal Effects at Representative values, MER). Additional information can
-#' be found in the Details and Examples sections below, and in the vignette on
-#' the `marginaleffects` website.
+#' functions, which compute Average Marginal Effects (AME) or Group-Average
+#' Marginal Effects (G-AME). The `datagrid()` function and the `newdata`
+#' argument can be used to calculate Marginal Effects at the Mean (MEM) or
+#' Marginal Effects at User-Specified values (aka Marginal Effects at
+#' Representative values, MER). For more information, see the Details and
+#' Examples sections below, and in the vignettes on the `marginaleffects`
+#' website: <https://vincentarelbundock.github.io/marginaleffects/>
+#' * [Getting Started](https://vincentarelbundock.github.io/marginaleffects/#getting-started)
+#' * [Marginal Effects Vignette](https://vincentarelbundock.github.io/marginaleffects/articles/mfx02_mfx.html)
+#' * [Supported Models](https://vincentarelbundock.github.io/marginaleffects/articles/mfx06_supported_models.html)
+#' * Case Studies
+#'    - [Bayesian analyses with `brms`](https://vincentarelbundock.github.io/marginaleffects/articles/brms.html)
+#'    - [Mixed effects models](https://vincentarelbundock.github.io/marginaleffects/articles/lme4.html)
+#'    - [Generalized Additive Models](https://vincentarelbundock.github.io/marginaleffects/articles/gam.html)
+#'    - [Multinomial Logit and Discrete Choice Models](https://vincentarelbundock.github.io/marginaleffects/articles/mlogit.html)
+#'    - [Tables and plots](https://vincentarelbundock.github.io/marginaleffects/articles/modelsummary.html)
+#'    - [Robust standard errors and more](https://vincentarelbundock.github.io/marginaleffects/articles/sandwich.html)
+#'    - [Transformations and Custom Contrasts: Adjusted Risk Ratio Example](https://vincentarelbundock.github.io/marginaleffects/articles/transformation.html)
 #'
 #' A "marginal effect" is the partial derivative of the regression equation
 #' with respect to a variable in the model. This function uses automatic
@@ -20,26 +32,59 @@
 #'
 #' https://vincentarelbundock.github.io/marginaleffects/
 #'
+#' Numerical derivatives for the `marginaleffects` function are calculated
+#' using a simple epsilon difference approach: \eqn{\partial Y / \partial X = (f(X + \varepsilon) - f(X)) / \varepsilon}{dY/dX = (f(X + e) - f(X)) / e},
+#' where f is the `predict()` method associated with the model class, and
+#' \eqn{\varepsilon}{e} is determined by the `eps` argument.
+#'
+#' Warning: Some models are particularly sensitive to `eps`, so it is good
+#' practice to try different values of this argument.
+#'
+#' Standard errors for the marginal effects are obtained using the Delta
+#' method. See the "Technical Notes" vignette on the package website for details.
+#'
 #' @param model Model object
-#' @param variables Variables to consider (character vector). `NULL`
-#'   calculates marginal effects for all terms in the model object.
-#' @param vcov Matrix or boolean
-#'   + FALSE: does not compute unit-level standard errors. This can speed up computation considerably. 
-#'   + TRUE: computes unit-level standard errors using the default `vcov(model)` variance-covariance matrix.
-#'   + Named square matrix: computes standard errors with a user-supplied variance-covariance matrix. This matrix must be square and have dimensions equal to the number of coefficients in `get_coef(model)`.
-#' @param newdata A dataset over which to compute marginal effects. `NULL` uses
-#'   the original data used to fit the model.
-#' @param type Type(s) of prediction as string or character vector. This can
-#'   differ based on the model type, but will typically be a string such as:
-#'   "response", "link", "probs", or "zero".
-#' @param ... Additional arguments are passed to the `predict()` method used to
-#'   compute adjusted predictions. These arguments are particularly useful for
-#'   mixed-effects or bayesian models (see the online vignettes on the
-#'   `marginaleffects` website). Available arguments can vary from model to
-#'   model, depending on the range of supported arguments by each modeling
-#'   package. See the "Model-Specific Arguments" section of the
-#'   `?marginaleffects` document for a non-exhaustive list of available
-#'   arguments.
+#' @param variables `NULL` or character vector. The subset of variables for which to compute marginal effects.
+#' * `NULL`: compute contrasts for all the variables in the model object (can be slow). 
+#' * Character vector: subset of variables (usually faster).
+#' @param newdata `NULL`, data frame, string, or `datagrid()` call. Determines the predictor values for which to compute marginal effects.
+#' + `NULL` (default): Unit-level marginal effects for each observed value in the original dataset.
+#' + data frame: Unit-level marginal effects for each row of the `newdata` data frame.
+#' + string:
+#'   - "mean": Marginal Effects at the Mean. Marginal effects when each predictor is held at its mean or mode.
+#'   - "median": Marginal Effects at the Median. Marginal effects when each predictor is held at its median or mode.
+#'   - "marginalmeans": Marginal Effects at Marginal Means. See Details section below.
+#' + [datagrid()] call to specify a custom grid of regressors. For example:
+#'   - `newdata = datagrid(cyl = c(4, 6))`: `cyl` variable equal to 4 and 6 and other regressors fixed at their means or modes.
+#'   - See the Examples section and the [datagrid()] documentation.
+#' @param vcov Type of uncertainty estimates to report (e.g., for robust standard errors). Acceptable values:
+#'  * FALSE: Do not compute standard errors. This can speed up computation considerably.
+#'  * TRUE: Unit-level standard errors using the default `vcov(model)` variance-covariance matrix.
+#'  * String which indicates the kind of uncertainty estimates to return.
+#'    - Heteroskedasticity-consistent: `"HC"`, `"HC0"`, `"HC1"`, `"HC2"`, `"HC3"`, `"HC4"`, `"HC4m"`, `"HC5"`. See `?sandwich::vcovHC`
+#'    - Heteroskedasticity and autocorrelation consistent: `"HAC"`
+#'    - Other: `"NeweyWest"`, `"KernHAC"`, `"OPG"`. See the `sandwich` package documentation.
+#'  * One-sided formula which indicates the name of cluster variables (e.g., `~unit_id`). This formula is passed to the `cluster` argument of the `sandwich::vcovCL` function.
+#'  * Square covariance matrix
+#'  * Function which returns a covariance matrix (e.g., `stats::vcov(model)`)
+#' @param conf_level numeric value between 0 and 1. Confidence level to use to build a confidence interval.
+#' @param type string indicates the type (scale) of the predictions used to
+#' compute marginal effects or contrasts. This can differ based on the model
+#' type, but will typically be a string such as: "response", "link", "probs",
+#' or "zero". When an unsupported string is entered, the model-specific list of
+#' acceptable values is returned in an error message.
+#' @param eps A numeric value specifying the “step” size to use when
+#' calculating numerical derivatives. See the Details section below. Warning:
+#' the marginal effects computed for certain models can be sensitive to the
+#' choice of step (e.g., Bayesian mixed effects).
+#' @param ... Additional arguments are passed to the `predict()` method
+#' supplied by the modeling package.These arguments are particularly useful
+#' for mixed-effects or bayesian models (see the online vignettes on the
+#' `marginaleffects` website). Available arguments can vary from model to
+#' model, depending on the range of supported arguments by each modeling
+#' package. See the "Model-Specific Arguments" section of the
+#' `?marginaleffects` documentation for a non-exhaustive list of available
+#' arguments.
 #'
 #' @template model_specific_arguments
 #'
@@ -62,6 +107,7 @@
 #' tidy(mfx)
 #' plot(mfx)
 #'
+#' 
 #' # Marginal Effect at the Mean (MEM)
 #' marginaleffects(mod, newdata = datagrid())
 #'
@@ -70,13 +116,21 @@
 #' marginaleffects(mod,
 #'                 newdata = datagrid(hp = c(100, 110)))
 #'
+#' # Group-Average Marginal Effects (G-AME)
+#' # Calculate marginal effects for each observation, and then take the average
+#' # marginal effect within each subset of observations with different observed
+#' # values for the `cyl` variable:
+#' mod2 <- lm(mpg ~ hp * cyl, data = mtcars)
+#' mfx2 <- marginaleffects(mod2, variables = "hp")
+#' summary(mfx2, by = "cyl")
+#'
 #' # Marginal Effects at User-Specified Values (counterfactual)
 #' # Variables not explicitly included in `datagrid()` are held at their
 #' # original values, and the whole dataset is duplicated once for each
 #' # combination of the values in `datagrid()`
 #' mfx <- marginaleffects(mod,
 #'                        newdata = datagrid(hp = c(100, 110),
-#'                                           grid.type = "counterfactual"))
+#'                                           grid_type = "counterfactual"))
 #' head(mfx)
 #'
 #' # Heteroskedasticity robust standard errors
@@ -87,12 +141,15 @@ marginaleffects <- function(model,
                             newdata = NULL,
                             variables = NULL,
                             vcov = TRUE,
+                            conf_level = 0.95,
                             type = "response",
+                            eps = 1e-4,
                             ...) {
 
 
     # order of the first few paragraphs is important
     # if `newdata` is a call to `typical` or `counterfactual`, insert `model`
+    # should probably not be nested too deeply in the call stack since we eval.parent() (not sure about this)
     scall <- substitute(newdata)
     if (is.call(scall)) {
         lcall <- as.list(scall)
@@ -117,19 +174,14 @@ marginaleffects <- function(model,
     attributes_newdata <- attributes_newdata[idx]
 
     # sanity checks and pre-processing
-    model <- sanity_model(model = model, ...)
-    sanity_dots(model = model, ...)
+    model <- sanitize_model(model = model, newdata = newdata, calling_function = "marginaleffects", ...)
+    sanity_dots(model = model, calling_function = "marginaleffects", ...)
     sanity_type(model = model, type = type, calling_function = "marginaleffects")
+    conf_level <- sanitize_conf_level(conf_level, ...)
     newdata <- sanity_newdata(model, newdata)
     variables <- sanitize_variables(model, newdata, variables)
-    vcov <- sanitize_vcov(model, vcov)
 
-    # rowid is required for later merge
-    if (!"rowid" %in% colnames(newdata)) {
-        newdata$rowid <- 1:nrow(newdata)
-    }
-
-    # variables is a list but we need a vector
+    # variables is a list but we need a vector (and we drop cluster)
     variables_vec <- unique(unlist(variables))
     # this won't be triggered for multivariate outcomes in `brms`, which
     # produces a list of lists where top level names correspond to names of the
@@ -140,128 +192,40 @@ marginaleffects <- function(model,
         variables_vec <- intersect(variables_vec, unlist(variables[["conditional"]]))
     }
 
-    mfx_list <- list()
+    out <- comparisons(
+        model,
+        newdata = newdata,
+        variables = variables_vec,
+        vcov = vcov,
+        conf_level = conf_level,
+        type = type,
+        eps = eps,
+        # hard-coded. Users should use comparisons() for more flexibility
+        transform_pre = "difference",
+        contrast_numeric = "dydx",
+        contrast_factor = "reference",
+        interaction = FALSE,
+        # secret arguments
+        internal_call = TRUE,
+        ...)
 
-    # compute marginal effects and standard errors
-    mfx_list <- list()
-    se_mean_list <- list()
-    draws_list <- list()
-    J_list <- list()
-    J_mean_list <- list()
-    for (predt in type) {
-        for (v in variables_vec) {
-            mfx <- get_dydx(model = model,
-                            variable = v,
-                            newdata = newdata,
-                            type = predt,
-                            vcov = vcov,
-                            internal_call = TRUE, # for group column in comparisons
-                            ...)
-            mfx$type <- predt
+    setDT(out)
 
-            # bayesian draws
-            if (!is.null(attr(mfx, "posterior_draws"))) {
-                draws_list <- c(draws_list, list(attr(mfx, "posterior_draws")))
-                J <- J_mean <- NULL
+    # report slope, not contrast
+    setnames(out, old = "comparison", new = "dydx")
 
-            # standard errors via delta method
-            } else if (!is.null(vcov)) {
-                idx <- intersect(colnames(mfx), c("type", "group", "term", "contrast"))
-                idx <- mfx[, idx, drop = FALSE]
-                se <- standard_errors_delta(model,
-                                            vcov = vcov,
-                                            type = predt,
-                                            FUN = standard_errors_delta_marginaleffects,
-                                            newdata = newdata,
-                                            index = idx,
-                                            variable = v,
-                                            ...)
-                mfx$std.error <- as.numeric(se)
-                J <- attr(se, "J")
-                J_mean <- attr(se, "J_mean")
-
-            # no standard error
-            } else {
-                J <- J_mean <- NULL
-            }
-
-            mfx_list <- c(mfx_list, list(mfx))
-            J_list <- c(J_list, list(J))
-            J_mean_list <- c(J_mean_list, list(J_mean))
-        }
-    }
-
-    # could have different columns, so `rbind` won't do
-    out <- bind_rows(mfx_list)
-
-    J <- do.call("rbind", J_list) # bind_rows does not work for matrices
-
-    # duplicate colnames can occur for grouped outcome models, so we can't just
-    # use `poorman::bind_rows()`. Instead, ugly hack to make colnames unique
-    # with a weird string.
-    for (i in seq_along(J_mean_list)) {
-        if (inherits(J_mean_list[[i]], "data.frame")) {
-            newnames <- make.unique(names(J_mean_list[[i]]), sep = "______")
-            J_mean_list[[i]] <- stats::setNames(J_mean_list[[i]], newnames)
-        }
-    }
-    J_mean <- bind_rows(J_mean_list) # bind_rows need because some have contrast col
-    if (inherits(J_mean, "data.frame")) {
-        J_mean <- stats::setNames(J_mean, gsub("______.*$", "", colnames(J_mean)))
-    }
-
-
-    # empty contrasts equal "". important for merging in `tidy()`
-    if ("contrast" %in% colnames(J_mean)) {
-        J_mean$contrast <- ifelse(is.na(J_mean$contrast), "", J_mean$contrast)
-    }
-
-    # standard error at mean gradient (this is what Stata and R's `margins` compute)
-    # J_mean is NULL in bayesian models and where the delta method breaks
-    if (!is.null(J_mean) && !is.null(vcov)) {
-        idx <- !colnames(J_mean) %in% c("type", "group", "term", "contrast")
-        tmp <- J_mean[, !idx, drop = FALSE]
-        J_mean_mat <- as.matrix(J_mean[, idx, drop = FALSE])
-        # converting to data.frame can sometimes break colnames
-        colnames(J_mean_mat) <- colnames(J)
-        # aggressive check. probably needs to be relaxed.
-        if (any(colnames(J_mean_mat) != colnames(vcov))) {
-            tmp <- NULL
-            warning("The variance covariance matrix and the Jacobian do not match. `marginaleffects` is unable to compute standard errors using the delta method.",
-                    call. = FALSE)
-        } else {
-            V <- colSums(t(J_mean_mat %*% vcov) * t(J_mean_mat))
-            tmp$std.error <- sqrt(V)
-        }
-        se_at_mean_gradient <- tmp
-    } else {
-        se_at_mean_gradient <- NULL
-    }
-
-    # bayesian posterior draws
-    draws <- do.call("rbind", draws_list)
-    if (!is.null(draws)) {
-        if (!"conf.low" %in% colnames(out)) {
-            tmp <- apply(draws, 1, get_hdi)
-            out[["std.error"]] <- NULL
-            out[["dydx"]] <- apply(draws, 1, stats::median)
-            out[["conf.low"]] <- tmp[1, ]
-            out[["conf.high"]] <- tmp[2, ]
-        }
-    }
-
-    # merge newdata if requested and restore attributes
-    return_data <- sanitize_return_data()
-    if (isTRUE(return_data)) {
-        out <- left_join(out, newdata, by = "rowid")
-    }
+    # comparisons() useful info
+    attributes_comparisons <- attributes(out)
+    idx <- c("class", "row.names", "names", "data", "reference")
+    idx <- !names(attributes_comparisons) %in% idx
+    attributes_comparisons <- attributes_comparisons[idx]
 
     # clean columns
-    stubcols <- c("rowid", "type", "group", "term", "contrast", "dydx", "std.error",
+    stubcols <- c("rowid", "type", "group", "term", "contrast", "dydx", "std.error", "statistic", "p.value", "conf.low", "conf.high",
                   sort(grep("^predicted", colnames(newdata), value = TRUE)))
     cols <- intersect(stubcols, colnames(out))
     cols <- unique(c(cols, colnames(out)))
-    out <- out[, cols]
+    out <- out[, ..cols]
 
     if ("group" %in% colnames(out) && all(out$group == "main_marginaleffect")) {
         out$group <- NULL
@@ -269,33 +233,29 @@ marginaleffects <- function(model,
 
     # return contrast column only when relevant
     if ("contrast" %in% colnames(out)) {
-        if (all(is.na(out$contrast))) {
-            out$contrast <- NULL
-        } else {
-            out$contrast[is.na(out$contrast)] <- ""
+        out[is.na(contrast), "contrast" := ""]
+        out[contrast == "dydx", "contrast" := "dY/dX"]
+        if (all(out$contrast == "dY/dX")) {
+            out[, "contrast" := NULL]
         }
     }
 
-    # DO NOT sort rows because we want draws to match
-    row.names(out) <- NULL
-
-    # we want consistent output, regardless of whether `data.table` is installed/used or not
-    out <- as.data.frame(out)
-
+    # class
+    setDF(out)
+    class(out) <- setdiff(class(out), "comparisons")
     class(out) <- c("marginaleffects", class(out))
-    attr(out, "posterior_draws") <- draws
-    attr(out, "model") <- model
-    attr(out, "type") <- type
-    attr(out, "model_type") <- class(model)[1]
-    attr(out, "variables") <- variables
-    attr(out, "J") <- J
-    attr(out, "J_mean") <- J_mean
-    attr(out, "se_at_mean_gradient") <- se_at_mean_gradient
 
-    # modelbased::visualisation_matrix attaches useful info for plotting
+    # restore attributes
     for (a in names(attributes_newdata)) {
         attr(out, paste0("newdata_", a)) <- attributes_newdata[[a]]
     }
+    for (a in names(attributes_comparisons)) {
+        if (!a %in% names(attributes(out))) {
+            attr(out, a) <- attributes_comparisons[[a]]
+        }
+    }
+
+    attr(out, "vcov.type") <- get_vcov_label(vcov)
 
     return(out)
 }

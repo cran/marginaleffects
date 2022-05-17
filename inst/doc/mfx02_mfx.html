@@ -1,0 +1,682 @@
+<!DOCTYPE html>
+
+<html>
+
+<head>
+
+<meta charset="utf-8" />
+<meta name="generator" content="pandoc" />
+<meta http-equiv="X-UA-Compatible" content="IE=EDGE" />
+
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+
+
+
+<title>Marginal Effects</title>
+
+
+<style type="text/css">
+  code{white-space: pre-wrap;}
+  span.smallcaps{font-variant: small-caps;}
+  span.underline{text-decoration: underline;}
+  div.column{display: inline-block; vertical-align: top; width: 50%;}
+  div.hanging-indent{margin-left: 1.5em; text-indent: -1.5em;}
+  ul.task-list{list-style: none;}
+    </style>
+
+
+
+<style type="text/css">
+  code {
+    white-space: pre;
+  }
+  .sourceCode {
+    overflow: visible;
+  }
+</style>
+<style type="text/css" data-origin="pandoc">
+a.sourceLine { display: inline-block; line-height: 1.25; }
+a.sourceLine { pointer-events: none; color: inherit; text-decoration: inherit; }
+a.sourceLine:empty { height: 1.2em; }
+.sourceCode { overflow: visible; }
+code.sourceCode { white-space: pre; position: relative; }
+div.sourceCode { margin: 1em 0; }
+pre.sourceCode { margin: 0; }
+@media screen {
+div.sourceCode { overflow: auto; }
+}
+@media print {
+code.sourceCode { white-space: pre-wrap; }
+a.sourceLine { text-indent: -1em; padding-left: 1em; }
+}
+pre.numberSource a.sourceLine
+  { position: relative; left: -4em; }
+pre.numberSource a.sourceLine::before
+  { content: attr(title);
+    position: relative; left: -1em; text-align: right; vertical-align: baseline;
+    border: none; pointer-events: all; display: inline-block;
+    -webkit-touch-callout: none; -webkit-user-select: none;
+    -khtml-user-select: none; -moz-user-select: none;
+    -ms-user-select: none; user-select: none;
+    padding: 0 4px; width: 4em;
+    color: #aaaaaa;
+  }
+pre.numberSource { margin-left: 3em; border-left: 1px solid #aaaaaa;  padding-left: 4px; }
+div.sourceCode
+  {  }
+@media screen {
+a.sourceLine::before { text-decoration: underline; }
+}
+code span.al { color: #ff0000; font-weight: bold; } /* Alert */
+code span.an { color: #60a0b0; font-weight: bold; font-style: italic; } /* Annotation */
+code span.at { color: #7d9029; } /* Attribute */
+code span.bn { color: #40a070; } /* BaseN */
+code span.bu { } /* BuiltIn */
+code span.cf { color: #007020; font-weight: bold; } /* ControlFlow */
+code span.ch { color: #4070a0; } /* Char */
+code span.cn { color: #880000; } /* Constant */
+code span.co { color: #60a0b0; font-style: italic; } /* Comment */
+code span.cv { color: #60a0b0; font-weight: bold; font-style: italic; } /* CommentVar */
+code span.do { color: #ba2121; font-style: italic; } /* Documentation */
+code span.dt { color: #902000; } /* DataType */
+code span.dv { color: #40a070; } /* DecVal */
+code span.er { color: #ff0000; font-weight: bold; } /* Error */
+code span.ex { } /* Extension */
+code span.fl { color: #40a070; } /* Float */
+code span.fu { color: #06287e; } /* Function */
+code span.im { } /* Import */
+code span.in { color: #60a0b0; font-weight: bold; font-style: italic; } /* Information */
+code span.kw { color: #007020; font-weight: bold; } /* Keyword */
+code span.op { color: #666666; } /* Operator */
+code span.ot { color: #007020; } /* Other */
+code span.pp { color: #bc7a00; } /* Preprocessor */
+code span.sc { color: #4070a0; } /* SpecialChar */
+code span.ss { color: #bb6688; } /* SpecialString */
+code span.st { color: #4070a0; } /* String */
+code span.va { color: #19177c; } /* Variable */
+code span.vs { color: #4070a0; } /* VerbatimString */
+code span.wa { color: #60a0b0; font-weight: bold; font-style: italic; } /* Warning */
+
+</style>
+<script>
+// apply pandoc div.sourceCode style to pre.sourceCode instead
+(function() {
+  var sheets = document.styleSheets;
+  for (var i = 0; i < sheets.length; i++) {
+    if (sheets[i].ownerNode.dataset["origin"] !== "pandoc") continue;
+    try { var rules = sheets[i].cssRules; } catch (e) { continue; }
+    for (var j = 0; j < rules.length; j++) {
+      var rule = rules[j];
+      // check if there is a div.sourceCode rule
+      if (rule.type !== rule.STYLE_RULE || rule.selectorText !== "div.sourceCode") continue;
+      var style = rule.style.cssText;
+      // check if color or background-color is set
+      if (rule.style.color === '' && rule.style.backgroundColor === '') continue;
+      // replace div.sourceCode by a pre.sourceCode rule
+      sheets[i].deleteRule(j);
+      sheets[i].insertRule('pre.sourceCode{' + style + '}', j);
+    }
+  }
+})();
+</script>
+
+
+
+
+<style type="text/css">body {
+background-color: #fff;
+margin: 1em auto;
+max-width: 700px;
+overflow: visible;
+padding-left: 2em;
+padding-right: 2em;
+font-family: "Open Sans", "Helvetica Neue", Helvetica, Arial, sans-serif;
+font-size: 14px;
+line-height: 1.35;
+}
+#TOC {
+clear: both;
+margin: 0 0 10px 10px;
+padding: 4px;
+width: 400px;
+border: 1px solid #CCCCCC;
+border-radius: 5px;
+background-color: #f6f6f6;
+font-size: 13px;
+line-height: 1.3;
+}
+#TOC .toctitle {
+font-weight: bold;
+font-size: 15px;
+margin-left: 5px;
+}
+#TOC ul {
+padding-left: 40px;
+margin-left: -1.5em;
+margin-top: 5px;
+margin-bottom: 5px;
+}
+#TOC ul ul {
+margin-left: -2em;
+}
+#TOC li {
+line-height: 16px;
+}
+table {
+margin: 1em auto;
+border-width: 1px;
+border-color: #DDDDDD;
+border-style: outset;
+border-collapse: collapse;
+}
+table th {
+border-width: 2px;
+padding: 5px;
+border-style: inset;
+}
+table td {
+border-width: 1px;
+border-style: inset;
+line-height: 18px;
+padding: 5px 5px;
+}
+table, table th, table td {
+border-left-style: none;
+border-right-style: none;
+}
+table thead, table tr.even {
+background-color: #f7f7f7;
+}
+p {
+margin: 0.5em 0;
+}
+blockquote {
+background-color: #f6f6f6;
+padding: 0.25em 0.75em;
+}
+hr {
+border-style: solid;
+border: none;
+border-top: 1px solid #777;
+margin: 28px 0;
+}
+dl {
+margin-left: 0;
+}
+dl dd {
+margin-bottom: 13px;
+margin-left: 13px;
+}
+dl dt {
+font-weight: bold;
+}
+ul {
+margin-top: 0;
+}
+ul li {
+list-style: circle outside;
+}
+ul ul {
+margin-bottom: 0;
+}
+pre, code {
+background-color: #f7f7f7;
+border-radius: 3px;
+color: #333;
+white-space: pre-wrap; 
+}
+pre {
+border-radius: 3px;
+margin: 5px 0px 10px 0px;
+padding: 10px;
+}
+pre:not([class]) {
+background-color: #f7f7f7;
+}
+code {
+font-family: Consolas, Monaco, 'Courier New', monospace;
+font-size: 85%;
+}
+p > code, li > code {
+padding: 2px 0px;
+}
+div.figure {
+text-align: center;
+}
+img {
+background-color: #FFFFFF;
+padding: 2px;
+border: 1px solid #DDDDDD;
+border-radius: 3px;
+border: 1px solid #CCCCCC;
+margin: 0 5px;
+}
+h1 {
+margin-top: 0;
+font-size: 35px;
+line-height: 40px;
+}
+h2 {
+border-bottom: 4px solid #f7f7f7;
+padding-top: 10px;
+padding-bottom: 2px;
+font-size: 145%;
+}
+h3 {
+border-bottom: 2px solid #f7f7f7;
+padding-top: 10px;
+font-size: 120%;
+}
+h4 {
+border-bottom: 1px solid #f7f7f7;
+margin-left: 8px;
+font-size: 105%;
+}
+h5, h6 {
+border-bottom: 1px solid #ccc;
+font-size: 105%;
+}
+a {
+color: #0033dd;
+text-decoration: none;
+}
+a:hover {
+color: #6666ff; }
+a:visited {
+color: #800080; }
+a:visited:hover {
+color: #BB00BB; }
+a[href^="http:"] {
+text-decoration: underline; }
+a[href^="https:"] {
+text-decoration: underline; }
+
+code > span.kw { color: #555; font-weight: bold; } 
+code > span.dt { color: #902000; } 
+code > span.dv { color: #40a070; } 
+code > span.bn { color: #d14; } 
+code > span.fl { color: #d14; } 
+code > span.ch { color: #d14; } 
+code > span.st { color: #d14; } 
+code > span.co { color: #888888; font-style: italic; } 
+code > span.ot { color: #007020; } 
+code > span.al { color: #ff0000; font-weight: bold; } 
+code > span.fu { color: #900; font-weight: bold; } 
+code > span.er { color: #a61717; background-color: #e3d2d2; } 
+</style>
+
+
+
+
+</head>
+
+<body>
+
+
+
+
+<h1 class="title toc-ignore">Marginal Effects</h1>
+
+
+
+<div id="definition" class="section level1">
+<h1>Definition</h1>
+<p>A “marginal effect” (MFX) is a measure of the association between a change in a regressor, and a change in the response variable. More formally, <a href="https://cran.r-project.org/package=margins">the excellent <code>margins</code> vignette</a> defines the concept as follows:</p>
+<blockquote>
+<p>Marginal effects are partial derivatives of the regression equation with respect to each variable in the model for each unit in the data.</p>
+</blockquote>
+<p>Put differently, the marginal effect measures the association between a change in a regressor <span class="math inline">\(x\)</span>, and a change in the response <span class="math inline">\(y\)</span>. Put differently, differently, the marginal effect is the slope of the prediction function, measured at a specific value of the regressor <span class="math inline">\(x\)</span>.</p>
+<p>Marginal effects are extremely useful, because they are intuitive and easy to interpret. They are often the main quantity of interest in an empirical analysis.</p>
+<p>In scientific practice, the “Marginal Effect” falls in the same toolbox as the <a href="https://vincentarelbundock.github.io/marginaleffects/articles/mfx03_contrasts.html">“Contrast.”</a> Both try to answer a counterfactual question: What would happen to <span class="math inline">\(y\)</span> if <span class="math inline">\(x\)</span> were different? They allow us to model the “effect” of a change/difference in the regressor <span class="math inline">\(x\)</span> on the response <span class="math inline">\(y\)</span>.<a href="#fn1" class="footnote-ref" id="fnref1"><sup>1</sup></a></p>
+<p>To illustrate the concept, consider this quadratic function:</p>
+<p><span class="math display">\[y = -x^2\]</span></p>
+<p>From the definition above, we know that the marginal effect is the partial derivative of <span class="math inline">\(y\)</span> with respect to <span class="math inline">\(x\)</span>:</p>
+<p><span class="math display">\[\frac{\partial y}{\partial x} = -2x\]</span></p>
+<p>To get intuition about how to interpret this quantity, consider the response of <span class="math inline">\(y\)</span> to <span class="math inline">\(x\)</span>. It looks like this:</p>
+<p><img src="data:image/png;base64,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" /><!-- --></p>
+<p>When <span class="math inline">\(x\)</span> increases, <span class="math inline">\(y\)</span> starts to increase. But then, as <span class="math inline">\(x\)</span> increases further, <span class="math inline">\(y\)</span> creeps back down in negative territory.</p>
+<p>A marginal effect is the slope of this response function at a certain value of <span class="math inline">\(x\)</span>. The next plot adds three tangent lines, highlighting the slopes of the response function for three values of <span class="math inline">\(x\)</span>. The slopes of these tangents tell us three things:</p>
+<ol style="list-style-type: decimal">
+<li>When <span class="math inline">\(x&lt;0\)</span>, the slope is positive: an increase in <span class="math inline">\(x\)</span> is associated with an increase in <span class="math inline">\(y\)</span>: The marginal effect is positive.</li>
+<li>When <span class="math inline">\(x=0\)</span>, the slope is null: a (small) change in <span class="math inline">\(x\)</span> is associated with no change in <span class="math inline">\(y\)</span>. The marginal effect is null.</li>
+<li>When <span class="math inline">\(x&gt;0\)</span>, the slope is negative: an increase in <span class="math inline">\(x\)</span> is associated with a decrease in <span class="math inline">\(y\)</span>. The marginal effect is negative.</li>
+</ol>
+<p><img src="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAkAAAADmCAIAAACyIq27AAAACXBIWXMAAA7DAAAOwwHHb6hkAAAgAElEQVR4nO3dd0AT5xsH8Cc7bEQUlCI4cS9UELVqa4t11jrqwioWJ1L5tYIDnCgqDnAhtbgXWhxtHdQ6UQFxK4IyVFQUZBMg48bvj7QIigQkyeXC8/mLHJfLl/Dmntzde+/LoWkaEEIIIbbhMh0AIYQQ+hRYwBBCCLESFjCEEEKshAUMIYQQK2EBQwghxEpYwBBCCLGSnhQwgiCKioooimI6SA0QBCGXy5lOUTNFRUWsy1xaWqp6pTfngVJoPku1SKXS4uJiplP8JycObv8PQMXNNlKplF2fPpIkWbfHIElSJpMxnaJmJBKJRjPrSQGjKIp1/1qapkmSZDpFzcjlctZlVihUVaacOLg4EJ5s1Uoc1QiCUJ1Za6RZkLQRHm+uei2SJNl1R6lyj8GuAsbSPQZBEJrbvp4UMIQ+EVEC1yeBqQO0nMF0FJ1kMxSaT4W7vpD/kOkoCL0PCxiq2+78AsXPoddB4ImZjqKrHEPA8DOI/UF3zrIipIQFDNVhb85B8nboFADmHZmOosP4RuC0E/LuwuNgpqMgVAGf6QAIMYeUwmfDofX/mM6h8xr2AZeD0MiV6RwIVYAFDNVhNkPBZijTIVjC7numEyD0PjyFiBBCiJWwgCGEEGIlLGCorqGxN11tZceCPI/pEAhhAUN1zZNt8LczEDoz1AXrKArh0jcQP5vpHAhhAUN1iiQV7s4H807AN2I6CmsJTKFLEDw/BM8jmI6C6josYKjOoAm4NgFEluCI9zPVTvMfwfY7iJ8BJS+YjoLqNCxgqM5IWAW58eC8CwSmTEdhvx7bgSuC2Kkqx/lFSHOwgKG6gSiG5O3gMBes+jEdRS+IGkD3bWBgDSTLBtFG+kSzNzInJCRs3769sLCwT58+7u7uXC7WS8QQvhF8cxsE5kzn0CO234Htd0yHQHWaBisKSZLr16/38PAICwtLTk6+cuWK5l4LIdXE1jo/Yi8NKWEG0V+YXP0c7i3CrpIIVU2DBezevXuWlpYdO3YUi8VDhw69dOmS5l4LIX3weBPcmMHLi+cVPoCEVRD3I9OBENJpGjyFmJWVZWtrq/zZ1tb27du3la5GZJynX51W/kyadyMbD6uQL30fV5L87jGHJ2+zpPwK3MIE/ssImqKMKIrg8TgcDmEzkjLrVH4dYdJKoN6dqaeMmhF2k8uvwHt9ipcXV36JouXPtMDs3ctKXwvSQsuvQDboTzboX36JIC2UI31d9pAWmCla/lwham4s/83pdyvQNPGZWzHV6t0alFyYFFD+KZRZR8JmVPkl/JdHuIUVZmaSt1kMnHf/R64kmZ++r/wKRKOhVL3uFaI+WcshJO+SGHymaDqt/Aq8rH942RWOmBXNPWlRQ5qm5XI5RVEcea4gpUJfPrK+C2k1sELUZ+HckufvXoUrVrReWH4Fbv5tfsaJClFtx1EmbcovET5aUr6bAGXsQDSZUOFVMk5w82+XXyJvNR/4hu+eUpSmeFzhDSGtXMn6vcovEaSEcOQ576KKGiiazym/Ai87mpd1rvwShb0HbWhb9pBDFgser6nwKqoac0ExkW76Q3Z2dk5OTn5+fklJySSLVQ1E5Z7w/HDIBXOuedt69erVq1evQYMGDRo0+Cx3R4XGbNiUsJ9SIeqb07zc2ApRW/6PLnfutLLG3I9s8EWFN+Tpdk5pxrs3hG+qaPVL+RW4uXH8N6fe/WkUJbObQJf/36mlMRen8J/vLb8CYT2EsuhRIeqTIA5R9C6qgY2i6fTyK1TamEmBJQCUlpZyuVw1NeY7/IzjFaJ+QmN+fZKbd6v8Enkr37JbPiiKoiXPFAm7K0S1+pqs37v8Ek00ZqpeN6LRe415P1fy5N1jDlfeZmn5FbiFj/gvDxsQBJfLVXC5AKB6z/zxxswxa8tvNRU+oMECVlRUZGBgoPzZwMCgsLCw0tXo3Dv8ZzuVP5M2pVKLr8v/1uT1WX7O5XcrcwTSpr7lVxDmPxH/93QlqWFbucih/BKD53s55LuzMYp6PaVWY8uvYPj2Gv9lhc+JpPEPlPjdvoRX9Nqg4qsoOMZSk54Vkrw8zpc8KntIiRsX2Va42VOc+4BfcSOl9frJRU3KHnLIEsOKK8ishknrDym/xPjNP/ys0+WXFDX9heYIyx4KCtLee0NkInuZQYcKSdIPceXvvk8Qph2ljSaVX8HgbZzoeYWNFFuNJmlTACAIgiAIbsnb994QguJIzfqVX2Ly6i9+QXzZQ1pgVmRfYdx3UV7i+/870x5yQdPySwyf7Sz/mZdbfiltOLL8CkaZl/ivfy+/pMh2Ji3499SCQWoQz6Dpe2+7nN9AauRYIcmLo7zSZ2UPSaMWUhuP8iuIs2+JKm6kxHIQwW1Q9pCryH/vDSnfmCUSSWJi4tNzYanJicmvqZQ31PO3VLGMBthU/injt3KgfAEDCNkS9jSrQjc/IZ9jW5/TzIrbwprnYMN1aN2+6fCvLC0ty1YwzLrGf7mn/FMkjSZRBu/OnVbWmI2kJi4VXuXFsYqNuVFRE8/yK4hy71f431Ey+vXx/F7Xae6/fwCHLP2gMQ99vzFnnudnniq/5P3GnP9BYxbayQwrzH0jTj/ElWeVPSRMOkgb/VB+hcoa8yjSyBQAZDIZh8OppDGT8H5jzjjFz79R9rCSxpz/YWPu/n5jfr4L6HdzQFfSmN9c4r8+Wn5J0WczaCGv7CGvJOP9xsyzlBp1q5DkvcZs2Fx1Y67/TdWNWaYokdaruGd+E8XPvlj2kAaetOn88isIC5LFz3aWLzCV7JnT95X/Jq0wd5Jajyu/guHb6/wXuwGAaPgVVFbAOJqbCPzMmTOpqamenp4A8Pz589WrV4eGhqp81qeRy+WFhYUWFhYs6ieiUCgIgiir8ayQk5NjaGjImswvT8CVEdKOIeL2Xlp+ZZIk7927d+3atRs3bsTHxycnJytnr2/SpEnLli2bNWtmZ2dna2vbuHHjhg0b1q9f38zMzNjYGK6Ng+eH323FpCUMfSyVygoKCnJycrKzszMyMl69evXs2bOnT58mJyenpaUp52u3sbHp1q1bjx49evXq1aNHD+3/g0ozrhtc6Q+tZkPXDVp+6U+jUCgKCgrMzc35fNbMyEEQhFwuNzQ0VL2qzsjNzRWJREZGmho3QIP/PCsrq7KOGxkZGVZWVpp7LYTeJ82CG9Oh0dfyJj9oredGUlJSVFTU+fPnr1y5UlBQwOPxOnTo8Pnnn3t7e3fu3Llt27YmJiZVPd8xGCSpkBMPAGDcFFz2AXDEYrFYLK704yOXy5OSku7fv3/79u2bN28GBASUlpYKhUJnZ+cvvvjC1dW1e/fuPB7vwyeqHWXWiWq7iJuwDGyGgNUXqp+AkDpo8AiMJMmpU6cuXrzY3t5+2bJlffv2/eILTbVsPALTDjYdgV0aAjmxMOhBocLI1FSDdy6TJBkdHX3y5Mk//vgjLS2Nz+c7OTl98cUXn3/+ubOzs7Gxcc02R1Mlr2+ScomJrUtN+0wqFIrbt29HR0dfvHjx8uXLxcXFlpaWgwYNGj58+MCBAzX6zb24uFgsEvIufQmSpzDoPgjrae611AKPwLRD00dgGixgAJCUlBQaGiqTyXr06DFlyhQOh6OhF8ICph2sKWCp4RD3I/Q+Ak1GFxYWaqKA0TR97dq1Q4cO/f7771lZWQ0aNBg6dOigQYMGDBhgZmam+vkfJ5FICIIwN6/VLWtyufzq1aunT58+efJkSkqKoaHhkCFDxo4dO2jQIJFIpPr5NVRcXCwWi3klaXCmCzgGQ3Nd7z+JBUw72F3AtAYLmHawpoBJ38Czw9B6LgCovYA9f/589+7de/fuTUtLs7a2HjVq1OjRo3v16qWuk3VqKWDlPXz4MDIyMiIiIjEx0cLCYuzYse7u7o6OjqqfWW3/FjAeD4qfg5GdGresIVjAtAMLWLVgAdMO1hSwctRVwCiKOnXqVGhoaFRUlEgk+u6779zc3AYMGKD2i0xqL2Blbt++vW/fvgMHDrx9+7ZLly4zZ84cP368WnYu7woYS2AB0w5NFzDW7O4RYkphYeGGDRtatGgxbNiwV69ebd68OSMjY//+/a6urizaZQNA165dN27c+PLly99//93S0nL69OmfffbZvHnz0tPTmY6G0KfAAobQR71+/drHx8fW1tbX19fR0fHKlSv37t2bNWuWJg6PtEYoFI4cOfLvv/9OSkqaNGlSWFhY8+bNJ0yYcO/ePaajIVQzWMCQvqBkUJioro2lp6fPmjWrWbNmoaGh7u7uycnJR48e7dOnj7q2rwtatWoVEhLy4sWLlStXXr58uUuXLsOGDYuPj1f9zOqg5HB/MUjS1LM1hCqDBQzpi3t+cLYHyHJUr1mljIyMWbNmtWzZ8tChQz4+Ps+ePdu4caO9vb06IuoiMzMzHx+ftLS0sLCwhISEHj16DB069O7du7XdLlECT/fAdTegSXXERKgSWMCQXnh7FZI2Qtt5IKr/ydvIy8ubP39+ixYtDh48uGDBgqdPny5btqx+/U/fIIsIhUIPD4+kpKTw8PCHDx927dp17NixKSkptdiiOTiFQ3YMJK5TX0yEKsAChtiPkEDMZKjXGdou+LQNKBSK4ODgFi1abNq0ydPTMzU1denSpay+0PVpBAKBu7v748ePN23adOnSpbZt2/7000+5ubmfuDnrAdBqNtxfAnl4dQ1pBBYwxH43vUD6GlwOAFfwCc8+ffp0+/btf/755yFDhjx+/Hjt2rV15KjrY4RCoaenZ0pKyoIFC8LDw1u2bLllyxbloIs11nkNGNtDzCSgP+npCFUJCxhiOUoBsmzovAZMHVSvXFFaWtrQoUMHDx7coEGDuLi4PXv2lE0AhIyNjZctW/b48eNBgwZ5eXl17do1Ojq6xlvhG0LPfdBhaflJUhBSFyxgiOW4Auj7B7SarXrNcuRy+cqVK9u3b3/r1q19+/ZFR0d369ZN9dPqHhsbm3379l29epXP5/ft23fKlCnZ2dk120T97mA7QjPpUF2HBQzphxoMsxkTE9O1a9clS5b8+OOPSUlJEydO1NwonfrBxcUlPj4+ODj42LFjbdq02b9/P9OJEALAAobqlJKSEm9v7969e/P5/JiYmE2bNml0oHp9wuPxvLy8Hj161Lt3bzc3t0GDBr18+ZLpUKiuwwKGWKrGY3hevXq1Y8eOoaGhy5cvj4+P7969uyZi6TcbG5vjx48fOXLk1q1b7du337VrV82eT8mhIEEz0VBdhAUMsRBNwcWBkLKjmqvLZDJfX99+/frVq1fv5s2bixYtEgg+pb8iUho9enRCQoKrq6u7u/vw4cOzsrKq+8xb3nD+S5C91WQ6VIdgAUMslLQBXp8DQ5vqrPv48WNnZ+cNGzYsWrQoJiamffv2mk5XF1haWkZERBw6dEh5XBsVFVWtp7VbCJQc4jw0nA7VFcxPp6JQKORyeS03QpKkXC4Xi8UsuhpPURRFUSyazQEASktLBQIBs5m5RUkGl3srbCfKOwWrXHnnzp2+vr6NGjUKDw9nyzlDhUJBUZQmpp3UhIyMjGnTpl2+fHnGjBkBAQEqY/NfHhbd+lHWJYxoMkE7CStFUZRMJhOJRCyagImNewypVMrj8Wp/woPP51fatJgvYDRNUxRVy40oFAqJRGJmZsai5kgQBEEQYnHNpo1nVn5+vlgsZjIzpeD+05ujyCNdbwPfuIoVCwsLp0+ffvTo0bFjx4aGhpqYmGgtYy2VlJQQBMGi3iUURa1Zs2b58uXt2rU7dOhQy5Ytq16fe30c500U6XqHwakvCYIoKioyNTVl0YQ4JEkqFAp27TEKCgqEQmHtZxDkcDiV7tuZL+YcDqf2bYgkSQDg8XgsKmAURXG5XBZ9fpQYzvx8P+Tfg6+u8ERmVax19+7d0aNHv3nzZu/evcOHD2dRMQAADoejlg+F1vB4PG9v7y+//HL8+PFOTk7h4eGjRo2q6gk9QuH8FzzpCzBtpq2M71N+aWbXB5CmaXY1DCWNZmbN7h4hAIBmP4BrLFj2rGKVXbt29ezZUywWx8fHu7m5aS1aHdejR4/bt2/369dv9OjRc+fOVSgUH11VVB8G3YWGfbWYDuknLGCIbSwcP/YbmUw2ffp0d3f30aNHx8XFtW7dWpu5UL169U6cOLFmzZqtW7d++eWXmZmZH1+XNdeqkS7DAob0xOvXr/v167dr167Nmzfv3bvX0NCQ6UR1EYfD8fHxUU737OjoeOPGDaYTIX2GBQzpA+WNyU+fPj1//rynpyfTceq6/v3737x508rKqm/fvvv27VO1OsP9yBB7YQFDOk+WA483Af3RrqqHDx/u27evlZVVfHx8nz59tBkNfUyTJk2uXr367bffTpo0af78+R/taVzyEs52g+wY7aZDegILGNJ58TPg/mIoff3hb2iaXrZs2fjx4wcPHhwdHY2ToegUAwODgwcPrlixYu3atSNHjiwuLq5kJbEVABeuTwRFkdYDItbDAoZ029N9kP47dNv04bgbcrl80qRJS5cuXbhw4ZEjR/Cilw7icDh+fn5HjhyJiorq16/fmzdv3l+DK4Cee6D0Ndz1YSIgYjcsYEiHlbyCWz/BZ8Oh6aT3fpOfnz9w4MAjR47s2rUrICCARSOw1EGjRo26ePFienp6z549ExMT3/+1WVvouAKSwyDjFBPpEIthAUM6i4a4qcDhQ4+w937x8uXLPn363Lp169SpU5MnT2YiG6oZJyenmJgYkUjUu3fvq1evvv/r1t7Q8HO4twg7dKAawQKGdBYHmoyBnrtBbFV+6aNHj1xcXHJzc6OjowcMGMBUOFRTzZo1u3btmoODw9dff33ixIkKv+NwwWU/9P8b7w9DNYIFDOmw5u7QeFD5BbGxsX369DEyMrp+/XrHjh2ZyoU+Tf369f/5558BAwaMGjUqPDy8wu8MPwNxQ4ZyIbbCAoZY49y5cwMGDGjRokV0dLSdHWPjwKLaMDQ0PHbsmJubm4eHR1BQENNxELsxP5gvQtVx/PjxcePG9e7d+8SJE8bGVY1Dj3Qcn8/fuXOnhYWFj49Pfn7+ypUrmU6E2AoLGNIxJS/BoDFwKpwbOHDgwOTJkwcNGhQREcGu6SRQpTgczvr1683MzJYsWSKRSIKDgyv0I82/DwWJYPc9cwERO6g+hZifnx8eHh4QEAAA9+/fV05cgpBGECVwYQDEzyy/LDw8fNKkSaNHj46MjMTqpU8WL168YcOGzZs3z5gxo8JQHU+2QJw7FCYxFw2xg4ojsBcvXgwcODAnJyczM9PPz2/atGkSieTUqVPVvAIRGxt74MCB3Nzc5s2bz5kzp0GDBurIjPTXnXkgeQa9j5Qt2L59+6xZsyZPnrxjxw7WzYSEVPL29jY0NJw1a5ZcLv/tt9/+/Rd33QiZF+H6BPg6Fri1ncwX6TEVR2AzZ87s0qXLq1evlPNYR0ZGWlpaent7V2fTWVlZwcHBc+bMCQ8Pt7KyCg0NVUNepMfenIPkUOi0Asz/7V64devWWbNmeXh4vNu1Ib0zffr0X3/9de/eve7u7v+e4OEbgfNuyLsHCXh5DFVFxRHYlStXzp8/X7bvsLGx8ff3VzHd6n8ePXrUsWPHVq1aAcDw4cN9fX1rmRXpM3k+xE6FBi7Q+n/KBdu2bZszZ86MGTO2bt2KA23ot6lTp/J4vKlTp9I0vWvXLh6PBw16Qev/wcOV0PgbqO/EdECko1QUMDMzM6lUWn6JXC43MTGpzqadnZ27deum/Dk1NbV58+aVrkaSJEEQ1dlgFZRbkMvlLNrTkSRJkqRMJmM6SM0QBKGJzNy38XyaVDj+RssJAGLHjh1eXl4eHh4bNmyQy+W12TJFUex6k0mSpGmadZnlcjmX++m35YwbN44kyWnTpgFAWFgYl8uF1n58QkYKbGgNvBXKQz25XM6ii/rKXSW7GgZN02rZy3G5XIGgkpPJHJquauyW6dOnJycnHzt2rEGDBgqFIjExcfjw4V9//fWWLVuq/9rR0dHh4eHz58+vdIbc0tLSyoepRnUMh5bTHCEAHDx4cO7cuRMmTNiwYQOLvpGg2lP+6ydOnLh+/Xr816MyQqHQ1NT0w+UqClhBQcGIESOuXr2qUCisra0zMzNHjBixb9++j438HRUVdfLkSQDw8PDo0qVLUVFRSEhIdna2t7f3x/p90DT90bmCqk2hUEgkEjMzs9p8B9QygiAIgmBXt7r8/HyxWKzRzAcPHpw8efLEiRN/++03tfw3JRIJu+4bKykpIQii0o+rziopKRGJRGq5Trl9+/Y5c+bMnj07ODi49lv7GIIgioqKTE1NWXRtVXmYa2BgwHSQGigoKBAKhbXPzOFwKt0bqD6FeOHChbi4uMTERDMzs/bt27ds2bKK9V1dXV1dXZU/KxSKxYsXd+jQYdGiRVV8meJwOLVvQ8rzADwej0UFjKIoLpfLos+PkkYznzhxwt3dffTo0Tt37lTXq6ilgWkTh8NhXWZlq1BL5tmzZysUCm9vbxMTk1WrVtV+g5VSfmlm1weQpml2BVbSaGNWvbu/fv26tbX15MmTORyOr6/vqlWrqnnJKiYmxsDAwN3dHU8FoOo4d+7c2LFjBw0atG/fPtZ9SpEazZ07d8WKFYGBgatXr363tPg5c4mQjlJRwDZu3NirV6+HDx+mp6d///33FEUFBQUtXbq0OptOSUl5+PDhsP9MnDhRDXmRPilKhosDoeQVAMTGxn733Xe9e/eOiIio9GotqlP8/PzmzZu3cOHC7du3AwDk34c/HSD9KNO5kI6hq2RnZxcUFETTdEhISJcuXWiajoiIsLe3r/pZ2ieTyd6+favsvsUWcrm8pKSE6RQ1k52drbbMlIKOcqaPf0bLch88eGBhYdGjR4+ioiL1bLycgoICtW9To4qKivLy8phOUTMSiYQgCPVuk6IoDw8PLpcbERFB0zR9aQh91JwufqGWjcvl8rdv3yoUCrVsTTsUCkVxcTHTKWomJydHIpFobvsqroFlZWX169cPAC5cuDB48GAAaNeuXSXzgiNUUwmBkHMDvvjn+evCgQMHWltbnz59ml29LZBGcTic0NDQ3NxcNzc3CwuLAb3D4XQHiHWHL6Jw2jCkpOIUooODQ2RkZEpKytmzZwcOHAgAFy5csLGx0Uo2pL/y7sDDAHCYm8PvOHDgQC6Xe/bs2fr16zMdC+kWHo934MCB3r17f/fdd7cSXkCPMHhzDpLfn6Eb1VkqCtjy5cvXr1/fqlUrR0dHFxeXwMDAuXPnenl5aScc0lvxs8CkRUnLRUOGDMnKyjp79qytrS3TmZAuEolEx48fb968+eDBg1NlHaCpG7y9ynQopCtUnEIcOnRoSkpKcnKyi4sLh8NxcnL6559/+vfvr51wSG/1OkTKisZNnHLv3r1z5861bduW6UBId5mamp4+fbpXr17ffPPN9auXLBs2ZjoR0hWqu9E3bNjQ3t4+IyMjNTXVzs6uSZMmqampWkiG9JmRvZf/9r/++uvAgQO9evViOg3SdY0aNTpz5kxubu6wb0eVlpYyHQfpChVHYL///rubm9t7wyECAF3l+B0IVW3dunXbtm0LCQkZMWIE01kQOzg4OJw8eXLAgAFubm5Hjhxh0ZAFSHNUNAJfX99vv/328ePH2RVpJxzSS5GRkb6+vt7e3ngxFdVIr1699uzZc/z4cR8fH6azIJ2g4ggsIyPD399fOSUKQrWSeQGM7OMS3rq5uQ0bNmzdunVMB0LsM2bMmKdPn86fP79ly5bTPy8CWQ50DmQ6FGKMigLWrFmzpKQkvMaOakv6Bq5+n053/3bOnbZt2+7fvx9PAaFP4+vrm5KS4unp2WzbhK+M90Gjr8EKu5XVUSoKWEBAwJw5cx4/fuzo6CgSicqW9+3bV8PBkH6J85CUKoauecbn8//44w8jIyOmAyEW27ZtW2pq6hifkzHrOrSOmQSD7oOwHtOhEANUTKfysVHpFAqFZvJ8IrlcXlhYaGFhwaLv9QqFgiAIdk2OkJOTY2hoWOPMKb9ScdO/29Pt3LVH0dHRXbt21Uy6yhUWFrJrahLlsEzm5uZMB6mB4uJisViszSGYc3NznZ2daVIetyjbou1ocN5Vo6crFIqCggJzc3M+X8WXeN1BEIRcLv/YVFa6KTc3VyQSae4Lq4rdveIjNJQG6SHJU7jzi19Uuz/+ubV3714tVy+krywsLP7888/s3IIxv31GJO+G7OtMJ0IMUP3tg6bpK1euJCUlEQTRrl27vn374vQoqAY4vIMJ7Vfvj122bNnIkSOZToP0h4ODw+HDhwcPHuzdeuhmNxem4yAGqChg2dnZ33zzzZ07d+zs7Lhc7rNnz7p06XLmzBkctg5V0+3H2T+uvTtq1Cg/Pz+msyB94+rqGhQU9L///a+Ty28//vgj03GQtqk4hfjTTz/xeLy0tLTU1NTk5OS0tDQej+ft7a2dcIjtsrKyRowY0apVq127duGBO9IEb2/vH374wdPTMyYmhuksSNtUdOKwtraOiIgo3+fw6tWro0ePfv36tboSEARRzSmeq96IVCo1MjJi0V6SJEmKotg1eWNxcbFQKKxmZoVCMXjw4ISEhGvXrtnb22s42kdJpVKxWMzUq38CmUxGURS7evfIZDKBQMBUFyqpVDpgwIBXr17FxMRYW1tX5ykkSZaWlhoYGLBo7m+KogiCEAqFTAepgeLiYj6fX74H+6fhcrmV/uGf0gNHveNIcTic2lcd5RbUsimtKcvMdJAaq1Zmef7ChQHXr1//66+/mjZtqvlQVdHbN1lncP7DyKsbGBgcOXKkZ8+e48aNO//bD7zmPwBHRSll4x4DWBgY1LqH/5CKAvbll1/6+voePXpUOdvFixcv5s2bN2DAgFqmKY/H49X+SxCHwyktLRUKhezqRs/hcGr/3USbJBJJtb5PZUUfCHDdsqV07dq1ymnkGGJwy40AABuWSURBVCSTydj1JiunCWZXZuWRAYNHM82aNTty5MhXXw3w8Y7dElwIbVWMNaXsSi0UClnXjZ5dDaO4uJjH42kus4rdfUhICEVRTZs2bdmyZcuWLZs1a0YQRHBwsIbSIH1AFN+PmDjtV9noUSN/+eUXptOguqJv375r1wZtPQf7ti6CvHtMx0HaoOLbh6WlZVxc3OXLlx89egQAbdq06devH+uOYZE2FVyeMWrVCzv7pjt37camgrRp7ty5sTHXZoQf69jmu04zE4DHpmuf6BOoPuFWVFT04MGDBw8e3Llz5+7duwUFBVqIhViKfnFyyvz9b4qEx06cMjY2ZjoOqnN+C99lb28/auXTgpj5TGdBGqeigD169KhZs2YBAQFv3rzJy8sLCgpq3rx5QkKCdsIh1lm/esnxm7AjfHfr1q2ZzoLqImNj48gTpzKLhO4B13DaQr2nooB5eno6Ozs/e/bs+PHjv//+e1paWu/evefMmaOdcIhdrl27tnDHozmzpn3//Vims6C6q3Xr1r/+tvtY1M2QkBCmsyDNUnENLD4+/syZM2W3pIjF4vnz5zPerwzpoOzs7LFjx3bp0mXdxs1MZ0F13dixY6Ojo318fJydnZ2dnZmOgzRFxRGYsbFxZmZm+SWZmZmM39aDdA1FUZMmTSouLo6IiGDXjZZIX23YsKFjx45jx47Nzc1lOgvSFBUFbPny5V5eXpGRkTk5OTk5OZGRkV5eXoGBgeR/tJMS6bigoKCzZ8/u2rWLwRE3ECpPJBJFRETk5eW5u0+h5YVMx0EaoWIoqQYNGuTm5lIUVelv7e3tnz59qplgNYPzgWlHpfOBxR755fMJwbNme+rmDYI4H5gWaH8+sGo6cuTI999/H+LV0Sukwp1hOB+Ydmh6PjAV/7y//vqrit+y655wpAl5z2PHzt7QsYXlmjVrmM6C0PvGjBlz8Y8wn9ALvQcs7zp0MdNxkJqpOF5xcnIiSdLa2trJyen169dr1qw5f/68o6Ojk5OTk5NT586dtZMS6ShKMW3ioNxizuET/+C3GaSbNuz4q6Wt2bjpyyRZj5jOgtRMRQHbuHFjr169Hj58mJ6e/v3331MUFRQUtHTpUq1kQ7pux9Jhv1/NC92wuIVDR6azIFQ5AwODw5FnXuTQc9y+ABov2+sV1WMhBgUFDR48+MSJE+3atTtx4kRYWNiBAwe0Ew7pssS443PXnnUb0mHCjCVMZ0GoKu0699y4fPbuvzMP7dzAdBakTioKWFZWVr9+/QDgwoULgwcPBoB27dq9efNGC8mQLpPJZBNmrmhk1XDr/ktMZ0FItem+m0cMHzLz55XPnz9nOgtSGxUFzMHBITIyMiUl5ezZs8r7ly9cuGBjY6OVbEh3LVq06OHDhweO/GFiZsF0FoSqZUf4bmNj44kTJ+L9P3pD9X1g69evb9WqlaOjo4uLS2Bg4Ny5c728vGr0GlKp9NSpU7UIiXTL+fPnN27cuHjxYicnJ6azIFRd9evX37179/Xr1wMDA5nOgtRDxX1gAJCenp6cnOzi4mJgYHDhwgUOh9O/f/8avcbmzZsfPnwYFhZWi5wq4H1g2pATX/wsSsExcR4TZGltf/nyZR287+dDeB+YFujsfWAf+uWXX7Zu2XT31IrPzKRiq6482yEA7Jj0B+8D+5Dqm/hMTU2fPXsWExPj5+dnaWnZrl27Gr1AbGxsamrqp8ZDOuNhANz3VzbDs15cnutRVuytEHrPyhVLxzUIdcicD5kATwBshsLnJ4DDmi++qDwVBezFixcDBw7MycnJzMz08/ObNm2aRCI5deqUnZ1ddbael5d36NChadOmbdq06WPr0DT9sZE+qk+5BZIkWTSBAkVRFEWx43R8aQbvvn/ZI3tLis77jSR7MJio+miaZseb/B+aplmXmTUtGUDw8rCjbcm7x6/+pNKP0599y1yi6mLTHqMctTRmDodT6dk1FQVs5syZXbp02bNnj1gsBoDIyMgJEyZ4e3sfO3ZM5UvSNB0SEjJlyhQTE5MqVpNKpcXFxSq3Vh1snGyztLSU6QiqCXLizCouIXPu5uflMZOm5vLYE7UM6zLLZDKmI1SLUdbN987aSzPjS4z6MpOm5qRSKdMRakYqldY+s1AorPRCgIoCduXKlfPnz5edLLKxsfH39x81atTH1o+Kijp58iQAeHh4ZGRk2NjYdO7cOT09vepktR+OjCCI4uJiU1NTFs1hTxAESZKsGMCCw2v/3hKuaUszM7NKV9Y1JSUl7LpsUFpaSpIku+azlkqlQqGQFVeguRatoWJHelH9NgI2NGaSJAmCYMUeo0xhYaFQKFQe/9TGx3bsKiqHmZnZe8VTLpdXcUTl6urq6uqq/Pny5ctxcXEXLlygKEoqlY4bN2779u0f7vV4PF7tr6Yozxzy+XxWfITKEwgETEeohnqtkwrsW5s9K1vA7bCIy4rkABwOhx1v8n9kMhlFUezKLJfL+Xw+Oy6LtnCH1O1Q+Fj56Hmu0M7+ex6PBe82h8NhXcNQnvrTXGYVBWzQoEFLliwpO2GYmJj4008/DRs2rDqbnjt3rvKH9PT0lStXarQXItKolJSUHr9krJ/aeNKoL3mGVvzWM8G4GdOhEPokAlNwjSOTtihyEu4kvvzql+jd1n9VcVYJ6TIVBWzt2rUjRoxo2LAhQRCNGjXKzMwcMWLE2rVrtRMO6QKKoqZMmVLP0nrMivsSgjA0NOSzqOs/Qh8SmFGtfSQFBd16mX3+5/BZs2Z9/vnnDRs2ZDoWqjHVpxAvXLgQFxeXmJhoZmbWvn37li1b1vQ1mjRpgodf7BUSEnLt2rWoqCgzM7OcnBym4yCkNhwOZ8eOHR06dJg5c2ZkZCTTcVCNffSK0c2bN1evXr1jx46XL186OTmNHj26fv36CQkJ4eHh3bt312ZExKAnT54sWrRo2rRpX331FdNZEFI/Gxub4ODgY8eORUREMJ0F1VjlI3FERESMHz9e2XuEpulDhw5Nnjw5KysLAExMTNq0aRMXF6f1qFXBkTg0gSJkffp+kZGRcf/+fWXPnUpnZNZxOBKHFrBoJA6l92ZkHjZsWMz1qw/jTls1d2Y62kfhSBwfqnx3v2rVqpEjRxYUFOTl5S1YsGDo0KEdOnR49eoVTdOFhYW6Vr2Qhmzy/Som5vqOHTuqvpMPIbbbvj2UlBV6ThkENMF0FlQDlRewJ0+eTJs2TSgUAsDMmTNJkpw9e3bjxo21mw0xKSVm76It0T+O7DFgwACmsyCkWY0b22wMnP97dN7vGycwnQXVQOUFTCqVln3pVp5+wepVp9CyPI9p0+qbidb9dpbpLAhpww+eAd/0auq5/EhO8t9MZ0HVxZorRkibwvy+vvRQtj10i6lZPaazIKQlYQfOlci53tPHAFGiem2kA7CAofe9TLrqu/XmxOHOg0b+yHQWhLTH1q75mhXz910sOHPqJNNZULVU3guRw+E4OzuX9YM6e/Zs+YcAcObMGS0FrB7shahGw4YNi4u9nvAoydLS8r1fYS9ELcBeiFrwXi/EMhRF9e/f/9mzZw8fPtS1vkvYC/FDld/IPHHixCoeIj125MiRP//88+DBgx9WL4T0HpfL3bFjR6dOnfz8/EJCQpiOg1SovIDt27dPyzmQLsjNzfXy8ho8ePC4ceOYzoIQM1q1auXn57dkyZLx48c7OTkxHQdVhTUn3JAW+Pj4FBcXb9u2jekgCDHJx8enbdu2Hh4eCpl6pipEGoIFDAEAAE1c2jF2586dK1asaNKkCdNpEGKSQCD49ddfExIeBv34GZS+ZjoO+igsYAgAQHZnxYwlEd06tZozZw7TWRBinrOz86zp7gFHClIjxwBU0tMN6QIsYAgg707gqpWpWdywnYdY1JEMIY1auXqDhYXFrLVXIRkn09BRWMDqPEr2+Oj3q/+gfvppTpcuXZhOg5CuMDU13bT1178fwMHNP0HRE6bjoEpUfh+YNlEURVFULTeiUCiKi4tNTU1ZdB8YQRAkSYpEImZjcO76fD05OKXA6t6DRGNj46pXLigoEIvFjGeukeLiYs3dhqIJJSUlJEnq2k1IVSstLRWJROz69EkkEhMTE5WnHL4dNvhmzPmEyGlmn2/STraPIUlSoVCIxWJmY9RIYWGhQCCo/Z2jHA6n0v+UigkttYAkSblcXvuNAIBcLudwOOoIpQ1qqdy1dzi23oUE+vDhYIFAIJPJql6ZpmmCYNlw3RRFqfy7dApFUTRNsyuz8lPMrk8fAMjlcpVFN2h9cPdujvMPKYKdGP6PKPcY7GoYNE2TJFn7zHw+v9ICxvwRmFrgSByfJi8vr02bNk5OTidPVmvsHByJQwtwJA4t+NhIHJVau3btggULYmJievTooYVsH4MjcXyINbt7pAmLFi2SSCSbN29mOghCusvb27tt27bKiaWYzoIqwAJWd928eTMsLMzf3x9v/EKoCgKBYNu2bXfu3MF7/HUNFrA6SZpFFb+cOXNm69atvb29mU6DkK7r06fPpEmT/P3931xfA1mXmY6D/oUFrE6Km/rrPMebN29u2bJFOe82Qqhqa9as4XA4PovXwfWJIM9jOg4CwAJWF6X8mvP4L/+I0vHjx/fv35/pNAixg5WV1fLly/dfyLl0Nwdu/4/pOAgAC1idI3kKd37x/bO5TAFBQUFMp0GITWbNmtW5c+efDlsQybsh/Xem4yAsYHUKTUHslBvPxLtOP128eHHjxo2ZDoQQm/B4vC1btjx4krE1rjXEzwJZNtOJ6josYHWJLJsiSuccsnBwcPjpp5+YToMQ+7i4uLi5uS3dn5Fl8zOI6jMdp67DAlaXiBvueuVx487jTZs2CQQCptMgxEpr1qyhaFiw4wkAa0Ye0VdYwOqQ/Pz8hQsXjRw5csCAAUxnQYitrK2tlyxZsnv37hs3bjCdpa7DAlaHLF++vKioaP369UwHQYjd5syZ4+Dg4OXlpR9D8bEXFrC6gAaAR48ebdmyxcfHx87Ojuk8CLGbQCAIDg6Oi4vbu3cvAA15d5lOVEdhAdN3iiI42x1e/+3t7d2oUSMfHx+mAyGkD77++uthw4YtWLCg6M4GiHKG/AdMJ6qLsIDpu9tzoSDhj8tP/v7777Vr17JrKGuEdNn69etzc3NXHsoAY3u4Ng5IKdOJ6hwsYHrt5R+QulPePvCXxZv69OkzZswYpgMhpD9atGgxd+7c4E1bUxutgaIn8GAp04nqHM0WsMzMTH9//wkTJvj7+0skEo2+FnqfLBtuTAfrLzedUaSmpgYHB7NovkGEWGHRokX16tWbt3IPtJ0PiUE4zq+WabCA0TS9dOnSYcOG7dmzx8bGpppTJiK1SVwHlPRti3UBASsnT57ctWtXpgMhpG9MTExWrlx5/PjxS9mfg6ULlLxgOlHdono20k927949c3Pz7t27A8DUqVPxCEzbOq4Au3H+C0Ipilq5ciXTaRDST5MnT966dav3z/Nu3ozn8TS4R0Uf0uAR2OvXr01NTdeuXTtjxowtW7ZUZ+pupE5cwYOX3N9++23hwoXW1tZMp0FIP3G53A0bNty9e3fXrt1MZ6lzOJq7Ee/o0aP79+/39/dv27ZtWFgYSZK//PLLh6uVlpaWlJTU/uVommbdNR5NZx41alRaWlpMTIxIJFLLBvFN1gLWBQbWZgYAdcWePHnyjRs3bty4YWxsrJYNVop177O63mShUGhiYvLhcjUfFUVFRSmvdXl4eBgaGjo4OHTr1g0AhgwZ4u/vX+lTBAJB7ft2kyQplUoNDAxY9N8lSZKiKM2NSRgVFXXp0qU9e/bUq1dPXdssKSkRCATsGkdRJpOpq35rh0wmoyjKwMCA6SA1IJfL+Xw+l8uaXs1lewx1ZQ4MDHR0dNy2bdvSpUsBAIBW+0iJFEWRJMmuT19JSQmfz6/9rLkf+zepuYC5urq6uroqfyYIomw5j8fj8XiVJ+Dza392US6XS6VSsVjMoo+QQqEgCELN+6mCBMh/AHZjCYJYtGhRz5493dzc1FjUlQWMXftWhULBrsAkSaq/YWgYRVFisfhjn3EdpFAopFKpSCRS16WN9u3be3p6bt682dPT07ZRfYgeAfYToOkktWxciSAIuVzOroZRWlrK5/M1l1mDu/vOnTu/evUqKSmJpum//vpL2ZsDaRAlh+tucN8fSOmOHTsSExPXr1/PokNShFjNz8/P0NBw4cKFwDcEgTnc9ILi50yH0nMaLGACgWDBggVbt2794YcfSktLp06dqrnXQgAAD5ZB/j1w2llUoli2bNmYMWN69uzJdCaE6op69er5+/sfPHjw1q1b0H0r8A0hxg1oiulc+kyDnTi0SS6XFxYWWlhY1N1TiNkxcK4PtJ0PnQL8/PzWrVv36NGjZs2aqWfj/8nJyTE0NGTXSYzCwkJTU1OmU9SARCIhCMLc3JzpIDVQXFzMulOIBQUF5ubm6u0dLZfL27dvb2Njc/HiRXj9N1wcCF03QOu5atm48hQiu0aDy83NFYlERkZGGto+a3b3qCpEMcRMBvMO0GHxy5cvN27cOHv2bLVXL4RQ1YRCYWBg4KVLl/78809o9DW08ICHK4DAW2A1BQuYXuCJwH489NwHXKG/v79IJPLz82M6E0J10Xfffefi4uLr60sQBHRdD19fB74GO9bXcVjA9AKHDx2WgHn7e/fu7d27Vzk+G9OZEKqLOBxOUFBQUlLSzp07gW8Mpg5MJ9JnWMD0yvz585s0aeLp6cl0EITqLhcXlxEjRixdurS4uJjpLHoOC5j+OH/+/NmzZwMCAth13y5C+icwMDA7O3vDhg1MB9FzWMDYrDi97Eeapn19fbt06TJu3DgGEyGEAKBVq1YeHh5BQUFv3779d1HJS0gOZTSUHsICxlolL+FMJ0gKVj6KiIi4devWmjVrWHQjAUJ6bPHixTRNBwQE/Ps4/SjEz4bXZxkNpW9wZ8dSNMR5AEcA9uMAQC6X+/n5ffXVV1999RXTwRBCAABWVlY///zz9u3b09LSAAAcfgKrvhA7FWQ5TEfTH1jA2OnxZnh9FnpsB7EVAOzYsSMtLS0wMJDpWAihd37++Wdzc/N/xzHncMF5FxASuDGN6Vz6AwsYCxUmwd350Hwq2H4HABKJJCAgYMyYMY6OjkwnQwi9Y2Ji4ufnd/jw4bt37wIAGNlD143w4hg8P8R0ND2BBYyFsmPA8DPoulH5aOPGjTk5Oe9OtSOEdMb06dPt7OwWLlz47+Pm7tBuAdTrymgo/YEFjIWaTYHBD0BgAgDZ2dnr1q2bOnVqixYtmI6FEHqfUChctmzZmTNnLl++/O+iTqvw7mZ1wQLGTtx/7/RavXo1QRCLFy9mNg5C6GMmTJjQoUOHBQsWMB1ED2EBY7GXL19u3brVy8urUaNGTGdBCFWOy+WuXLkyJibmjz/+YDqLvsECxmIrVqwQi8U+Pj5MB0EIVWXo0KE9e/b09/enqIrTg5VmAE185ElINSxgLPHmHFwbW35eBpqmCwoK5s2bh+P2IqT7Vq1aJRKJsrKy3i2S58HpjpCwirlQrMf8hJYymUwqldZyIzRNEwQhEAjUEkk7aJqmabo6A2dwFAXG0b1osY2k52ngMDlnoEKh4PF47BrsgyRJFk20CAAkSdI0rd6JFjWNJEkul8vhcJgOUl3KPQafz2c2szjRX/Q0VOISRZqrvgem+nsM3aFQKLhcbu0/gAKBoNKZPJkvYGqh5zMyXxsPr/6Ab+6ASUvN56oKzsisBTgjsxZoaEbmGqNkcLYHUHL45jbwVHyscEbmD7Fmd193KW97dAxmvHohhNSMK4Kee0CSBnfnMx2FlbCA6TZSCvGzwGYINP+R6SgIIQ2o1xk6LIWcG0DJmY7CPmw6z14X8cTQ7y8w/IzpHAghjWnrA23nAQf3xjWGb5nOs+jGdAKEkCYx2jOL1fAUIkIIIVbCAoYQQoiV9KSA8Xg8IyMjFt2GAgBcLvfjN67p6L0NhoaG7LrZDgBEIhHTEWpGKBSKxWKmU9SMUChk0R0s8N8eQxczUwrIv1/pb6rcY+goQ0NDoVCoue3ryX1gCCGE6hrd+wKCEEIIVQMWMIQQQqyEBQwhhBArYQFDCCHESljAEEIIsZK+jcQhlUrPnz8/ePBgpoPop9jY2AMHDuTm5jZv3nzOnDkNGjRgOpG+SUhI2L59e2FhYZ8+fdzd3XWxnzf7YTPWGk3vkPXt47Fjxw6ct1tDsrKygoOD58yZEx4ebmVlFRoaynQifUOS5Pr16z08PMLCwpKTk69cucJ0Ij2EzVibNL1D1qsCFhsbm5qaynQKvfXo0aOOHTu2atVKLBYPHz788ePHTCfSN/fu3bO0tOzYsaNYLB46dOilS5eYTqSHsBlrjRZ2yPpTwPLy8g4dOuTh4cF0EL3l7Ozs5eWl/Dk1NbV58+bM5tE/WVlZtra2yp9tbW3fvn3LbB69hM1YO7SzQ9aTAkbTdEhIyJQpU0xMTJjOorfEYrGxsTEAREdH79q1a/z48Uwn0jdFRUVls10bGBgUFhYym0cvYTPWAq3tkFnciSMqKurkyZMA4OHhkZGRYWNj07lz5/T0dKZz6ZXyb3KXLl2KiopCQkKys7OXLVtmZ2fHdDp9Y2xsnJmZqfy5tLRUuZ9FaofNWNNOnz6tnR2ynoyFGBwcHBcXBwAURUmlUkNDw+3bt5uZmTGdS68oFAofH58OHTpMmTKFXeMms8Xt27ePHj0aGBgIADExMVFRUUuXLmU6lL7BZqwFWtshs/gIrLy5c+cqf0hPT1+5cmVYWBizefRSTEyMgYGBu7s700H0VqdOnTZt2pSWlmZvb3/27Nm+ffsynUgPYTPWAq3tkPWkgCEtSElJefjw4bBhw5QPTU1N9+/fz2wkPcPj8ebPnx8SEiKTyXr06NG/f3+mE+khbMb6RE9OISKEEKpr9KQXIkIIoboGCxhCCCFWwgKGEEKIlbCAIYQQYiUsYAghhFgJCxhCCCFWwgKGEEKIlbCAIYQQYiUsYAghhFgJCxhCuuLMmTNGRkZpaWkAQBBEp06dFi1axHQohHQXDiWFkA6ZNGnSmzdv/v7778DAwP3799++fVskEjEdCiEdhQUMIR2Sm5vbpk2b6dOnb9iw4eLFi927d2c6EUK6C0ejR0iHWFhYbNmyZcyYMfPmzcPqhVDV8BoYQrpFOSlzSkoK00EQ0nVYwBDSIampqQsWLDh06NA///wTGRnJdByEdBqeQkRIV9A07e7uPmHChLFjx759+9bT0/PLL780NzdnOhdCOgo7cSCkKzZt2rR69erExEQzMzOKonr27Nm+ffvw8HCmcyGko7CAIYQQYiW8BoYQQoiVsIAhhBBiJSxgCCGEWAkLGEIIIVbCAoYQQoiVsIAhhBBiJSxgCCGEWAkLGEIIIVbCAoYQQoiVsIAhhBBipf8DzmXiAwbItN8AAAAASUVORK5CYII=" /><!-- --></p>
+<p>Below, we show how to reach the same conclusions in an estimation context, with simulated data and the <code>marginaleffects</code> function.</p>
+</div>
+<div id="marginaleffects-function" class="section level1">
+<h1><code>marginaleffects</code> function</h1>
+<p>The marginal effect is a <em>unit-level</em> measure of association between changes in a regressor and changes in the response. Except in the simplest linear models, the value of the marginal effect will be different from individual to individual, because it will depend on the values of the other covariates for each individual.</p>
+<p>The <code>marginaleffects</code> function thus produces distinct estimates of the marginal effect for each row of the data used to fit the model. The output of <code>marginaleffects</code> is a simple <code>data.frame</code>, which can be inspected with all the usual <code>R</code> commands.</p>
+<p>To show this, we load the library, download the <a href="https://allisonhorst.github.io/palmerpenguins/">Palmer Penguins</a> data from the <a href="https://vincentarelbundock.github.io/Rdatasets/articles/data.html"><code>Rdatasets</code> archive</a>, and estimate a GLM model:</p>
+<div class="sourceCode" id="cb1"><pre class="sourceCode r"><code class="sourceCode r"><a class="sourceLine" id="cb1-1" title="1"><span class="kw">library</span>(marginaleffects)</a>
+<a class="sourceLine" id="cb1-2" title="2"></a>
+<a class="sourceLine" id="cb1-3" title="3">dat &lt;-<span class="st"> </span><span class="kw">read.csv</span>(<span class="st">&quot;https://vincentarelbundock.github.io/Rdatasets/csv/palmerpenguins/penguins.csv&quot;</span>)</a>
+<a class="sourceLine" id="cb1-4" title="4">dat<span class="op">$</span>large_penguin &lt;-<span class="st"> </span><span class="kw">ifelse</span>(dat<span class="op">$</span>body_mass_g <span class="op">&gt;</span><span class="st"> </span><span class="kw">median</span>(dat<span class="op">$</span>body_mass_g, <span class="dt">na.rm =</span> <span class="ot">TRUE</span>), <span class="dv">1</span>, <span class="dv">0</span>)</a>
+<a class="sourceLine" id="cb1-5" title="5"></a>
+<a class="sourceLine" id="cb1-6" title="6">mod &lt;-<span class="st"> </span><span class="kw">glm</span>(large_penguin <span class="op">~</span><span class="st"> </span>bill_length_mm <span class="op">+</span><span class="st"> </span>flipper_length_mm <span class="op">+</span><span class="st"> </span>species,</a>
+<a class="sourceLine" id="cb1-7" title="7">           <span class="dt">data =</span> dat, <span class="dt">family =</span> binomial)</a></code></pre></div>
+<div class="sourceCode" id="cb2"><pre class="sourceCode r"><code class="sourceCode r"><a class="sourceLine" id="cb2-1" title="1">mfx &lt;-<span class="st"> </span><span class="kw">marginaleffects</span>(mod)</a>
+<a class="sourceLine" id="cb2-2" title="2"><span class="kw">head</span>(mfx)</a>
+<a class="sourceLine" id="cb2-3" title="3"><span class="co">#&gt;   rowid     type           term contrast       dydx   std.error statistic</span></a>
+<a class="sourceLine" id="cb2-4" title="4"><span class="co">#&gt; 1     1 response bill_length_mm    dY/dX 0.01762275 0.007837288  2.248577</span></a>
+<a class="sourceLine" id="cb2-5" title="5"><span class="co">#&gt; 2     2 response bill_length_mm    dY/dX 0.03584665 0.011917159  3.007986</span></a>
+<a class="sourceLine" id="cb2-6" title="6"><span class="co">#&gt; 3     3 response bill_length_mm    dY/dX 0.08443344 0.021119186  3.997949</span></a>
+<a class="sourceLine" id="cb2-7" title="7"><span class="co">#&gt; 4     4 response bill_length_mm    dY/dX 0.03471401 0.006506804  5.335032</span></a>
+<a class="sourceLine" id="cb2-8" title="8"><span class="co">#&gt; 5     5 response bill_length_mm    dY/dX 0.05087500 0.013407802  3.794432</span></a>
+<a class="sourceLine" id="cb2-9" title="9"><span class="co">#&gt; 6     6 response bill_length_mm    dY/dX 0.01650827 0.007252823  2.276117</span></a>
+<a class="sourceLine" id="cb2-10" title="10"><span class="co">#&gt;        p.value    conf.low  conf.high large_penguin bill_length_mm</span></a>
+<a class="sourceLine" id="cb2-11" title="11"><span class="co">#&gt; 1 2.453942e-02 0.002261943 0.03298355             0           39.1</span></a>
+<a class="sourceLine" id="cb2-12" title="12"><span class="co">#&gt; 2 2.629851e-03 0.012489447 0.05920385             0           39.5</span></a>
+<a class="sourceLine" id="cb2-13" title="13"><span class="co">#&gt; 3 6.389363e-05 0.043040592 0.12582628             0           40.3</span></a>
+<a class="sourceLine" id="cb2-14" title="14"><span class="co">#&gt; 4 9.552749e-08 0.021960910 0.04746711             0           36.7</span></a>
+<a class="sourceLine" id="cb2-15" title="15"><span class="co">#&gt; 5 1.479816e-04 0.024596190 0.07715381             0           39.3</span></a>
+<a class="sourceLine" id="cb2-16" title="16"><span class="co">#&gt; 6 2.283904e-02 0.002292998 0.03072354             0           38.9</span></a>
+<a class="sourceLine" id="cb2-17" title="17"><span class="co">#&gt;   flipper_length_mm species</span></a>
+<a class="sourceLine" id="cb2-18" title="18"><span class="co">#&gt; 1               181  Adelie</span></a>
+<a class="sourceLine" id="cb2-19" title="19"><span class="co">#&gt; 2               186  Adelie</span></a>
+<a class="sourceLine" id="cb2-20" title="20"><span class="co">#&gt; 3               195  Adelie</span></a>
+<a class="sourceLine" id="cb2-21" title="21"><span class="co">#&gt; 4               193  Adelie</span></a>
+<a class="sourceLine" id="cb2-22" title="22"><span class="co">#&gt; 5               190  Adelie</span></a>
+<a class="sourceLine" id="cb2-23" title="23"><span class="co">#&gt; 6               181  Adelie</span></a></code></pre></div>
+</div>
+<div id="average-marginal-effect-ame" class="section level1">
+<h1>Average Marginal Effect (AME)</h1>
+<p>A dataset with one marginal effect estimate per unit of observation is a bit unwieldy and difficult to interpret. Many analysts like to report the “Average Marginal Effect”, that is, the average of all the observation-specific marginal effects. These are easy to compute based on the full <code>data.frame</code> shown above, but the <code>summary</code> function is convenient:</p>
+<div class="sourceCode" id="cb3"><pre class="sourceCode r"><code class="sourceCode r"><a class="sourceLine" id="cb3-1" title="1"><span class="kw">summary</span>(mfx)</a>
+<a class="sourceLine" id="cb3-2" title="2"><span class="co">#&gt; Average marginal effects </span></a>
+<a class="sourceLine" id="cb3-3" title="3"><span class="co">#&gt;                Term           Contrast   Effect Std. Error z value   Pr(&gt;|z|)</span></a>
+<a class="sourceLine" id="cb3-4" title="4"><span class="co">#&gt; 1    bill_length_mm              dY/dX  0.02757   0.005782  4.7679 1.8613e-06</span></a>
+<a class="sourceLine" id="cb3-5" title="5"><span class="co">#&gt; 2 flipper_length_mm              dY/dX  0.01058   0.002357  4.4897 7.1312e-06</span></a>
+<a class="sourceLine" id="cb3-6" title="6"><span class="co">#&gt; 3           species Chinstrap - Adelie -0.41479   0.056900 -7.2898 3.1042e-13</span></a>
+<a class="sourceLine" id="cb3-7" title="7"><span class="co">#&gt; 4           species    Gentoo - Adelie  0.06170   0.106856  0.5774    0.56367</span></a>
+<a class="sourceLine" id="cb3-8" title="8"><span class="co">#&gt;       2.5 %  97.5 %</span></a>
+<a class="sourceLine" id="cb3-9" title="9"><span class="co">#&gt; 1  0.016237  0.0389</span></a>
+<a class="sourceLine" id="cb3-10" title="10"><span class="co">#&gt; 2  0.005962  0.0152</span></a>
+<a class="sourceLine" id="cb3-11" title="11"><span class="co">#&gt; 3 -0.526312 -0.3033</span></a>
+<a class="sourceLine" id="cb3-12" title="12"><span class="co">#&gt; 4 -0.147735  0.2711</span></a>
+<a class="sourceLine" id="cb3-13" title="13"><span class="co">#&gt; </span></a>
+<a class="sourceLine" id="cb3-14" title="14"><span class="co">#&gt; Model type:  glm </span></a>
+<a class="sourceLine" id="cb3-15" title="15"><span class="co">#&gt; Prediction type:  response</span></a></code></pre></div>
+<p>We can compute other summaries of unit-level marginal effects by setting the <code>FUN</code> argument. For example, to compute “median marginal effects”:</p>
+<div class="sourceCode" id="cb4"><pre class="sourceCode r"><code class="sourceCode r"><a class="sourceLine" id="cb4-1" title="1"><span class="kw">summary</span>(mfx, <span class="dt">FUN =</span> median)</a>
+<a class="sourceLine" id="cb4-2" title="2"><span class="co">#&gt; Average marginal effects </span></a>
+<a class="sourceLine" id="cb4-3" title="3"><span class="co">#&gt;                Term           Contrast   Effect Std. Error z value   Pr(&gt;|z|)</span></a>
+<a class="sourceLine" id="cb4-4" title="4"><span class="co">#&gt; 1    bill_length_mm              dY/dX  0.02757   0.005782  4.7679 1.8613e-06</span></a>
+<a class="sourceLine" id="cb4-5" title="5"><span class="co">#&gt; 2 flipper_length_mm              dY/dX  0.01058   0.002357  4.4897 7.1312e-06</span></a>
+<a class="sourceLine" id="cb4-6" title="6"><span class="co">#&gt; 3           species Chinstrap - Adelie -0.41479   0.056900 -7.2898 3.1042e-13</span></a>
+<a class="sourceLine" id="cb4-7" title="7"><span class="co">#&gt; 4           species    Gentoo - Adelie  0.06170   0.106856  0.5774    0.56367</span></a>
+<a class="sourceLine" id="cb4-8" title="8"><span class="co">#&gt;       2.5 %  97.5 %</span></a>
+<a class="sourceLine" id="cb4-9" title="9"><span class="co">#&gt; 1  0.016237  0.0389</span></a>
+<a class="sourceLine" id="cb4-10" title="10"><span class="co">#&gt; 2  0.005962  0.0152</span></a>
+<a class="sourceLine" id="cb4-11" title="11"><span class="co">#&gt; 3 -0.526312 -0.3033</span></a>
+<a class="sourceLine" id="cb4-12" title="12"><span class="co">#&gt; 4 -0.147735  0.2711</span></a>
+<a class="sourceLine" id="cb4-13" title="13"><span class="co">#&gt; </span></a>
+<a class="sourceLine" id="cb4-14" title="14"><span class="co">#&gt; Model type:  glm </span></a>
+<a class="sourceLine" id="cb4-15" title="15"><span class="co">#&gt; Prediction type:  response</span></a></code></pre></div>
+<p>Note that since marginal effects are derivatives, they are only properly defined for continuous numeric variables. When the model also includes categorical regressors, the <code>summary</code> function will try to display relevant (regression-adjusted) contrasts between different categories, as shown above.</p>
+<p>You can also extract average marginal effects using <code>tidy</code> and <code>glance</code> methods which conform to the <a href="https://broom.tidymodels.org/"><code>broom</code> package specification</a>:</p>
+<div class="sourceCode" id="cb5"><pre class="sourceCode r"><code class="sourceCode r"><a class="sourceLine" id="cb5-1" title="1"><span class="kw">tidy</span>(mfx)</a>
+<a class="sourceLine" id="cb5-2" title="2"><span class="co">#&gt;       type              term           contrast    estimate   std.error</span></a>
+<a class="sourceLine" id="cb5-3" title="3"><span class="co">#&gt; 1 response    bill_length_mm              dY/dX  0.02756962 0.005782306</span></a>
+<a class="sourceLine" id="cb5-4" title="4"><span class="co">#&gt; 2 response flipper_length_mm              dY/dX  0.01058151 0.002356822</span></a>
+<a class="sourceLine" id="cb5-5" title="5"><span class="co">#&gt; 3 response           species Chinstrap - Adelie -0.41479008 0.056899735</span></a>
+<a class="sourceLine" id="cb5-6" title="6"><span class="co">#&gt; 4 response           species    Gentoo - Adelie  0.06169819 0.106855875</span></a>
+<a class="sourceLine" id="cb5-7" title="7"><span class="co">#&gt;    statistic      p.value    conf.low   conf.high</span></a>
+<a class="sourceLine" id="cb5-8" title="8"><span class="co">#&gt; 1  4.7679280 1.861303e-06  0.01623651  0.03890273</span></a>
+<a class="sourceLine" id="cb5-9" title="9"><span class="co">#&gt; 2  4.4897349 7.131187e-06  0.00596222  0.01520079</span></a>
+<a class="sourceLine" id="cb5-10" title="10"><span class="co">#&gt; 3 -7.2898420 3.104184e-13 -0.52631151 -0.30326865</span></a>
+<a class="sourceLine" id="cb5-11" title="11"><span class="co">#&gt; 4  0.5773963 5.636718e-01 -0.14773548  0.27113186</span></a>
+<a class="sourceLine" id="cb5-12" title="12"></a>
+<a class="sourceLine" id="cb5-13" title="13"><span class="kw">glance</span>(mfx)</a>
+<a class="sourceLine" id="cb5-14" title="14"><span class="co">#&gt;        aic      bic   r2.tjur      rmse nobs        F</span></a>
+<a class="sourceLine" id="cb5-15" title="15"><span class="co">#&gt; 1 179.8451 199.0192 0.6949385 0.2763254  342 15.66122</span></a></code></pre></div>
+</div>
+<div id="group-average-marginal-effect-g-ame" class="section level1">
+<h1>Group-Average Marginal Effect (G-AME)</h1>
+<p>We can also use the <code>by</code> argument of the <code>summary</code> or <code>tidy</code> functions to compute the average marginal effects <em>within different subgroups</em> of the observed data, based on values of the regressors. For example, to compute the average marginal effects of Bill Length for each Species, we do:</p>
+<div class="sourceCode" id="cb6"><pre class="sourceCode r"><code class="sourceCode r"><a class="sourceLine" id="cb6-1" title="1">mfx2 &lt;-<span class="st"> </span><span class="kw">marginaleffects</span>(mod, <span class="dt">variables =</span> <span class="st">&quot;bill_length_mm&quot;</span>)</a>
+<a class="sourceLine" id="cb6-2" title="2"><span class="kw">summary</span>(mfx2, <span class="dt">by =</span> <span class="st">&quot;species&quot;</span>)</a>
+<a class="sourceLine" id="cb6-3" title="3"><span class="co">#&gt; Average marginal effects </span></a>
+<a class="sourceLine" id="cb6-4" title="4"><span class="co">#&gt;             Term   species   Effect Std. Error z value   Pr(&gt;|z|)     2.5 %</span></a>
+<a class="sourceLine" id="cb6-5" title="5"><span class="co">#&gt; 1 bill_length_mm    Adelie 0.043533   0.008826   4.933 8.1143e-07  0.026235</span></a>
+<a class="sourceLine" id="cb6-6" title="6"><span class="co">#&gt; 2 bill_length_mm    Gentoo 0.002873   0.002847   1.009 0.31299421 -0.002708</span></a>
+<a class="sourceLine" id="cb6-7" title="7"><span class="co">#&gt; 3 bill_length_mm Chinstrap 0.036794   0.009798   3.755 0.00017324  0.017590</span></a>
+<a class="sourceLine" id="cb6-8" title="8"><span class="co">#&gt;     97.5 %</span></a>
+<a class="sourceLine" id="cb6-9" title="9"><span class="co">#&gt; 1 0.060831</span></a>
+<a class="sourceLine" id="cb6-10" title="10"><span class="co">#&gt; 2 0.008454</span></a>
+<a class="sourceLine" id="cb6-11" title="11"><span class="co">#&gt; 3 0.055998</span></a>
+<a class="sourceLine" id="cb6-12" title="12"><span class="co">#&gt; </span></a>
+<a class="sourceLine" id="cb6-13" title="13"><span class="co">#&gt; Model type:  glm </span></a>
+<a class="sourceLine" id="cb6-14" title="14"><span class="co">#&gt; Prediction type:  response</span></a></code></pre></div>
+<p>This is equivalent to manually taking the mean of the observation-level marginal effect for each species sub-group:</p>
+<div class="sourceCode" id="cb7"><pre class="sourceCode r"><code class="sourceCode r"><a class="sourceLine" id="cb7-1" title="1"><span class="kw">aggregate</span>(dydx <span class="op">~</span><span class="st"> </span>species, <span class="dt">data =</span> mfx2, <span class="dt">FUN =</span> mean)</a>
+<a class="sourceLine" id="cb7-2" title="2"><span class="co">#&gt;     species        dydx</span></a>
+<a class="sourceLine" id="cb7-3" title="3"><span class="co">#&gt; 1    Adelie 0.043532837</span></a>
+<a class="sourceLine" id="cb7-4" title="4"><span class="co">#&gt; 2 Chinstrap 0.036793947</span></a>
+<a class="sourceLine" id="cb7-5" title="5"><span class="co">#&gt; 3    Gentoo 0.002872873</span></a></code></pre></div>
+<p>Note that <code>marginaleffects</code> follows <code>Stata</code> and the <code>margins</code> package in computing standard errors using the group-wise averaged Jacobian.</p>
+</div>
+<div id="marginal-effect-at-user-specified-values" class="section level1">
+<h1>Marginal Effect at User-Specified Values</h1>
+<p>Sometimes, we are not interested in <em>all</em> the unit-specific marginal effects, but would rather look at the estimated marginal effects for certain “typical” individuals, or for user-specified values of the regressors. The <code>datagrid</code> function helps us build a data grid full of “typical” rows. For example, to generate artificial Adelies and Gentoos with 180mm flippers:</p>
+<div class="sourceCode" id="cb8"><pre class="sourceCode r"><code class="sourceCode r"><a class="sourceLine" id="cb8-1" title="1"><span class="kw">datagrid</span>(<span class="dt">flipper_length_mm =</span> <span class="dv">180</span>,</a>
+<a class="sourceLine" id="cb8-2" title="2">         <span class="dt">species =</span> <span class="kw">c</span>(<span class="st">&quot;Adelie&quot;</span>, <span class="st">&quot;Gentoo&quot;</span>),</a>
+<a class="sourceLine" id="cb8-3" title="3">         <span class="dt">model =</span> mod)</a>
+<a class="sourceLine" id="cb8-4" title="4"><span class="co">#&gt;    bill_length_mm flipper_length_mm species</span></a>
+<a class="sourceLine" id="cb8-5" title="5"><span class="co">#&gt; 1:       43.92193               180  Adelie</span></a>
+<a class="sourceLine" id="cb8-6" title="6"><span class="co">#&gt; 2:       43.92193               180  Gentoo</span></a></code></pre></div>
+<p>The same command can be used (omitting the <code>model</code> argument) to <code>marginaleffects</code>’s <code>newdata</code> argument to compute marginal effects for those (fictional) individuals:</p>
+<div class="sourceCode" id="cb9"><pre class="sourceCode r"><code class="sourceCode r"><a class="sourceLine" id="cb9-1" title="1"><span class="kw">marginaleffects</span>(mod,</a>
+<a class="sourceLine" id="cb9-2" title="2">                <span class="dt">newdata =</span> <span class="kw">datagrid</span>(<span class="dt">flipper_length_mm =</span> <span class="dv">180</span>,</a>
+<a class="sourceLine" id="cb9-3" title="3">                                   <span class="dt">species =</span> <span class="kw">c</span>(<span class="st">&quot;Adelie&quot;</span>, <span class="st">&quot;Gentoo&quot;</span>)))</a>
+<a class="sourceLine" id="cb9-4" title="4"><span class="co">#&gt;   rowid     type              term           contrast        dydx   std.error</span></a>
+<a class="sourceLine" id="cb9-5" title="5"><span class="co">#&gt; 1     1 response    bill_length_mm              dY/dX  0.06067504 0.033257106</span></a>
+<a class="sourceLine" id="cb9-6" title="6"><span class="co">#&gt; 2     2 response    bill_length_mm              dY/dX  0.08466334 0.040417468</span></a>
+<a class="sourceLine" id="cb9-7" title="7"><span class="co">#&gt; 3     1 response flipper_length_mm              dY/dX  0.02328764 0.005498309</span></a>
+<a class="sourceLine" id="cb9-8" title="8"><span class="co">#&gt; 4     2 response flipper_length_mm              dY/dX  0.03249469 0.008616513</span></a>
+<a class="sourceLine" id="cb9-9" title="9"><span class="co">#&gt; 5     1 response           species Chinstrap - Adelie -0.21105002 0.103178237</span></a>
+<a class="sourceLine" id="cb9-10" title="10"><span class="co">#&gt; 6     2 response           species Chinstrap - Adelie -0.21105002 0.103178237</span></a>
+<a class="sourceLine" id="cb9-11" title="11"><span class="co">#&gt; 7     1 response           species    Gentoo - Adelie  0.15912111 0.303473386</span></a>
+<a class="sourceLine" id="cb9-12" title="12"><span class="co">#&gt; 8     2 response           species    Gentoo - Adelie  0.15912111 0.303473386</span></a>
+<a class="sourceLine" id="cb9-13" title="13"><span class="co">#&gt;   statistic      p.value     conf.low   conf.high bill_length_mm</span></a>
+<a class="sourceLine" id="cb9-14" title="14"><span class="co">#&gt; 1  1.824423 6.808811e-02 -0.004507693  0.12585777       43.92193</span></a>
+<a class="sourceLine" id="cb9-15" title="15"><span class="co">#&gt; 2  2.094722 3.619575e-02  0.005446559  0.16388012       43.92193</span></a>
+<a class="sourceLine" id="cb9-16" title="16"><span class="co">#&gt; 3  4.235418 2.281267e-05  0.012511152  0.03406413       43.92193</span></a>
+<a class="sourceLine" id="cb9-17" title="17"><span class="co">#&gt; 4  3.771211 1.624571e-04  0.015606634  0.04938274       43.92193</span></a>
+<a class="sourceLine" id="cb9-18" title="18"><span class="co">#&gt; 5 -2.045490 4.080661e-02 -0.413275648 -0.00882439       43.92193</span></a>
+<a class="sourceLine" id="cb9-19" title="19"><span class="co">#&gt; 6 -2.045490 4.080661e-02 -0.413275648 -0.00882439       43.92193</span></a>
+<a class="sourceLine" id="cb9-20" title="20"><span class="co">#&gt; 7  0.524333 6.000470e-01 -0.435675798  0.75391802       43.92193</span></a>
+<a class="sourceLine" id="cb9-21" title="21"><span class="co">#&gt; 8  0.524333 6.000470e-01 -0.435675798  0.75391802       43.92193</span></a>
+<a class="sourceLine" id="cb9-22" title="22"><span class="co">#&gt;   flipper_length_mm species</span></a>
+<a class="sourceLine" id="cb9-23" title="23"><span class="co">#&gt; 1               180  Adelie</span></a>
+<a class="sourceLine" id="cb9-24" title="24"><span class="co">#&gt; 2               180  Gentoo</span></a>
+<a class="sourceLine" id="cb9-25" title="25"><span class="co">#&gt; 3               180  Adelie</span></a>
+<a class="sourceLine" id="cb9-26" title="26"><span class="co">#&gt; 4               180  Gentoo</span></a>
+<a class="sourceLine" id="cb9-27" title="27"><span class="co">#&gt; 5               180  Adelie</span></a>
+<a class="sourceLine" id="cb9-28" title="28"><span class="co">#&gt; 6               180  Gentoo</span></a>
+<a class="sourceLine" id="cb9-29" title="29"><span class="co">#&gt; 7               180  Adelie</span></a>
+<a class="sourceLine" id="cb9-30" title="30"><span class="co">#&gt; 8               180  Gentoo</span></a></code></pre></div>
+<p>When variables are omitted from the <code>datagrid</code> call, they will automatically be set at their median or mode (depending on variable type).</p>
+</div>
+<div id="marginal-effect-at-the-mean-mem" class="section level1">
+<h1>Marginal Effect at the Mean (MEM)</h1>
+<p>The “Marginal Effect at the Mean” is a marginal effect calculated for a hypothetical observation where each regressor is set at its mean or mode. By default, the <code>datagrid</code> function that we used in the previous section sets all regressors to their means or modes. To calculate the MEM, we can set the <code>newdata</code> argument, which determines the values of predictors at which we want to compute marginal effects:</p>
+<div class="sourceCode" id="cb10"><pre class="sourceCode r"><code class="sourceCode r"><a class="sourceLine" id="cb10-1" title="1"><span class="kw">marginaleffects</span>(mod, <span class="dt">newdata =</span> <span class="st">&quot;mean&quot;</span>)</a>
+<a class="sourceLine" id="cb10-2" title="2"><span class="co">#&gt;   rowid     type              term           contrast        dydx   std.error</span></a>
+<a class="sourceLine" id="cb10-3" title="3"><span class="co">#&gt; 1     1 response    bill_length_mm              dY/dX  0.05065165 0.011975692</span></a>
+<a class="sourceLine" id="cb10-4" title="4"><span class="co">#&gt; 2     1 response flipper_length_mm              dY/dX  0.01944084 0.005597224</span></a>
+<a class="sourceLine" id="cb10-5" title="5"><span class="co">#&gt; 3     1 response           species Chinstrap - Adelie -0.80569873 0.073539686</span></a>
+<a class="sourceLine" id="cb10-6" title="6"><span class="co">#&gt; 4     1 response           species    Gentoo - Adelie  0.08359420 0.114498716</span></a>
+<a class="sourceLine" id="cb10-7" title="7"><span class="co">#&gt;     statistic      p.value     conf.low   conf.high bill_length_mm</span></a>
+<a class="sourceLine" id="cb10-8" title="8"><span class="co">#&gt; 1   4.2295387 2.341710e-05  0.027179727  0.07412358       43.92193</span></a>
+<a class="sourceLine" id="cb10-9" title="9"><span class="co">#&gt; 2   3.4733004 5.140996e-04  0.008470483  0.03041120       43.92193</span></a>
+<a class="sourceLine" id="cb10-10" title="10"><span class="co">#&gt; 3 -10.9559718 6.220703e-28 -0.949833864 -0.66156359       43.92193</span></a>
+<a class="sourceLine" id="cb10-11" title="11"><span class="co">#&gt; 4   0.7300885 4.653361e-01 -0.140819162  0.30800756       43.92193</span></a>
+<a class="sourceLine" id="cb10-12" title="12"><span class="co">#&gt;   flipper_length_mm species</span></a>
+<a class="sourceLine" id="cb10-13" title="13"><span class="co">#&gt; 1          200.9152  Adelie</span></a>
+<a class="sourceLine" id="cb10-14" title="14"><span class="co">#&gt; 2          200.9152  Adelie</span></a>
+<a class="sourceLine" id="cb10-15" title="15"><span class="co">#&gt; 3          200.9152  Adelie</span></a>
+<a class="sourceLine" id="cb10-16" title="16"><span class="co">#&gt; 4          200.9152  Adelie</span></a></code></pre></div>
+</div>
+<div id="counterfactual-marginal-effects" class="section level1">
+<h1>Counterfactual Marginal Effects</h1>
+<p>The <code>datagrid</code> function allowed us look at completely fictional individuals. Setting the <code>grid_type</code> argument of this function to <code>&quot;counterfactual&quot;</code> lets us compute the marginal effects for the actual observations in our dataset, but with a few manipulated values. For example, this code will create a <code>data.frame</code> twice as long as the original <code>dat</code>, where each observation is repeated with different values of the <code>flipper_length_mm</code> variable:</p>
+<div class="sourceCode" id="cb11"><pre class="sourceCode r"><code class="sourceCode r"><a class="sourceLine" id="cb11-1" title="1">nd &lt;-<span class="st"> </span><span class="kw">datagrid</span>(<span class="dt">flipper_length_mm =</span> <span class="kw">c</span>(<span class="dv">160</span>, <span class="dv">180</span>),</a>
+<a class="sourceLine" id="cb11-2" title="2">               <span class="dt">model =</span> mod,</a>
+<a class="sourceLine" id="cb11-3" title="3">               <span class="dt">grid_type =</span> <span class="st">&quot;counterfactual&quot;</span>)</a></code></pre></div>
+<p>We see that the rows 1, 2, and 3 of the original dataset have been replicated twice, with different values of the <code>flipper_length_mm</code> variable:</p>
+<div class="sourceCode" id="cb12"><pre class="sourceCode r"><code class="sourceCode r"><a class="sourceLine" id="cb12-1" title="1">nd[nd<span class="op">$</span>rowid <span class="op">%in%</span><span class="st"> </span><span class="dv">1</span><span class="op">:</span><span class="dv">3</span>,]</a>
+<a class="sourceLine" id="cb12-2" title="2"><span class="co">#&gt;     rowid_counterfactual bill_length_mm species flipper_length_mm</span></a>
+<a class="sourceLine" id="cb12-3" title="3"><span class="co">#&gt; 1                      1           39.1  Adelie               160</span></a>
+<a class="sourceLine" id="cb12-4" title="4"><span class="co">#&gt; 2                      2           39.5  Adelie               160</span></a>
+<a class="sourceLine" id="cb12-5" title="5"><span class="co">#&gt; 3                      3           40.3  Adelie               160</span></a>
+<a class="sourceLine" id="cb12-6" title="6"><span class="co">#&gt; 343                    1           39.1  Adelie               180</span></a>
+<a class="sourceLine" id="cb12-7" title="7"><span class="co">#&gt; 344                    2           39.5  Adelie               180</span></a>
+<a class="sourceLine" id="cb12-8" title="8"><span class="co">#&gt; 345                    3           40.3  Adelie               180</span></a></code></pre></div>
+<p>We can use the observation-level marginal effects to compute average (or median, or anything else) marginal effects over the counterfactual individuals:</p>
+<div class="sourceCode" id="cb13"><pre class="sourceCode r"><code class="sourceCode r"><a class="sourceLine" id="cb13-1" title="1"><span class="kw">library</span>(dplyr)</a>
+<a class="sourceLine" id="cb13-2" title="2"></a>
+<a class="sourceLine" id="cb13-3" title="3"><span class="kw">marginaleffects</span>(mod, <span class="dt">newdata =</span> nd) <span class="op">%&gt;%</span></a>
+<a class="sourceLine" id="cb13-4" title="4"><span class="st">    </span><span class="kw">group_by</span>(term) <span class="op">%&gt;%</span></a>
+<a class="sourceLine" id="cb13-5" title="5"><span class="st">    </span><span class="kw">summarize</span>(<span class="dt">dydx =</span> <span class="kw">median</span>(dydx))</a>
+<a class="sourceLine" id="cb13-6" title="6"><span class="co">#&gt; # A tibble: 3 × 2</span></a>
+<a class="sourceLine" id="cb13-7" title="7"><span class="co">#&gt;   term                   dydx</span></a>
+<a class="sourceLine" id="cb13-8" title="8"><span class="co">#&gt;   &lt;chr&gt;                 &lt;dbl&gt;</span></a>
+<a class="sourceLine" id="cb13-9" title="9"><span class="co">#&gt; 1 bill_length_mm    0.00985  </span></a>
+<a class="sourceLine" id="cb13-10" title="10"><span class="co">#&gt; 2 flipper_length_mm 0.00378  </span></a>
+<a class="sourceLine" id="cb13-11" title="11"><span class="co">#&gt; 3 species           0.0000226</span></a></code></pre></div>
+</div>
+<div id="conditional-marginal-effects-plot" class="section level1">
+<h1>Conditional Marginal Effects (Plot)</h1>
+<p>The <code>plot_cme</code> function can be used to draw “Conditional Marginal Effects.” This is useful when a model includes interaction terms and we want to plot how the marginal effect of a variable changes as the value of a “condition” (or “moderator”) variable changes:</p>
+<div class="sourceCode" id="cb14"><pre class="sourceCode r"><code class="sourceCode r"><a class="sourceLine" id="cb14-1" title="1">mod &lt;-<span class="st"> </span><span class="kw">lm</span>(mpg <span class="op">~</span><span class="st"> </span>hp <span class="op">*</span><span class="st"> </span>wt <span class="op">+</span><span class="st"> </span>drat, <span class="dt">data =</span> mtcars)</a>
+<a class="sourceLine" id="cb14-2" title="2"></a>
+<a class="sourceLine" id="cb14-3" title="3"><span class="kw">plot_cme</span>(mod, <span class="dt">effect =</span> <span class="st">&quot;hp&quot;</span>, <span class="dt">condition =</span> <span class="st">&quot;wt&quot;</span>)</a></code></pre></div>
+<p><img src="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAkAAAADmCAMAAAAKnsreAAAC61BMVEUAAAABAQECAgIDAwMEBAQFBQUGBgYHBwcICAgJCQkKCgoLCwsMDAwNDQ0ODg4PDw8QEBARERESEhITExMUFBQVFRUWFhYXFxcYGBgZGRkaGhobGxscHBwdHR0eHh4fHx8gICAhISEiIiIjIyMkJCQlJSUmJiYnJycoKCgpKSkqKiorKyssLCwtLS0vLy8wMDAxMTEyMjIzMzM0NDQ1NTU2NjY3Nzc4ODg6Ojo8PDw9PT0+Pj4/Pz9AQEBBQUFCQkJDQ0NERERFRUVGRkZHR0dISEhKSkpLS0tMTExNTU1OTk5PT09QUFBRUVFSUlJTU1NUVFRVVVVWVlZXV1dYWFhZWVlaWlpbW1tcXFxdXV1eXl5fX19hYWFiYmJjY2NkZGRlZWVmZmZnZ2doaGhpaWlqampra2tsbGxtbW1ubm5vb29wcHBxcXFycnJzc3N0dHR1dXV2dnZ3d3d4eHh5eXl6enp7e3t8fHx9fX1+fn5/f3+AgICBgYGCgoKDg4OEhISFhYWGhoaHh4eIiIiJiYmKioqLi4uMjIyNjY2Ojo6Pj4+QkJCRkZGSkpKTk5OUlJSVlZWWlpaXl5eYmJiZmZmampqbm5ucnJydnZ2enp6fn5+goKChoaGioqKjo6OkpKSlpaWnp6eoqKipqamqqqqrq6usrKytra2urq6vr6+wsLCxsbGysrKzs7O0tLS1tbW2tra3t7e4uLi5ubm7u7u8vLy9vb2+vr6/v7/AwMDBwcHCwsLDw8PExMTFxcXGxsbHx8fIyMjJycnKysrLy8vMzMzNzc3Ozs7Pz8/Q0NDR0dHS0tLT09PU1NTV1dXW1tbX19fY2NjZ2dna2trb29vc3Nzd3d3e3t7f39/g4ODh4eHi4uLj4+Pk5OTl5eXm5ubn5+fo6Ojp6enq6urr6+vs7Ozt7e3u7u7v7+/w8PDx8fHy8vLz8/P09PT19fX29vb39/f4+Pj5+fn6+vr7+/v8/Pz9/f3+/v7///9eSsUUAAAACXBIWXMAAA7DAAAOwwHHb6hkAAAWWElEQVR4nO2de4AUxZ3HG1gE1BAUEgiIORVB1wQfPJRDORHBLAeSFYJrQMEEDUQOuPMRoscbD0XMJreHmCBEj6dR0AM1vBFRQQiPXWDZZVlYdmefs4/Zx+zWnzezPbPTM13dXfWrrp6e4ff5Yxx6pvpbNfWxe6enukohCCKAEu8KIIkNCoQIgQIhQqBAiBAagWpaqW2JX2WQxEMjkKLSvt/i+vjVB0kwNAJt7r58994Vt21ce+eLInv0N4CL1leDizb7wEUbvOCipA5csskLP9TDU/1ev82pGoHu3RB83PQwOdYPHBKgEd68mnJwUX8NuGidB1yUVIFLNnia45Da5GmyOVUjULevgo/fdCNF14JDCArESBIKNH5MKSFlPxtbO+d+cAhBgRhJQoFKhnRKTe00qCjrxoOMu2zwUqisoG1lorwUXLSqHFy0wgMu6i0Dl6z0VMUhtcq21PBhIuo60J7MlTtbiAd+CAmCRyAmkvAIRKre/vW0NyvAASFQICaSUKCT3X84bsKPbjwBTlBBgZhIQoFGPBboet/YEeAEFRSIiYQRqMQ8VSPQ9fuCjwe7ctcqGhSIicQQqCSAeapGoF6bg48fDoRUTAMKxEQCCFSiYp6qEWh1782lpZv7fur3wy93ExSIEbcLVNKGeapGoB7tQz+nKv8EriBBgRhxtUAlWsxTNQIdauMouIIEBWLEvQKVxGCeqr0OVHGiFXDtVFAgJlwqUKw9PAK91UE9gYFrp4ICMeFGgSj2cP0NND2vMgi4diooEBOuE4huD49APbPB9dKCAjHhLoEM7eERaNZ8cL20oEBMuEggM3t4BCrscsejowOAa6eCAjHhFoEs7OER6KHez/8uCLh2KigQE64QyNoeHoG67AbXSwsKxET8BWKyh0eg3vvB9dKCAjERX4FY5eESKPPW9buDRL1+4je/fKdZ+2xOWlpallkdUSAm4igQjz08AqWE0L7sn3rM9++7tM8yvI2Npj+2okBMxEugy5z68PyUQeHbeYTse1XzzJdhVUcUiIm4CFRyOdthgf7vbULyn9M8y8uYOXlhuJ8bayh4K2lbmagoAxetrgAXrfSAi9bAK1zlqXY4NT/A+ezz+bzQU8O3v1sItPEdQoozNM+yl5T531gaetVXTqGsjLaVidJScNFygVQPPBVe4TJnU8+qnMk+yw09NXwXuoVAn/4hcNz5dfQzkjPRrAiewphw8hQWOR05fgr79kVCDr6qeZaTQ0huhlkRFIgJxwSKkkGuQL5zrWhf9k/Jbf79F4GDTl3o2f6pxc2rMs0qjAIx4YxAsTJIFWhTZ8p4oNOzfvVuCyHjToWfbZk2ZWWtWZ1RICYcEIgig1SBbp2UUxoE3C4VFIgJ2QLRZZAqUOeT4BZpQYGYkCmQsQxSBUrdAm6RFhSICWkCmcogVaCtfZbs1P0Wxg8KxIQcgaxkkCoQ7bcwACgQExIEYpDB8etAAFAgJuwWiE0GuQK17M7K3CU8TTQKxIStAjHLIFUgz6AOt/ZLGYxf4zlwg0A8MkgVaPLQC4QU3P8UuF0qKBAT9gjEK4NUgXq2fv/a1wvcLhUUiAkbBOJWwRmBeoLbpYICMSEqEMAe2QJNHloQPIU9CW6XCgrEhJBAMHtAAp04Yt5W7R/Rgzv065cySODjbAUFYgIuUElJrjMC5W9blD5A+YV5W6O+xu/64x//jl/jeXBcoNaelS9Q0Z43M1I7KNfcO+1P35i3FS8kJo5Abd0rV6Dj6+eN6qYoPccu2nYx+G/ztqJACSKQtoulCZS75eXRPRWlx6j/2HC2baN5W1GgRBAotp8lCHTps+UT+7dXugydsfrb6FfM2yokUEM1haoK2lYmKkrBRb0CqR5w0eoycMkqj5fxnXk6zuo3MZKbfZ6ydfeqp+/rpHTo/8TiTyi7DtejPKpW4QX+hNbKaKHRUEvdzEJNObhoUw24aK0HXLSlClyy3uNneVsxjVzqVhYCR6DoDec+/t0jPQJ/8Dwyd32OQRmDtuoFwrUy+JF6CjM8EdlzCrv46aIJtyjK94bNWnvMrIx5W3GtDJcKZNalwgIV78+cendHJeWnU1btu2JVxrytuFaGGwWy6FIhgU6smz28q6LcPH7B9gKmMuZtxbUyXCeQdZdCBcrftuBf+wdOWkOmrznJXsq8rbhWhqsEYutSgEBF+zKnD7lGSemXkWl90gIKhGtl8GOrQMxdyinQ0T8//8B1Srvb0pfuuCDz13hcK4Mf+wTi6VJ2gTSXls8E/y13THSDOh8M+DNRQYGY0ArE26VMAl0OnLQGtlc6Dpyeua+4baNMgTZ2wbUyeLFBIO4OZRDo+PqZQzoryo/TF20rjHpBqkC3PJN3JQj4M1FBgZhQBeLuzVbMBMrdNn9U8NLyqHnrc/SvShWo6ynwp6EFBWKiwcP5ZUgrCX3zpX0r0ge0U64bMj3za4OSUgUag/fGcwOf7vJStq0CHV8zfUgnJWVA+qLPzPYrT6D9+/dv6rPks8B/RKcbR4EsCXaLfQKdWD9v1A2tJ63NF6xKyhMoJQLoM4mAApkS7hZbBMr/6LW0Popyw7/Mff80U0m8N96IxBBI0y2iAhXtVkct3zf9T4fYS6JARrhfoJhuERHoYMyoZXZQICNcLpC+W4ACnd+2KL2vonx/+Lz12YDizgukW2wlssEAFCgGerfwCxQZtfz2EW4LQjgukG6xlcgGI1AgLcY6cAl0OOtXgzspHe6Y/F9/v+zYjYUhzNsaFujBEnI/5WXdYiuRDUagQGFMu4VZIMqlZTcKNGjca8prKtqXdYutRDYEaPJRqPHStjJRWQYuWlsJLlrlARf1VRi+ctGC/OwCq7dczPti2YTb2ynXDX565QHt9nOWJY24kH2Buwy9rQ0xAn07dbQyWkUrkG6xlcgGEvx/F6GRLc6pT5ZN/kmK0iF10pLtp2zYnwD0NlbFCBTgIcoBSrfYimbNFQOu8lMY64nB5BRmOWrZjaewIJQ5EnWLrUQ2GHE1C8TRLXSB1AkxrEYtu1Qg2hyJusVWwhuMuVoF4uwWnUDhUcsDfmk5atmlAlHnSNQtthL6jzFXo0CArowSKDRquV/60h2FxkXacKlAOEciP1XQMWFtAsWOWmbB3QLhHIkcwLsyIBB11DILLhUI50jkQ6grj6+dTh+1zIJLBcI5EtkR6cqcD+aNvFFRej02/8PzgOLAVBWAQG1txjkSDeAUSKQrIxNivHfE3iGtjLAKRGs4DucwgEMgka6MGbVs85hoRswFMm88CmQAo0ACXXl2s37UsnsEYv2cUCADGASCd2X+x6+NvUlRuo2Y89dTUS/EWyD+zwkFMsBcIHhXFu1Z+dRdKa1zLX+p/5YeH4GaPE3gz8lSIPVn+IoJ4ASVJBII3pXWl5adFCjSInkCVa9YoawI8lx3cIJKcggE78rgqOWbFaWrxahlBwSiNEueQCXDhinDggxfA05QSXyBwF1pPNeyHmkCmbZV6ilsEHjXUSS0QPCuPJz1rGbUsjV2C8TWVqkCNf3b04QMnuujvo+dRBUI3pWhS8u9uS4t2yMQb1ulCvRSz7WErO4zG5ygkoACgXuyJMd6QgwDhAQCt1WqQLe8H3z8oDc4QSWhBAp2RwHkDr2Skiv7/zD17hTGuZb1QAQK1xo+qYxUgXocDD4evlq+hbV1C0CgE+teUEctv8I417IeDoF0VXepQE88WkGIN+1xjurUUaiuom1lorIMXLSmkv29BdHkZhdwkL3plTF9FKXbQy+sPVpQcJanaBR52Res3mLYgHL4x+SpAZeNTq3XC1Qy8LqhD3QdcIldIH8jhbpq2lYmvGXgovVeprddppCXTdtK4eKuVc8M7qik9M9YtatQ3XSOsaieguxLBq9Yt6IS/DH5PD5w2ejU8JFM+1NG8yfLFm6BH+JCuPQUZnyGYDqFGVxaFhqRGLOFvbEuPYWRijULyTGhWeqDuE0gy660EigyannjWd1rPM5EERGIv7EuFaggtadCht6VPPNEM3aliUCWl5ZFBBJbNx6GVIEee9KfQgofHA9OUHGBQHxdaSCQ4VzLWiACqXUUWjceXFKqQN87TFII+bwbOEElrgIB+pMikPlcy1Hv5AmKqnASCnTT3qBAn/YFJ6jER6CifD5rNEQJpBm1fJyhLJNA1AonoUDPjqhIIadufx6coOKsQOFOskGg4uClZdZl/EJYCGRS8SQUqHJER6VXu8drwQkqDgkU01WCAvHMtazFSCDr+iehQIQc+svWM+D9h5EskEGPwQXK3/Iyw4QYBugEYm5rsgn0aCl1fiAAkgSy6EmQQMFRy8G5lumjllnQCMTZ1mQT6J6fL1IWqYATVGwWiNUFXoEil5Y//gdnUQ2tAoHammwCff3USGWkCjhBxSaBOHuSR6CYUcvA4RxB5K4bb4gbBQowDLzrKMQEgnYlo0C0CTFAAoVqjAKFBRpaTO4G7zoKkEBqr+TrfmtihkGgw1nPDqKNWuYUKKreKFCbQGNeVF5UASeocAkU3TfSBDIdtcwukL7+KFBYoOMzxinjVMAJKiwCGXSQDIGsl/FjEsigISiQ7s5UYYwFsuwluwVSJ8ToYLGMn5VAZo1FgazGA+kWW5mTlpaWZZajE4jdAhsFOrFu9oNdFaXvuAXbrS4tmwgE/FBZSEKBaOOBdIutkAxvY6PpoLOwQAAL7BEo/yODCTEMoAsk8qGykIQC0cYD6RZb8WVY5QQEglogLFDbXMvpK9hvtdEJJPyhspCEAtHGA+kWW8nLmDl5Yfh6n9GgeuhA8/NnoCUvF54/+t6cR76vKD3TFvwtj6to1KB6oYHmPNR5GsBlXTqonjYeSLfYSvaSMv8bS0OvGi224vRyIF//ZfbDP1CU7g/NWnMYvhdpa68kJZTFVmLHA+2YMeOIbrGVIDkTQ+9obqLgq2mCHkYAR6ALO5Y8cXt7pcuQZ7K+AqbmB45AtIawUAkt2BQ4AoHLwlPrPfU2pfr1AtHGA+kWW8nJISQ3g3IubMO5v4G0o5bhwznisG58kCT8G4g2Hki32Mr+qcXNqzLNchwRSDdqGSZQa4VRIJFUqzkSdYutbJk2ZaXpoEXZAtFHLfML1FZhFEgkVcokm7x9GcZKoCvGo5b5BIqqMAokkpowAlmMWmYXSFdhFEgkNREEYlnGj00gaoVRIJHUsECHIoATVGwViHnUsrVAhhVGgURSwwIpEcAJKrYJxLWMn7lAphVGgURSw7r4I4ATVOwQiHGuZTaBrCqMAomk6o43nsHgBBVBgYDL+BkIxFJhFEgkVSPQd4N7BLg2FZygIiDQnjfpo5ZhArFWGAUSSdUINPzBdd3W/vXH2eAEFZhAoLmWTQTiqDAKJJKqEej6XWTCdrI5HZygwi1Q5NLy6gMQd3QCcVYYBRJJ1Qj0gy/Iy6+TAhum+WXv9+hRyzaMSARUGAUSSdUIlDbi/IbBFe/8CJygwipQaNTyzeMXtM21LCoQrMIokEiqRqCzd67wDbxGWQxOUGEQyGjUsohA8Vk3HgWK+hrfQqo/PgAOCGEukOmlZbBAcVk3PggKpBXId64VcIKKsUDH188b1U1Reo5dtO0i9Q0ggdRUFIgJqQJt6izvp4xzbXMtbzCRhF+gtlQUiAmpAt06Kac0CDhBJVYgjmX8+ASKSkWBmJAqUOeTvLv011Oo9dYXhjmQOS14aXnApGU78wutyT3D8CaV2NS6KlpdmPB6wEXrK8Alazy+OKTWeupsSm3UC5S6hVegJh+FGq/vYoDTW18a2UNRfjhy9p//cZGR3DNs76Ok1lbR6sJElQdc1FcBLlnjqYtDaq2n1qbUBr1AW/ss2bk7AK9GMTTWNUKX8WM5hRmk4imMCamnsJQQ4ASVxrr/tpwQAyqQcSoKxERiDGkt2sY11zKrQKapKBAT8gT67hL5LgQ4QUXKoHrLVBSICYlDWucStw1pZbeHoECMyBOovomEv6CBE1RsFogxFQViQurfQDWt1LaAE1RsFIgjFQViQqpAoTNY+36LhQ5CdgnEl4oCMSFVoM3dl+/eu+K2jWvvFJrp1xaBuFNRICakCnTvhuDjpofJsX7gEGKHQJBUFIgJqQJ1+yr4+E03UnQtOISICgRNRYGYkCrQ+DGlhJT9bGztnPvBIURIIJnrxhuDAomkagQqGdIpNbXToKKsGw+CQwhcICJp3XhLUCCR1KjLhnsyV+5sIR74cjtBQAKpRVEg2akyBaodWwjetxZugSJFUSDZqVKPQCPfB+9bC59AUUVRINmpUgU69MDSHfsDgBNUOASKLYoCyU514kp09I+pkcVWCDnQGLOBCqtAlKIokOxUx8cDRRZbIaRwYm30BjpMAtGLokCyUx2fHyiy2ApZ9vO02qgNBlgLZFgUBZKd6vj8QJHFVgJMqI3Z0OKnUF/jLzKGVqKN6nLTl81o8IKL1njARf2V4JI+T2McUhs8DTalhvW3mB8osthKSKCoDbyLrTi6GggiFcpiK7HzA0UvthISKGqD5X1hZndyUagqA9+0hPeFMSH1vjDa/ECRxVZCAkVtoEL9G8isQAT8G0h2quPzA0UWWyGqQOENxugFYq4iCiQ71fn5gSKLragChTcYEyMQTxVRINmpiTY/EGdRFEh2qjyBNN+VwAkqYYEARVEg2akJs9QBrCgKJDtVnkB92v/zW6fzWwEnqDTChxOhQLJT5QnU8uXcW66ftNl0LUI2UCAmkk2gIEdeuePaCR94wQkqKBATyShQgJMLbuoMTlBBgZhIToFylw/uMAKcoIICMZGEAp1del/KI/8DvjMrDArERLIJlLP4no6j14jO0BoEBWIi2QRS2g17fY0KOEEFBWIi2QTqFQGcoNIMr2KjD1y0pdH6PQY0CdwH12D9FgP8dfB5dOCzpzTXwbWlp9o/RyJyVYECIUKgQIgQKBAiBAqECIECIUK4SaAvfzN5vvCFcG4+mvrk6/DLB3B8253PnJOWlpZl7y5dJFDxxBxf5n86nXp+qqf65Q+cTg3w9rPOZ2Z4Gxv99u7SRQLtWkzIxclOpx58j5C/veV0auBw+1vnBfJl2L9PFwnkqyZk93zncyu/m33Y8dDyWSecFygvY+bkhfCfi6i4SKAAe6ecdj70q+dmFDmd2fLq0QvOC5S9pMz/xlJ79+kmgbwLfys6IBvGh6a32spg+2oSB4GC5Ey0d38uEqjxBfM7FuWw9XNCTk93OnXlpElPjJ1U6XBqTg4huRn27tNFAu15KR6pe1+4XPPGyjgEx+EItH9qcfOqTHv36SKB3k0L8KTjsf/7TMZy0RsJIMTjFLZl2pSVNtx4o8VFAiGJCAqECIECIUKgQIgQKBAiBAqECIECIUKgQGKUVMe7BnEGBRJj2Ip41yDOoEBioEDxrkACMnQ2Ib9QrpB8Zc8gRRkd7+rEFxSIn9/fQ0jflE1kXddGPAKhQPwcbF9+ocvEmWTa43gKQ4EA+G/46P2H3h1I+q9GgVAgCOmzZ8w/1/6UUoACoUAQ1tzz053kpqfuIigQCgThYvuOXpLRYW7g6fDnK+Jdm/iCAkH4yb2Bw5DyeeDZmu6Px7sy8QUFQoRAgRAhUCBECBQIEQIFQoRAgRAhUCBECBQIEQIFQoRAgRAhUCBEiP8HKEnoyax5r/cAAAAASUVORK5CYII=" width="60%" /></p>
+<p>The marginal effects in the plot above were computed with values of all regressors – except the <code>effect</code> and the <code>condition</code> – held at their means or modes, depending on variable type.</p>
+</div>
+<div id="example-quadratic" class="section level1">
+<h1>Example: Quadratic</h1>
+<p>In the “Definition” section of this vignette, we considered how marginal effects can be computed analytically in a simple quadratic equation context. We can now use the <code>marginaleffects</code> function to replicate our analysis of the quadratic function in a regression application.</p>
+<p>Say you estimate a linear regression model with a quadratic term:</p>
+<p><span class="math display">\[Y = \beta_0 + \beta_1 X^2 + \varepsilon\]</span></p>
+<p>and obtain estimates of <span class="math inline">\(\beta_0=1\)</span> and <span class="math inline">\(\beta_1=2\)</span>. Taking the partial derivative with respect to <span class="math inline">\(X\)</span> and plugging in our estimates gives us the marginal effect of <span class="math inline">\(X\)</span> on <span class="math inline">\(Y\)</span>:</p>
+<p><span class="math display">\[\partial Y / \partial X = \beta_0 + 2 \cdot \beta_1 X\]</span> <span class="math display">\[\partial Y / \partial X = 1 + 4X\]</span></p>
+<p>This result suggests that the effect of a <em>change</em> in <span class="math inline">\(X\)</span> on <span class="math inline">\(Y\)</span> depends on the <em>level</em> of <span class="math inline">\(X\)</span>. When <span class="math inline">\(X\)</span> is large and positive, an increase in <span class="math inline">\(X\)</span> is associated to a large increase in <span class="math inline">\(Y\)</span>. When <span class="math inline">\(X\)</span> is small and positive, an increase in <span class="math inline">\(X\)</span> is associated to a small increase in <span class="math inline">\(Y\)</span>. When <span class="math inline">\(X\)</span> is a large negative value, an increase in <span class="math inline">\(X\)</span> is associated with a <em>decrease</em> in <span class="math inline">\(Y\)</span>.</p>
+<p><code>marginaleffects</code> arrives at the same conclusion in simulated data:</p>
+<div class="sourceCode" id="cb15"><pre class="sourceCode r"><code class="sourceCode r"><a class="sourceLine" id="cb15-1" title="1"><span class="kw">library</span>(tidyverse)</a>
+<a class="sourceLine" id="cb15-2" title="2">N &lt;-<span class="st"> </span><span class="fl">1e5</span></a>
+<a class="sourceLine" id="cb15-3" title="3">quad &lt;-<span class="st"> </span><span class="kw">data.frame</span>(<span class="dt">x =</span> <span class="kw">rnorm</span>(N))</a>
+<a class="sourceLine" id="cb15-4" title="4">quad<span class="op">$</span>y &lt;-<span class="st"> </span><span class="dv">1</span> <span class="op">+</span><span class="st"> </span><span class="dv">1</span> <span class="op">*</span><span class="st"> </span>quad<span class="op">$</span>x <span class="op">+</span><span class="st"> </span><span class="dv">2</span> <span class="op">*</span><span class="st"> </span>quad<span class="op">$</span>x<span class="op">^</span><span class="dv">2</span> <span class="op">+</span><span class="st"> </span><span class="kw">rnorm</span>(N)</a>
+<a class="sourceLine" id="cb15-5" title="5">mod &lt;-<span class="st"> </span><span class="kw">lm</span>(y <span class="op">~</span><span class="st"> </span>x <span class="op">+</span><span class="st"> </span><span class="kw">I</span>(x<span class="op">^</span><span class="dv">2</span>), quad)</a>
+<a class="sourceLine" id="cb15-6" title="6"></a>
+<a class="sourceLine" id="cb15-7" title="7"><span class="kw">marginaleffects</span>(mod, <span class="dt">newdata =</span> <span class="kw">datagrid</span>(<span class="dt">x =</span> <span class="dv">-2</span><span class="op">:</span><span class="dv">2</span>))  <span class="op">%&gt;%</span></a>
+<a class="sourceLine" id="cb15-8" title="8"><span class="st">    </span><span class="kw">mutate</span>(<span class="dt">truth =</span> <span class="dv">1</span> <span class="op">+</span><span class="st"> </span><span class="dv">4</span> <span class="op">*</span><span class="st"> </span>x) <span class="op">%&gt;%</span></a>
+<a class="sourceLine" id="cb15-9" title="9"><span class="st">    </span><span class="kw">select</span>(dydx, truth)</a>
+<a class="sourceLine" id="cb15-10" title="10"><span class="co">#&gt;        dydx truth</span></a>
+<a class="sourceLine" id="cb15-11" title="11"><span class="co">#&gt; 1 -7.027238    -7</span></a>
+<a class="sourceLine" id="cb15-12" title="12"><span class="co">#&gt; 2 -3.012680    -3</span></a>
+<a class="sourceLine" id="cb15-13" title="13"><span class="co">#&gt; 3  1.001878     1</span></a>
+<a class="sourceLine" id="cb15-14" title="14"><span class="co">#&gt; 4  5.016436     5</span></a>
+<a class="sourceLine" id="cb15-15" title="15"><span class="co">#&gt; 5  9.030994     9</span></a></code></pre></div>
+<p>We can plot conditional adjusted predictions with <code>plot_cap</code> function:</p>
+<div class="sourceCode" id="cb16"><pre class="sourceCode r"><code class="sourceCode r"><a class="sourceLine" id="cb16-1" title="1"><span class="kw">plot_cap</span>(mod, <span class="dt">condition =</span> <span class="st">&quot;x&quot;</span>)</a></code></pre></div>
+<p><img src="data:image/png;base64,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" /><!-- --></p>
+<p>We can plot conditional marginal effects with the <code>plot_cme</code> function (see section below):</p>
+<div class="sourceCode" id="cb17"><pre class="sourceCode r"><code class="sourceCode r"><a class="sourceLine" id="cb17-1" title="1"><span class="kw">plot_cme</span>(mod, <span class="dt">effect =</span> <span class="st">&quot;x&quot;</span>, <span class="dt">condition =</span> <span class="st">&quot;x&quot;</span>)</a></code></pre></div>
+<p><img src="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAkAAAADmCAMAAAAKnsreAAAC6FBMVEUAAAABAQECAgIDAwMEBAQFBQUGBgYHBwcICAgJCQkKCgoLCwsMDAwNDQ0ODg4PDw8QEBARERESEhITExMUFBQVFRUWFhYXFxcYGBgZGRkaGhobGxscHBwdHR0eHh4fHx8gICAhISEiIiIjIyMkJCQlJSUmJiYnJycoKCgpKSkqKiorKyssLCwuLi4vLy8wMDAxMTEyMjIzMzM0NDQ1NTU2NjY3Nzc4ODg5OTk6Ojo7Ozs8PDw9PT0+Pj4/Pz9AQEBBQUFCQkJDQ0NERERFRUVHR0dISEhJSUlKSkpLS0tMTExNTU1OTk5QUFBRUVFSUlJTU1NUVFRVVVVWVlZXV1dYWFhZWVlaWlpbW1tcXFxdXV1eXl5fX19gYGBhYWFiYmJjY2NkZGRlZWVmZmZnZ2doaGhpaWlqampra2tsbGxtbW1ubm5vb29wcHBxcXFycnJzc3N0dHR1dXV2dnZ3d3d4eHh5eXl6enp7e3t8fHx9fX1+fn5/f3+AgICBgYGCgoKDg4OEhISFhYWGhoaHh4eIiIiJiYmKioqLi4uMjIyNjY2Pj4+QkJCRkZGSkpKTk5OUlJSVlZWWlpaXl5eYmJiZmZmampqbm5ucnJydnZ2fn5+goKChoaGioqKjo6OkpKSlpaWnp6eoqKipqamqqqqrq6usrKytra2urq6vr6+xsbGysrKzs7O0tLS1tbW2tra3t7e4uLi5ubm7u7u8vLy9vb2+vr6/v7/AwMDBwcHCwsLDw8PExMTFxcXGxsbHx8fIyMjJycnKysrLy8vMzMzNzc3Ozs7Pz8/Q0NDR0dHS0tLT09PU1NTV1dXW1tbX19fY2NjZ2dna2trb29vc3Nzd3d3e3t7f39/g4ODh4eHi4uLj4+Pk5OTl5eXm5ubn5+fo6Ojp6enq6urr6+vs7Ozt7e3u7u7v7+/w8PDx8fHy8vLz8/P09PT19fX29vb39/f4+Pj5+fn6+vr7+/v8/Pz9/f3+/v7///+0YaGUAAAACXBIWXMAAA7DAAAOwwHHb6hkAAATDElEQVR4nO2de3wU5bnH32STkAQQDiBEwKMgrRorVUlVgljaWA4mgkBBIKXaVqAHglos4jk0WuSipUbAc0ShxAsVwTZVVFQuEbAoPdITwJyCREApsJdcTDbAZt9/z87O7s7s7M7O5X125t3J8/2DS7Lzy4/l+9nbzPs+hCIIA8TuAkhmgwIhTKBACBMoEMIECoQwgQIhTGgJtH/+jKXnKG2Y/5OXukB+YAdrgP8b2yt0tNteoZ39H8EaIKIh0Nlpjf51T9LA/Yf8v94J8gNbWAPafLZXaGFPYA3wtdpeQURDoJ3LKT01gx58lNL6apAfiAKBVMgUgfxtlO5aSt9ZQ2nTLyNfCwZYaGY6OkSrlzWBuUIzewJrgLfF5grRFzTaL6L3zD5Kt7wUejabFflCx3kEiT6AaQnUumxhE6Xb14YegeZGvhS4yEIz09EhWrysCcwVfMwJzAFeuytc0ifQxYc2BkO/HXyM0n34GigWgK+BYmgItHtJ+LfA7ONdv/kA5AeiQCAVLBMooPF9DYE2VoSYSenRqjnhhyJ2UCCQCtYI1FVfNehE6ptY/kk0CgRSwQKBgvXzi8jQR06nvhUKZCagGwjUUH0N6VdZp/UMhgKZCnC6QA3V3yZ9K+su6ohBgcwEOFqgppqbSUH5lgv6YmQCFS8/wdhJDygQSIV0CXSypjQrv7xW/wlrmUBPfSer9L/crL20QIFAKqRFoK/XjM7KK3/VUHTcU1jDf47Irfgj0Hl+FVAgkArwArnXj3O57troNRijeA3UsshFev/0GEsxDVAgkArAArVvKc/LLq05YzxGLtC5jXf3GDT3/T+PHaL55s08KBBIBUiBOuoqe5Li6uOmYmQC3ekasmC3cJa+hfwfY7kUoEAgFcAE6qyr7B2yx/T/uEygh/dGTlYEPoa5ejUpKBBIBRiBAvVVA8jVi48wxODnQGYCHCGQcKKLXFlVzxaDApkJyHyBgvvmXkEGP7Sf+Qw5CmQmINMFOvjoVWTA3F0Qr1RQIDMBGS3Q4eprhRNdQB8ZywXyHwsDE6wGCgRSwaxATTWlpKC8tj0dVyS+kU/CwASrgQKBVDAl0CnxRFcbTAURmS7Dpze6BbQOueRnwcd0dIhmD2sCcwUfewJrgMdwwlcbfpDlun3dWaAK0ZP1MoHyD+tzLtDJgo/p6BDNXtYE5go+9gTWAI+xhDMbJ+Rk3776FFyF6LVC8ss5tukTiA18CgOpYOQprOXlCbnZY9b9E7iCiEygN4eseG9XCJhgNVAgkAq6BWp/fVI+Kfn9SfgKIjKBciLABKuBAoFU0CdQ5ERXY1oqiODnQGYCMkIg8URX1cF0VRCRCxTc9cK6nTCrv9RBgUAqaAkUPdGl/t8JL9D5Ua7hI3JK0nxRKwoEUiG1QA2LB5MBD6awB6KCiEygGbd+SenJ2yphgtVAgUAqpBDofxZfTQbM2al1ogteoEHh91/1RTDBaqBAIBXUBDpSfS3pM/udS8m/C1pBJFGgQTDBaqBAIBWSCnR8xY2k5/Q/dVpTQSTuKeyk8BQ2EyZYDRQIpEKiQKdrSrN6lNfq/oAxDS+iS1wjRuSMOg8TrAYKBFJBIZCnttzlKl3fbGUFkbi38Tuff/5DfBuvI4AvgXy15bnZpTVnLa4ggh8kmgngSKCOuql5pHjV19ZXEEGBzATwIlDH1ikF5JZnvrSlgggKZCaAC4Eu/GVmb3LDMrMrulAg+ypwIJDnvarLyVUsa3LgBVoS/vzA+zOYYDVQIPYKXfVVA8nQVCe60l4hhkygG284QOnWohLFLfYK157BDVtBgVgrNFQPJ/2n/Zn17TK8QJdW9Hx0Uu81Ck9OT2unOGxFEWCfQMLmc/9SWXeJz32ilxKyWfH9VVMq2ikOW1EE2CTQiVXXk8KpdcL17DwKdLxs4Ja1veYoP82cHBIobtgKrsqwZVXG58tHksLJf4wcaXxVBkAFOUlWZRRUeig9NnZwEoFw2IrN/O/yUVl5419osruHREuiQO+Efw0+l0SguGErQSZa2A4PBtt8rAnMFVrYE4zc2L2pPMdV+uxZ+dd8rZZWSEKiQCoIAuGwlfgAC18DNYsnuhRrcrh8DaSCIBAOW4kPsEqgjrrKQlK86qvE72SYQDhsJT7AEoE66yp7qW4+l0ECAYMC6aoQqH/wMjJs8VG173Mn0J3n6G0wiRqgQNoVAh/8oj8ZvuSzFDfhTqBRE58gT4jABKuBAmlUCH60oIgMffivqQO4E+jg/ePJeBGYYDVQoJQV9E5Z4k6gEN+HSdQABVKv0CBuPqdnyhKPAuHSZt0B6RCoqeYWA1OWeBQIlzbrDgAXKG7zOT3wKBAubdYdACvQmTWlWXnlrxhSgkeBcGmz7gBAgdwv/sDlKttgdMoSxwINgglWAwWSVWiunZCbfYdy8zk98CgQLm3WHQAikJ9lyhKPAuHSZt0B7AmpNp/TA48C4dJm3QGMCYH6uaxTlrgUyBK6vUDhzeeGsE5ZQoFMk9ECBfdWhacsGdlGIykokGkyWCBhytLl84QpS3CbK5gGBbKvgimBDstPdDlSIPE0vG+y1iEXWlnwMB0dwutmTWCu4DGccPjp20jB+NrzYBXc7P8ItsM7FAK1rV5NVgv8sr+WQPYuBsjAVRknnxVOdG2Sr6NgrsDdqoxzY8aQMQJjN+h87DJJd3sKc9eWZbtK1yuOcORT2CiYRA26lUBetc3nHCnQpUceoLRkkR8mWI3uI1DLy3fnZo1Zm/RElyMFWjJoE6UvDnkYJliNbiJQ+5Z788mo1YlTloAq8CjQsNeEXzcr18YD0x0E0j7R5UiBBuwTfj2g+S6MDccLFKivujzFlCWgCjwK9OMfhf5rWivuhQlWw9kCddVXFaWesgRUgUeBzo3seevoy65NshAbEicL1FA9jPTXmLIEVIFHgWjX26uWbdMx54UJxwrUUP2t8OZz1lTgUiDfhmX0kOaSNkacKdDR6utIn9nb9azogqnAo0AniwcReusNTTDBajhQoC9WjiSF0/5k5AM0Rwp098xADj195ySYYDWcJpDRKUtAFXgUqPcBmkPp+31hgtVwlECeWmHzuRrjl5E7UqChewSBtl8JE6yGcwTyJd98zpoKPAr04DhfDj3yrX+HCVbDIQJFpiyZ/czDkQI1j8slRVn3tsMEq+EEgf75ypQCcvMzDG83HCkQpR//4U2zw4N0k/ECXXhrVi9S/FvTK7oAKlAOBfqRO+X+QDhsRSSw42f9yDWL9tlYQYQ7gW6a8hR5SiTJrXDYSphPq4rCU5bsHvdEORTok8oyUiaS5FY4bCUyZalyh/A4jAJJyF4DjVG/VdywlQttLHiYjg7hZU4wEXBgyQjS574t3kiA14YK8bjtrhD93D0q0K1n6XfVBYobttLpY8HNdHQID3OC0YBDK0eS/Imbz0oBHqsrJHDe8ntBwTdKgSY8Rh4TSSJQ3LAVNjLtKazp6ZtIwdRtHfKv4VOYRFSgv8+bSCaKJLlVdx228lXN7Vk9Kl5Tbl2IAkkkrExNSrcctuIVT3SdSxKAAsXQeT1Qtxu2EpmydCZ5AAoUA68HSoI4Zan6C9UAFCgGXg+kJOWUpUgAChQDrweKQ2vKUiQABYqB1wNJBD74RT8yfMkh7QAUKAZeDxQh+NH8IjL0EY0pS5EAFCgGXg8URu+UpUgAChQDrwcyNGUpEoACxej2eyQ21dxsYMpSJAAFitG9BTppdMpSJAAFitGNBfp6zeisvPJXTfxPoEAS3VUg9/pxLtddG41OWYoEoEAxogJ9LAETrAYPAjXX/ltu9h3PJ25dqDcABYoRFYhIwASrYbtA/rrp5qcsiaBAElFdAhIwwWrYK1B487nrUp7o0gEKJJHweHO+BCZYDRsFCtRXhacswa2NN5/AGsCjQJ+VDAhRWAwTrIZdAoWnLF0ZnrKEAoFUEJEJNPbOl/tuevWqz2GC1bBFoOC+hYPJ4IX7gzAVUCAJmUC9dtLJb9GtU7UO6WxmwcN0tBDgNnrEnoVXkv4PvOUFq+Bm/0dkfIXoKVOZQJd/QB9/hp502Da/h4XN5+JPdOEjEEgFEZlAFeO+eL3E99IVMMFqWCpQU00pKSivVVxggAKBVBCRCfSP61f7R+aR5TDBalgn0Clx87nEE10oEEgFkbi38UHaVrcXJlcViwRKPmUJqAIKJCEXyH8sDEywGlYI5FObsgRUAQWSkAn0Rr4jTmW0vnJ3Xlbp2uQrumAqoEASMl2GT290C8AEq5FegTremFxARv3uy/RWQIEkZALlH4aJTE0aBQrsqLyMFFdrfhKKAoFUEJEJVLwNJjI16RIoPGXpqqpPraiAAknIBHpzyIr3doWACVYjLQKFpywN1Z6yBFQBBZKQCZQTASZYjTQIFJ6yVLlD9+YPKBBIBZGMv6TV0JQloAookERUoM++op9FgAlWA1Sgo09cTy77ydv6V3TBVECBJGKXtC6imXZJ6xcrv0sKp71pfEw5CgRSQSSqS+cl2hkBJlgNIIHMTVkCqoACScgeb74J0w6zEZkqEAKZnrIEVAEFkpAJFHkGyx6xPJ0PQsy9T/+3+SlLQBVQIAmZQFv7P71rz+prtmy6Pm6n373CS1ReZmV01E3twTBlCaICRYHkyAS6+XXh1zd+SA+NkN3g9LR2XmZl+LdNLSQ3Lfu7jRUiAShQDJlAfcObK33al54plL64akpFOxezMi68JZzoerLR9nFPFAWSIxNo0gQ3pZ7ye9p/dZv8FpPbFbMy2DDVO/D+z/uRax4/JPwZBRLgUaBz3+tRXNxj1JkX+sWNwxIEipuV4fey4DZ+yIdzBpHBc7Z7xL95TCQwV1AE2F/hvN0V2hIFonT3umffC9LzkbkQ786b97eIQHGzMi5+w4LH4O0/eXwY6XffX1pjX/AZTWCukIDXa3sFj90VOhMEar/ndNLHKEEgu2ZlNFR/O2HzOXwKE+DxKazstaS3EASyZVbGCWHzual1ys3nUCABHgX6ePTKdz8KobiFIJD1szKSTVkSQYEEeBSIn5Op4SlL9yRMWRJBgQR4FMgaNHurT1kSQYEE+BXI3v2BUk5ZEkGBBHgUyPb9gbSmLImgQAI8CmTv/kA6piyJoEACPAqkd38gNpL2DtQ/2Ed7ypIICiTAo0B27Q/UVV81kPxrePM5PaBAAjwKZM/+QJ9WXUGG6F3RJYACCfAokA37AxmbsiSCAgnwKJDV+wMZnrIkggIJcCfQ5xIwwWpEejfV3GJ4ypIICiTAnUCWjjo4ZW7KkggKJMCdQEOy76g52hQGJliNFndtWZarrNZ0fxRIgDuBgvsXDes1fWuaB6ZS94tjXa6yDR6GCBRIgDuBBP72H9cVTt7M3EyVltoJudmj1zGs6BJAgQS4FCjE4d8OzYcJVuKvqwxPWQJa2swCCgRSQSReoONPl7jGwQTHEZ6yVFzdSMHWxrOAAoFUEJF/kLjylpy71qtehxMjGDDGhd0LBpCrF3wi/q3Z4NEJtHpZE5grNLMnsAZ4W2yuEF2nHBWocflNueM36Nqh1dCqjNYd8waSofN2xL7AvJqAfVUGcwX2VRnsayrsrqBclUGyxjyzQUTXI5cugvvDU5b2yU904VMYSAXunsKKJGCCQ2/qFl9NBszZqdiTAQUCqcCdQNAc+c21pM9P30ncuhAFAqngbIG+TDplSQQFAqngYIFOq01ZEkGBQCo4VSBPbbnLVbq+Wf0WKBBIBUcKpDFlSQQFAqngQIE6yvOyRq9JtaIrDAoEUsGBAtFZGlOWRFAgkApOFEgfKBBIBRTINCiQAApkGhRIAAUyDQokgAKZBgUSQIFMgwIJoECmQYEEuq9AzINcLjAnsAdwUMHEkkzgCiKWC4Q4CxQIYQIFQphAgRAmUCCECRQIYSKzBNo/f8ZSceXjryoqKl6wvoA0+hNuCKgxbL8LFGSUQGenNfrXPRn+46zWixcN7YwHgjT6E3AIqCFsvwuUZJRAO5dTemqG8Cf/LI2bpgdp9CfgEFBD2H4XKMkogfxtlO5aKvzpxKwFM5Z5LS8gjf4EHAJqCNvvAiUZJVCIPbPDu5F/vsIT+P1Ky3+6NPozbgiotdh7FyjJGIHCAzhbly2UduBrnGZ5CWn0Z9wQUCux+y5QkjECCVx8KDr1rrGR0uPWPwBIoz8Bh4Aawva7QElGCbR7ifh7Y8dH95/tem6d5QWioz8bOwCHgBrC9rtASUYJtLEixExKJx6h234++9l07wiahMjoz1ABuCGghrD/LlCQUQIh/IECIUygQAgTKBDCBAqEMIECIUygQAgTKBDCBAqEMIECIUygQIbZXnicXrrxcbtrcAIKZJzKu+iKYqCVwRkPCmQcz8ClPQ/YXYIXUCATbCGP2l2BG1AgE6wlk+yuwA0okHGO9drce6vdJXgBBTJMcOwcuqaIeZsrh4ACGea5K5pp1/cesLsGJ6BACBMoEMIECoQwgQIhTKBACBMoEMIECoQwgQIhTKBACBMoEMIECoQw8f8YEJQS6VGdmwAAAABJRU5ErkJggg==" /><!-- --></p>
+<p>Again, the conclusion is the same. When <span class="math inline">\(x&lt;0\)</span>, an increase in <span class="math inline">\(x\)</span> is associated with an increase in <span class="math inline">\(y\)</span>. When <span class="math inline">\(x=0\)</span>, the marginal effect is equal to 0. When <span class="math inline">\(x&gt;0\)</span>, an increase in <span class="math inline">\(x\)</span> is associated with a decrease in <span class="math inline">\(y\)</span>.</p>
+</div>
+<div id="prediction-types" class="section level1">
+<h1>Prediction types</h1>
+<p>The <code>marginaleffect</code> function takes the derivative of the fitted (or predicted) values of the model, as is typically generated by the <code>predict(model)</code> function. By default, <code>predict</code> produces predictions on the <code>&quot;response&quot;</code> scale, so the marginal effects should be interpreted on that scale. However, users can pass a string or a vector of strings to the <code>type</code> argument, and <code>marginaleffects</code> will consider different outcomes.</p>
+<p>Typical values include <code>&quot;response&quot;</code> and <code>&quot;link&quot;</code>, but users should refer to the documentation of the <code>predict</code> of the package they used to fit the model to know what values are allowable. documentation.</p>
+<div class="sourceCode" id="cb18"><pre class="sourceCode r"><code class="sourceCode r"><a class="sourceLine" id="cb18-1" title="1">mod &lt;-<span class="st"> </span><span class="kw">glm</span>(am <span class="op">~</span><span class="st"> </span>mpg, <span class="dt">family =</span> binomial, <span class="dt">data =</span> mtcars)</a>
+<a class="sourceLine" id="cb18-2" title="2">mfx &lt;-<span class="st"> </span><span class="kw">marginaleffects</span>(mod, <span class="dt">type =</span> <span class="st">&quot;response&quot;</span>)</a>
+<a class="sourceLine" id="cb18-3" title="3"><span class="kw">summary</span>(mfx)</a>
+<a class="sourceLine" id="cb18-4" title="4"><span class="co">#&gt; Average marginal effects </span></a>
+<a class="sourceLine" id="cb18-5" title="5"><span class="co">#&gt;   Term  Effect Std. Error z value   Pr(&gt;|z|)   2.5 %  97.5 %</span></a>
+<a class="sourceLine" id="cb18-6" title="6"><span class="co">#&gt; 1  mpg 0.04649   0.008856   5.249 1.5285e-07 0.02913 0.06384</span></a>
+<a class="sourceLine" id="cb18-7" title="7"><span class="co">#&gt; </span></a>
+<a class="sourceLine" id="cb18-8" title="8"><span class="co">#&gt; Model type:  glm </span></a>
+<a class="sourceLine" id="cb18-9" title="9"><span class="co">#&gt; Prediction type:  response</span></a>
+<a class="sourceLine" id="cb18-10" title="10"></a>
+<a class="sourceLine" id="cb18-11" title="11">mfx &lt;-<span class="st"> </span><span class="kw">marginaleffects</span>(mod, <span class="dt">type =</span> <span class="st">&quot;link&quot;</span>)</a>
+<a class="sourceLine" id="cb18-12" title="12"><span class="kw">summary</span>(mfx)</a>
+<a class="sourceLine" id="cb18-13" title="13"><span class="co">#&gt; Average marginal effects </span></a>
+<a class="sourceLine" id="cb18-14" title="14"><span class="co">#&gt;   Term Effect Std. Error z value  Pr(&gt;|z|)   2.5 % 97.5 %</span></a>
+<a class="sourceLine" id="cb18-15" title="15"><span class="co">#&gt; 1  mpg  0.307     0.1148   2.673 0.0075066 0.08194 0.5321</span></a>
+<a class="sourceLine" id="cb18-16" title="16"><span class="co">#&gt; </span></a>
+<a class="sourceLine" id="cb18-17" title="17"><span class="co">#&gt; Model type:  glm </span></a>
+<a class="sourceLine" id="cb18-18" title="18"><span class="co">#&gt; Prediction type:  link</span></a></code></pre></div>
+</div>
+<div id="regression-tables-and-coefficient-plots" class="section level1">
+<h1>Regression tables and coefficient plots</h1>
+<p>Average marginal effects are easy to display in a regression table using packages like <code>modelsummary</code>. See <a href="https://vincentarelbundock.github.io/marginaleffects/articles/modelsummary.html">the tables and plots vignette.</a></p>
+</div>
+<div id="supporting-new-models" class="section level1">
+<h1>Supporting new models</h1>
+<p>In most cases, extending <code>marginaleffects</code> to support new models is easy. Imagine you want to add support for an object called <code>model</code> of class <code>EXAMPLE</code> with N observations.</p>
+<div id="step-1-check-if-marginaleffects-default-functions-work" class="section level4">
+<h4><em>Step 1:</em> Check if <code>marginaleffects</code> default functions work:</h4>
+<div class="sourceCode" id="cb19"><pre class="sourceCode r"><code class="sourceCode r"><a class="sourceLine" id="cb19-1" title="1"><span class="co"># returns a named vector of coefficients</span></a>
+<a class="sourceLine" id="cb19-2" title="2"><span class="kw">get_coef</span>(model)</a>
+<a class="sourceLine" id="cb19-3" title="3"></a>
+<a class="sourceLine" id="cb19-4" title="4"><span class="co"># returns a named vector of predictions </span></a>
+<a class="sourceLine" id="cb19-5" title="5"><span class="co"># returns a named matrix of size NxK for models with K levels (e.g., multinomial logit)</span></a>
+<a class="sourceLine" id="cb19-6" title="6"><span class="kw">get_predict</span>(model)</a>
+<a class="sourceLine" id="cb19-7" title="7"></a>
+<a class="sourceLine" id="cb19-8" title="8"><span class="co"># returns a named square matrix of size equal to the number of coefficients</span></a>
+<a class="sourceLine" id="cb19-9" title="9"><span class="kw">get_vcov</span>(model)</a>
+<a class="sourceLine" id="cb19-10" title="10"></a>
+<a class="sourceLine" id="cb19-11" title="11"><span class="co"># returns a new model object with different stored coefficients </span></a>
+<a class="sourceLine" id="cb19-12" title="12"><span class="co"># calling get_predict(model) and get_predict(model_new) should produce different results</span></a>
+<a class="sourceLine" id="cb19-13" title="13">model_new &lt;-<span class="st"> </span><span class="kw">set_coef</span>(model, <span class="kw">rep</span>(<span class="dv">0</span>, <span class="kw">length</span>(<span class="kw">get_coef</span>(model))))</a>
+<a class="sourceLine" id="cb19-14" title="14"><span class="kw">predict</span>(model) <span class="op">!=</span><span class="st"> </span><span class="kw">predict</span>(model_new)</a></code></pre></div>
+<p>If all of these functions work out-of-the-box, there’s a good chance your model will be supported automatically. If they do <em>not</em> work, move to…</p>
+</div>
+<div id="step-2-define-the-missing-methods." class="section level4">
+<h4><em>Step 2:</em> Define the missing methods.</h4>
+<p>Find the class name of your model by calling:</p>
+<div class="sourceCode" id="cb20"><pre class="sourceCode r"><code class="sourceCode r"><a class="sourceLine" id="cb20-1" title="1"><span class="kw">class</span>(model)</a></code></pre></div>
+<p>Then, create functions (methods) called <code>get_coef.EXAMPLE</code>, <code>get_predict.EXAMPLE</code>, <code>vcov.EXAMPLE</code>, and <code>set_coef.EXAMPLE</code>, with the “EXAMPLE” replaced by the name your model class.</p>
+</div>
+<div id="step-3-add-tests" class="section level4">
+<h4><em>Step 3:</em> Add tests</h4>
+<p>Create a file called <code>tests/testthat/test-PKGNAME.R</code> and write a few tests. Ideally, we would like to compare the results obtained by <code>marginaleffects</code> to an external source, like the <code>margins</code> package for <code>R</code>, or the <code>margins</code> command for <code>Stata</code>.</p>
+</div>
+<div id="step-4-finalize" class="section level4">
+<h4><em>Step 4:</em> Finalize</h4>
+<p>Add your new model class to the lists of supported models in:</p>
+<ul>
+<li>The <code>sanity_model</code> function of the <code>R/sanity.R</code> file.</li>
+<li>The supported models CSV table in <code>data-raw/supported_models.csv</code></li>
+<li>The “Suggests” list in the <code>DESCRIPTION</code> file.</li>
+</ul>
+</div>
+</div>
+<div class="footnotes">
+<hr />
+<ol>
+<li id="fn1"><p>The term “effect” is itself tricky. To be clear, this vignette does <em>not</em> use the word “effect” to imply “causality”.<a href="#fnref1" class="footnote-back">↩</a></p></li>
+</ol>
+</div>
+
+
+
+<!-- code folding -->
+
+
+<!-- dynamically load mathjax for compatibility with self-contained -->
+<script>
+  (function () {
+    var script = document.createElement("script");
+    script.type = "text/javascript";
+    script.src  = "https://mathjax.rstudio.com/latest/MathJax.js?config=TeX-AMS-MML_HTMLorMML";
+    document.getElementsByTagName("head")[0].appendChild(script);
+  })();
+</script>
+
+</body>
+</html>

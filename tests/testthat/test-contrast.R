@@ -13,7 +13,7 @@ test_that("contrast as difference and CI make sense", {
     # problem reported with suggested fix by E.Book in Issue 58
     dat <- read.csv("https://vincentarelbundock.github.io/Rdatasets/csv/palmerpenguins/penguins.csv")
     dat$large_penguin <- ifelse(dat$body_mass_g > median(dat$body_mass_g, na.rm = TRUE), 1, 0)
-    mod <- glm(large_penguin ~ bill_length_mm + flipper_length_mm + species, 
+    mod <- glm(large_penguin ~ bill_length_mm + flipper_length_mm + species,
                data = dat, family = binomial)
     mfx <- marginaleffects(mod)
     ti <- tidy(mfx)
@@ -34,13 +34,13 @@ test_that("bug be dead: all levels appear", {
 
 test_that("numeric contrasts", {
     mod <- lm(mpg ~ hp, data = mtcars)
-    expect_error(comparisons(mod, contrast_numeric = "bad", variables = "hp"), regexp = "Assertion failed")
+    expect_error(comparisons(mod, contrast_numeric = "bad", variables = "hp"), regexp = "Contrasts for numeric")
     contr1 <- comparisons(mod, contrast_numeric = 1, variables = "hp")
     contr2 <- comparisons(mod, contrast_numeric = "iqr", variables = "hp")
     contr3 <- comparisons(mod, contrast_numeric = "minmax", variables = "hp")
     contr4 <- comparisons(mod, contrast_numeric = "sd", variables = "hp")
     contr5 <- comparisons(mod, contrast_numeric = "2sd", variables = "hp")
-    iqr <- diff(quantile(mtcars$hp, probs = c(.25, .75))) * coef(mod)["hp"]
+    iqr <- diff(stats::quantile(mtcars$hp, probs = c(.25, .75))) * coef(mod)["hp"]
     minmax <- (max(mtcars$hp) - min(mtcars$hp)) * coef(mod)["hp"]
     sd1 <- sd(mtcars$hp) * coef(mod)["hp"]
     sd2 <- 2 * sd(mtcars$hp) * coef(mod)["hp"]
@@ -75,3 +75,69 @@ test_that("factor glm", {
     expect_equal(contr$estimate[2], pred$predicted[pred$cyl == 8] - pred$predicted[pred$cyl == 4])
 })
   
+
+test_that("emmeans w/ back-transforms is similar to comparisons with direct delta method", {
+    requiet("emmeans")
+    tol <- 1e-4
+
+    dat <- mtcars
+    dat$cyl <- as.factor(dat$cyl)
+    mod <- glm(am ~ cyl, data = dat, family = binomial)
+
+    # link scale
+    cmp <- comparisons(mod, type = "link", newdata = datagrid(), contrast_factor = "pairwise")
+    emm <- emmeans(mod, specs = "cyl")
+    emm <- contrast(emm, method = "revpairwise", df = Inf, adjust = NULL)
+    emm <- data.frame(confint(emm))
+    expect_equal(cmp$comparison, emm$estimate)
+    expect_equal(cmp$std.error, emm$SE)
+    expect_equal(cmp$conf.low, emm$asymp.LCL)
+    expect_equal(cmp$conf.high, emm$asymp.UCL)
+
+    # response scale
+    cmp <- comparisons(mod, type = "response", newdata = datagrid(), contrast_factor = "pairwise")
+    emm <- emmeans(mod, specs = "cyl")
+    emm <- contrast(regrid(emm), method = "revpairwise", df = Inf, adjust = NULL,
+        type = "response", ratios = FALSE)
+    emm <- data.frame(confint(emm))
+    expect_equal(cmp$comparison, emm$estimate, tolerance = tol)
+    expect_equal(cmp$std.error, emm$SE, tolerance = tol)
+    expect_equal(cmp$conf.low, emm$asymp.LCL, tolerance = tol)
+    expect_equal(cmp$conf.high, emm$asymp.UCL, tolerance = tol)
+})
+
+
+test_that("smart contrast labels", {
+    dat <- mtcars
+    dat$am <- as.logical(dat$am)
+    dat$cyl <- as.factor(dat$cyl)
+    dat$gear <- as.character(dat$gear)
+    mod <- lm(mpg ~ hp + am + cyl + gear, data = dat)
+
+    cmp1 <- comparisons(
+        mod,
+        newdata = "mean")
+    expect_equal(
+        cmp1$contrast,
+        c("(x + 1) - x", "TRUE - FALSE", "6 - 4", "8 - 4", "4 - 3", "5 - 3"))
+
+    cmp2 <- comparisons(
+        mod,
+        contrast_numeric = "sd",
+        transform_pre = "ratio",
+        newdata = "mean")
+    expect_equal(
+        cmp2$contrast,
+        c("(x + sd/2) / (x - sd/2)", "TRUE / FALSE", "6 / 4", "8 / 4", "4 / 3", "5 / 3"))
+
+    cmp3 <- comparisons(
+        mod,
+        contrast_numeric = "iqr",
+        transform_pre = "lnratioavg",
+        newdata = "mean")
+    expect_equal(
+        cmp3$contrast,
+        c("ln(mean(Q3) / mean(Q1))", "ln(mean(TRUE) / mean(FALSE))", "ln(mean(6) / mean(4))", "ln(mean(8) / mean(4))", "ln(mean(4) / mean(3))", "ln(mean(5) / mean(3))"))
+})
+
+

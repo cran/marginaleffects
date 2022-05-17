@@ -4,22 +4,24 @@
 \alias{summary.comparisons}
 \title{Summarize a \code{comparisons} object}
 \usage{
-\method{summary}{comparisons}(object, conf.level = 0.95, ...)
+\method{summary}{comparisons}(object, conf_level = 0.95, by = NULL, transform_post = NULL, ...)
 }
 \arguments{
 \item{object}{An object produced by the \code{comparisons} function}
 
-\item{conf.level}{The confidence level to use for the confidence interval if
-\code{conf.int=TRUE}. Must be strictly greater than 0 and less than 1. Defaults
-to 0.95, which corresponds to a 95 percent confidence interval.}
+\item{conf_level}{numeric value between 0 and 1. Confidence level to use to build a confidence interval.}
 
-\item{...}{Additional arguments are passed to the \code{predict()} method used to
-compute adjusted predictions. These arguments are particularly useful for
-mixed-effects or bayesian models (see the online vignettes on the
+\item{by}{Character vector of variable names over which to compute group-averaged contrasts.}
+
+\item{transform_post}{(experimental) A function applied to the estimate and confidence interval just before returning the final results. For example, users can exponentiate their final results by setting \code{transform_post=exp} or transform contrasts made on the link scale for ease of interpretation.}
+
+\item{...}{Additional arguments are passed to the \code{predict()} method
+supplied by the modeling package.These arguments are particularly useful
+for mixed-effects or bayesian models (see the online vignettes on the
 \code{marginaleffects} website). Available arguments can vary from model to
 model, depending on the range of supported arguments by each modeling
 package. See the "Model-Specific Arguments" section of the
-\code{?marginaleffects} document for a non-exhaustive list of available
+\code{?marginaleffects} documentation for a non-exhaustive list of available
 arguments.}
 }
 \value{
@@ -28,4 +30,14 @@ Data frame of summary statistics for an object produced by the
 }
 \description{
 Summarize a \code{comparisons} object
+}
+\examples{
+mod <- lm(mpg ~ hp * wt + factor(gear), data = mtcars)
+con <- comparisons(mod)
+
+# average marginal effects
+summary(con)
+
+# average marginal effects by group
+summary(con, by = "gear")
 }

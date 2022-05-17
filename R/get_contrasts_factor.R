@@ -1,20 +1,20 @@
-get_contrasts_factor <- function(model,
-                                 newdata,
-                                 variable,
-                                 type = "response",
-                                 contrast_numeric = 1, # do not push forward
-                                 contrast_factor = "reference",
-                                 ...) {
+get_contrast_data_factor <- function(model,
+                                     newdata,
+                                     variable,
+                                     contrast_factor,
+                                     contrast_label,
+                                     interaction,
+                                     first_interaction,
+                                     ...) {
 
-    baseline <- newdata
-    pred_list <- list()
-    if (is.factor(baseline[[variable]])) {
-        levs <- levels(baseline[[variable]])
+    data.table::setDT(newdata)
+
+    if (is.factor(newdata[[variable]])) {
+        levs <- levels(newdata[[variable]])
         convert_to_factor <- TRUE
     } else {
-        msg <- sprintf("The `%s` variable is treated as a categorical (factor) variable, but the original data is of class %s. It is safer and faster to convert such variables to factor before fitting the model and calling `marginaleffects` functions.", variable, class(baseline[[variable]])[1])
+        msg <- sprintf("The `%s` variable is treated as a categorical (factor) variable, but the original data is of class %s. It is safer and faster to convert such variables to factor before fitting the model and calling `marginaleffects` functions.", variable, class(newdata[[variable]])[1])
         warn_once(msg, "marginaleffects_warning_factor_on_the_fly_conversion")
-
         original_data <- insight::get_data(model)
         if (is.factor(original_data[[variable]])) {
             levs <- levels(original_data[[variable]])
@@ -27,72 +27,65 @@ get_contrasts_factor <- function(model,
 
     # index contrast orders based on contrast_factor
     if (contrast_factor == "reference") {
-        levs_idx <- data.frame(low = levs[1],
-                              high = levs[2:length(levs)])
+        # null contrasts are interesting with interactions
+        if (!isTRUE(interaction)) {
+            levs_idx <- data.table::data.table(lo = levs[1], hi = levs[2:length(levs)])
+        } else {
+            levs_idx <- data.table::data.table(lo = levs[1], hi = levs)
+        }
+
     } else if (contrast_factor == "pairwise") {
-        levs_idx <- expand.grid(low = levs,
-                               high = levs,
-                               stringsAsFactors = FALSE)
-        levs_idx <- levs_idx[levs_idx$high != levs_idx$low,]
-        levs_idx <- levs_idx[match(levs_idx$low, levs) < match(levs_idx$high, levs),]
+        levs_idx <- CJ(lo = levs, hi = levs, sorted = FALSE)
+        # null contrasts are interesting with interactions
+        if (!isTRUE(interaction)) {
+            levs_idx <- levs_idx[levs_idx$hi != levs_idx$lo,]
+            levs_idx <- levs_idx[match(levs_idx$lo, levs) < match(levs_idx$hi, levs),]
+        }
+
+    } else if (contrast_factor == "all") {
+        levs_idx <- CJ(lo = levs, hi = levs, sorted = FALSE)
+
     } else if (contrast_factor == "sequential") {
-        levs_idx <- data.frame(low = levs[1:(length(levs) - 1)],
-                              high = levs[2:length(levs)])
+        levs_idx <- data.table::data.table(lo = levs[1:(length(levs) - 1)], hi = levs[2:length(levs)])
     }
 
-    levs_idx$label <- sprintf("%s - %s", levs_idx$high, levs_idx$low)
-
-    draws_list <- list()
-
-    for (i in seq_len(nrow(levs_idx))) {
-
-        # when factor() is called in a formula and the original data is numeric
-        if (isTRUE(convert_to_factor)) {
-            baseline[[variable]] <- factor(levs_idx[i, "low"], levels = levs)
-        } else {
-            baseline[[variable]] <- levs_idx[i, "low"]
-        }
-        baseline_prediction <- get_predict(model,
-                                           newdata = baseline,
-                                           type = type,
-                                           ...)
-
-        # when factor() is called in a formula and the original data is numeric
-        if (isTRUE(convert_to_factor)) {
-            baseline[[variable]] <- factor(levs_idx[i, "high"], levels = levs)
-        } else {
-            baseline[[variable]] <- levs_idx[i, "high"]
-        }
-
-        incremented_prediction <- get_predict(model = model,
-                                              newdata = baseline,
-                                              type = type,
-                                              ...)
-        incremented_prediction$term <- variable
-        incremented_prediction$contrast <- levs_idx[i, "label"]
-        incremented_prediction$comparison <- incremented_prediction$predicted -
-                                             baseline_prediction$predicted
-        incremented_prediction$predicted <- NULL
-        pred_list[[i]] <- incremented_prediction
-
-        # bayes: posterior draws and credible intervals
-        if ("posterior_draws" %in% names(attributes(baseline_prediction))) {
-            draws_list[[i]] <- attr(incremented_prediction, "posterior_draws") -
-                               attr(baseline_prediction, "posterior_draws")
-        }
+    # internal option applied to the first of several contrasts when
+    # interaction=TRUE to avoid duplication. when only the first contrast
+    # flips, we get a negative sign, but if first increases and second
+    # decreases, we get different total effects.
+    if (isTRUE(first_interaction)) {
+        levs_idx <- levs_idx[match(levs_idx$hi, levs) >= match(levs_idx$lo, levs),]
     }
-    pred <- do.call("rbind", pred_list)
-    draws <- do.call("rbind", draws_list)
 
-    # TODO: check if this is still relevant
-    # # clean for hurdle models from package `pscl`
-    # coef_names <- gsub("count_|zero_", "", coef_names)
+    levs_idx$isNULL <- levs_idx$hi == levs_idx$lo
+    levs_idx$label <- sprintf(contrast_label, levs_idx$hi, levs_idx$lo)
+    levs_idx <- stats::setNames(levs_idx, paste0("marginaleffects_contrast_", colnames(levs_idx)))
 
-    # output
-    cols <- intersect(colnames(pred), c("rowid", "group", "term", "contrast", "comparison"))
-    row.names(pred) <- NULL
-    attr(pred, "posterior_draws") <- draws
+    lo <- hi <- cjdt(list(newdata, levs_idx))
 
-    return(pred)
+    original <- data.table::rbindlist(rep(list(newdata), nrow(levs_idx)))
+
+    if (is.factor(newdata[[variable]]) || isTRUE(convert_to_factor)) {
+        lo[[variable]] <- factor(lo[["marginaleffects_contrast_lo"]], levels = levs)
+        hi[[variable]] <- factor(hi[["marginaleffects_contrast_hi"]], levels = levs)
+    } else {
+        lo[[variable]] <- lo[["marginaleffects_contrast_lo"]]
+        hi[[variable]] <- hi[["marginaleffects_contrast_hi"]]
+    }
+
+    contrast_label <- hi$marginaleffects_contrast_label
+    contrast_null <- hi$marginaleffects_contrast_hi == hi$marginaleffects_contrast_lo
+
+    idx <- grepl("^marginaleffects_contrast", colnames(lo))
+    lo <- lo[, !idx, with = FALSE]
+    hi <- hi[, !idx, with = FALSE]
+
+    out <- list(rowid = original$rowid,
+                lo = lo,
+                hi = hi,
+                original = original,
+                ter = rep(variable, nrow(lo)), # lo can be different dimension than newdata
+                lab = contrast_label,
+                contrast_null = contrast_null)
+    return(out)
 }
-

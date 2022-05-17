@@ -2,49 +2,90 @@
 % Please edit documentation in R/comparisons.R
 \name{comparisons}
 \alias{comparisons}
-\title{Experimental function to compute contrasts between adjusted predictions}
+\title{Contrasts Between Adjusted Predictions}
 \usage{
 comparisons(
   model,
-  variables = NULL,
   newdata = NULL,
+  variables = NULL,
   type = "response",
   vcov = TRUE,
+  conf_level = 0.95,
   contrast_factor = "reference",
   contrast_numeric = 1,
+  transform_pre = "difference",
+  transform_post = NULL,
+  interaction = NULL,
+  eps = 1e-04,
   ...
 )
 }
 \arguments{
 \item{model}{Model object}
 
-\item{variables}{Variables to consider (character vector). \code{NULL}
-calculates marginal effects for all terms in the model object.}
-
-\item{newdata}{A dataset over which to compute marginal effects. \code{NULL} uses
-the original data used to fit the model.}
-
-\item{type}{Type(s) of prediction as string or character vector. This can
-differ based on the model type, but will typically be a string such as:
-"response", "link", "probs", or "zero".}
-
-\item{vcov}{Matrix or boolean
+\item{newdata}{\code{NULL}, data frame, string, or \code{datagrid()} call. Determines the predictor values for which to compute contrasts.
 \itemize{
-\item FALSE: does not compute unit-level standard errors. This can speed up computation considerably.
-\item TRUE: computes unit-level standard errors using the default \code{vcov(model)} variance-covariance matrix.
-\item Named square matrix: computes standard errors with a user-supplied variance-covariance matrix. This matrix must be square and have dimensions equal to the number of coefficients in \code{get_coef(model)}.
+\item \code{NULL} (default): Unit-level contrasts for each observed value in the original dataset.
+\item data frame: Unit-level contrasts for each row of the \code{newdata} data frame.
+\item string:
+\itemize{
+\item "mean": Contrasts at the Mean. Contrasts when each predictor is held at its mean or mode.
+\item "median": Contrasts at the Median. Contrasts when each predictor is held at its median or mode.
+\item "marginalmeans": Contrasts at Marginal Means.
+}
+\item \code{\link[=datagrid]{datagrid()}} call to specify a custom grid of regressors. For example:
+\itemize{
+\item \code{newdata = datagrid(cyl = c(4, 6))}: \code{cyl} variable equal to 4 and 6 and other regressors fixed at their means or modes.
+\item See the Examples section and the \link{datagrid} documentation.
+}
 }}
 
-\item{contrast_factor}{string
+\item{variables}{\code{NULL}, character vector, or named list. The subset of variables for which to compute contrasts.
+\itemize{
+\item \code{NULL}: compute contrasts for all the variables in the model object (can be slow).
+\item Character vector: subset of variables (usually faster).
+\item Named list: subset of variables with the type of contrasts to use, following the conventions in the \code{contrast_factor} and \code{contrast_numeric} arguments. Examples:
+\itemize{
+\item \code{variables = list(gear = "pairwise", hp = 10)}
+\item \code{variables = list(gear = "sequential", hp = c(100, 120))}
+\item See the Examples section below.
+}
+}}
+
+\item{type}{string indicates the type (scale) of the predictions used to
+compute marginal effects or contrasts. This can differ based on the model
+type, but will typically be a string such as: "response", "link", "probs",
+or "zero". When an unsupported string is entered, the model-specific list of
+acceptable values is returned in an error message.}
+
+\item{vcov}{Type of uncertainty estimates to report (e.g., for robust standard errors). Acceptable values:
+\itemize{
+\item FALSE: Do not compute standard errors. This can speed up computation considerably.
+\item TRUE: Unit-level standard errors using the default \code{vcov(model)} variance-covariance matrix.
+\item String which indicates the kind of uncertainty estimates to return.
+\itemize{
+\item Heteroskedasticity-consistent: \code{"HC"}, \code{"HC0"}, \code{"HC1"}, \code{"HC2"}, \code{"HC3"}, \code{"HC4"}, \code{"HC4m"}, \code{"HC5"}. See \code{?sandwich::vcovHC}
+\item Heteroskedasticity and autocorrelation consistent: \code{"HAC"}
+\item Other: \code{"NeweyWest"}, \code{"KernHAC"}, \code{"OPG"}. See the \code{sandwich} package documentation.
+}
+\item One-sided formula which indicates the name of cluster variables (e.g., \code{~unit_id}). This formula is passed to the \code{cluster} argument of the \code{sandwich::vcovCL} function.
+\item Square covariance matrix
+\item Function which returns a covariance matrix (e.g., \code{stats::vcov(model)})
+}}
+
+\item{conf_level}{numeric value between 0 and 1. Confidence level to use to build a confidence interval.}
+
+\item{contrast_factor}{string. Which pairs of factors should be contrasted?
 \itemize{
 \item "reference": Each factor level is compared to the factor reference (base) level
+\item "all": All combinations of observed levels
 \item "sequential": Each factor level is compared to the previous factor level
 \item "pairwise": Each factor level is compared to all other levels
 }}
 
-\item{contrast_numeric}{string or numeric
+\item{contrast_numeric}{string or numeric. Which pairs of numeric values should be contrasted?
 \itemize{
-\item Numeric of length 1: Contrast between the observed value and the observed value plus \code{contrast_numeric}
+\item Numeric of length 1: Contrast for a gap of \code{contrast_numeric}, computed at the observed value plus and minus \code{contrast_numeric / 2}
 \item Numeric vector of length 2: Contrast between the 2nd element and the 1st element of the \code{contrast_numeric} vector.
 \item "iqr": Contrast across the interquartile range of the regressor.
 \item "sd": Contrast across one standard deviation around the regressor mean.
@@ -52,24 +93,68 @@ differ based on the model type, but will typically be a string such as:
 \item "minmax": Contrast between the maximum and the minimum values of the regressor.
 }}
 
-\item{...}{Additional arguments are passed to the \code{predict()} method used to
-compute adjusted predictions. These arguments are particularly useful for
-mixed-effects or bayesian models (see the online vignettes on the
+\item{transform_pre}{(experimental) string or function. How should pairs of adjusted predictions be contrasted?
+\itemize{
+\item string: shortcuts to common contrast functions.
+\itemize{
+\item "difference" (default): \code{function(hi, lo) hi - lo}
+\item "differenceavg": \code{function(hi, lo) mean(hi) - mean(lo)}
+\item "ratio": \code{function(hi, lo) hi / lo}
+\item "lnratio": \code{function(hi, lo) log(hi / lo)}
+\item "ratioavg": \code{function(hi, lo) mean(hi) / mean(lo)}
+\item "lnratioavg": \code{function(hi, lo) log(mean(hi) / mean(lo))}
+}
+\item function: accept two equal-length numeric vectors of adjusted predictions (\code{hi} and \code{lo}) and returns a vector of contrasts of the same length, or a unique numeric value.
+}}
+
+\item{transform_post}{(experimental) A function applied to the estimate and confidence interval just before returning the final results. For example, users can exponentiate their final results by setting \code{transform_post=exp} or transform contrasts made on the link scale for ease of interpretation.}
+
+\item{interaction}{TRUE, FALSE, or NULL
+\itemize{
+\item \code{FALSE}: Contrasts represent the change in adjusted predictions when one predictor changes and all other variables are held constant.
+\item \code{TRUE}: Contrasts represent the changes in adjusted predictions when the predictors specified in the \code{variables} argument are manipulated simultaneously.
+\item \code{NULL} (default): Behaves like \code{TRUE} when the \code{variables} argument is specified and the model formula includes interactions. Behaves like \code{FALSE} otherwise.
+}}
+
+\item{eps}{A numeric value specifying the “step” size to use when
+calculating numerical derivatives. See the Details section below. Warning:
+the marginal effects computed for certain models can be sensitive to the
+choice of step (e.g., Bayesian mixed effects).}
+
+\item{...}{Additional arguments are passed to the \code{predict()} method
+supplied by the modeling package.These arguments are particularly useful
+for mixed-effects or bayesian models (see the online vignettes on the
 \code{marginaleffects} website). Available arguments can vary from model to
 model, depending on the range of supported arguments by each modeling
 package. See the "Model-Specific Arguments" section of the
-\code{?marginaleffects} document for a non-exhaustive list of available
+\code{?marginaleffects} documentation for a non-exhaustive list of available
 arguments.}
 }
 \description{
 This function calculates contrasts (or comparisons) between adjusted
 predictions for each row of the dataset. The resulting object can processed
-by the \code{tidy()} or \code{summary()} functions, which compute Average Contrasts.
-The \code{datagrid()} function and the \code{newdata} argument can be used to
-calculate contrasts Contrasts at the Mean or Contrasts at User-Specified
-values (aka Contrasts at Representative values). Additional information can
-be found in the Details and Examples sections below, and in the vignette on
-the \code{marginaleffects} website.
+by the \code{tidy()} or \code{summary()} functions, which compute Average Contrasts
+(see \code{?summary.marginaleffects}). The \code{newdata} argument can be used to
+calculate a variety of contrasts, including "Contrasts at the Mean,"
+"Contrasts at User-Specified values" (aka Contrasts at Representative
+values), "Contrasts in Marginal Means", "Adjusted Risk Ratios", and much
+more. For more information, see the Details and Examples sections below, and
+in the vignettes on the \code{marginaleffects} website: \url{https://vincentarelbundock.github.io/marginaleffects/}
+\itemize{
+\item \href{https://vincentarelbundock.github.io/marginaleffects/#getting-started}{Getting Started}
+\item \href{https://vincentarelbundock.github.io/marginaleffects/articles/mfx03_contrasts.html}{Contrasts Vignette}
+\item \href{https://vincentarelbundock.github.io/marginaleffects/articles/mfx06_supported_models.html}{Supported Models}
+\item Case Studies
+\itemize{
+\item \href{https://vincentarelbundock.github.io/marginaleffects/articles/brms.html}{Bayesian analyses with \code{brms}}
+\item \href{https://vincentarelbundock.github.io/marginaleffects/articles/lme4.html}{Mixed effects models}
+\item \href{https://vincentarelbundock.github.io/marginaleffects/articles/gam.html}{Generalized Additive Models}
+\item \href{https://vincentarelbundock.github.io/marginaleffects/articles/mlogit.html}{Multinomial Logit and Discrete Choice Models}
+\item \href{https://vincentarelbundock.github.io/marginaleffects/articles/modelsummary.html}{Tables and plots}
+\item \href{https://vincentarelbundock.github.io/marginaleffects/articles/sandwich.html}{Robust standard errors and more}
+\item \href{https://vincentarelbundock.github.io/marginaleffects/articles/transformation.html}{Transformations and Custom Contrasts: Adjusted Risk Ratio Example}
+}
+}
 }
 \details{
 A "contrast" is the difference between two adjusted predictions, calculated
@@ -82,7 +167,28 @@ website:
 
 https://vincentarelbundock.github.io/marginaleffects/
 }
+\section{Model-Specific Arguments}{
+
+
+Some model types allow model-specific arguments to modify the nature of
+marginal effects, predictions, marginal means, and contrasts.\tabular{llll}{
+   Package \tab Class \tab Argument \tab Documentation \cr
+   \code{brms} \tab \code{brmsfit} \tab \code{ndraws} \tab \link[brms:posterior_predict.brmsfit]{brms::posterior_predict} \cr
+    \tab  \tab \code{re_formula} \tab  \cr
+   \code{lme4} \tab \code{merMod} \tab \code{include_random} \tab \link[insight:get_predicted]{insight::get_predicted} \cr
+    \tab  \tab \code{re.form} \tab \link[lme4:predict.merMod]{lme4::predict.merMod} \cr
+    \tab  \tab \code{allow.new.levels} \tab \link[lme4:predict.merMod]{lme4::predict.merMod} \cr
+   \code{glmmTMB} \tab \code{glmmTMB} \tab \code{re.form} \tab \link[glmmTMB:predict.glmmTMB]{glmmTMB::predict.glmmTMB} \cr
+    \tab  \tab \code{allow.new.levels} \tab \link[glmmTMB:predict.glmmTMB]{glmmTMB::predict.glmmTMB} \cr
+    \tab  \tab \code{zitype} \tab \link[glmmTMB:predict.glmmTMB]{glmmTMB::predict.glmmTMB} \cr
+   \code{mgcv} \tab \code{bam} \tab \code{exclude} \tab \link[mgcv:predict.bam]{mgcv::predict.bam} \cr
+   \code{robustlmm} \tab \code{rlmerMod} \tab \code{re.form} \tab \link[robustlmm:rlmerMod-class]{robustlmm::predict.rlmerMod} \cr
+    \tab  \tab \code{allow.new.levels} \tab \link[robustlmm:rlmerMod-class]{robustlmm::predict.rlmerMod} \cr
+}
+}
+
 \examples{
+
 library(marginaleffects)
 library(magrittr)
 
@@ -96,8 +202,17 @@ comparisons(mod, contrast_factor = "pairwise") \%>\% tidy()
 
 # GLM with different scale types
 mod <- glm(am ~ factor(gear), data = mtcars)
-comparisons(mod) \%>\% tidy()
+comparisons(mod, type = "response") \%>\% tidy()
 comparisons(mod, type = "link") \%>\% tidy()
+
+# Contrasts at the mean
+comparisons(mod, newdata = "mean")
+
+# Contrasts between marginal means
+comparisons(mod, newdata = "marginalmeans")
+
+# Contrasts at user-specified values
+comparisons(mod, newdata = datagrid(am = 0, cyl = tmp$cyl))
 
 # Numeric contrasts
 mod <- lm(mpg ~ hp, data = mtcars)
@@ -107,5 +222,22 @@ comparisons(mod, contrast_numeric = c(90, 100)) \%>\% tidy()
 comparisons(mod, contrast_numeric = "iqr") \%>\% tidy()
 comparisons(mod, contrast_numeric = "sd") \%>\% tidy()
 comparisons(mod, contrast_numeric = "minmax") \%>\% tidy()
+
+# Adjusted Risk Ratio (see Case Study vignette on the website)
+mod <- glm(vs ~ mpg, data = mtcars, family = binomial)
+cmp <- comparisons(mod, transform_pre = "lnratioavg")
+summary(cmp, transform_post = exp)
+
+# Adjusted Risk Ratio: Manual specification of the `transform_pre`
+cmp <- comparisons(mod, transform_pre = function(hi, lo) log(mean(hi) / mean(lo)))
+summary(cmp, transform_post = exp)
+# Interactions between contrasts
+mod <- lm(mpg ~ factor(cyl) * factor(gear) + hp, data = mtcars)
+cmp <- comparisons(mod, variables = c("cyl", "gear"))
+summary(cmp)
+
+# variable-specific contrasts
+cmp <- comparisons(mod, variables = list(gear = "sequential", hp = 10))
+summary(cmp)
 
 }

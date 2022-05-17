@@ -18,12 +18,13 @@
 #' mod <- lm(mpg ~ hp * wt * am, data = mtcars)
 #' plot_cap(mod, condition = c("hp", "wt"))
 #'
-plot_cap <- function(model, 
+plot_cap <- function(model,
                      condition,
                      type = "response",
-                     conf.int = TRUE,
-                     conf.level = 0.95,
-                     draw = TRUE) {
+                     vcov = NULL,
+                     conf_level = 0.95,
+                     draw = TRUE,
+                     ...) {
 
     # get data to know over what range of values we should plot
     dat <- insight::get_data(model)
@@ -85,8 +86,9 @@ plot_cap <- function(model,
     datplot <- predictions(model,
                            newdata = nd,
                            type = type,
-                           conf.int = conf.int,
-                           conf.level = conf.level)
+                           vcov = vcov,
+                           conf_level = conf_level,
+                           ...)
     colnames(datplot)[colnames(datplot) == condition1] <- "condition1"
     colnames(datplot)[colnames(datplot) == condition2] <- "condition2"
     colnames(datplot)[colnames(datplot) == condition3] <- "condition3"
@@ -115,13 +117,13 @@ plot_cap <- function(model,
 
     # continuous x-axis
     if (is.numeric(datplot$condition1)) {
-        if (isTRUE(conf.int) && "conf.low" %in% colnames(datplot)) {
+        if (!isTRUE(vcov) && "conf.low" %in% colnames(datplot)) {
              p <- p + ggplot2::geom_ribbon(ggplot2::aes(fill = condition2), alpha = .1)
         }
         p <- p + ggplot2::geom_line(ggplot2::aes(color = condition2, linetype = condition3))
     # categorical x-axis
     } else {
-        if (isTRUE(conf.int) && "conf.low" %in% colnames(datplot)) {
+        if (!isTRUE(vcov) && "conf.low" %in% colnames(datplot)) {
              if (is.null(condition2)) {
                  p <- p + ggplot2::geom_pointrange()
              } else {

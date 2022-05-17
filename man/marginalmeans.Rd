@@ -8,43 +8,69 @@ marginalmeans(
   model,
   variables = NULL,
   variables_grid = NULL,
-  vcov = NULL,
+  vcov = TRUE,
+  conf_level = 0.95,
   type = "response",
+  transform_post = NULL,
+  interaction = NULL,
   ...
 )
 }
 \arguments{
 \item{model}{Model object}
 
-\item{variables}{Categorical predictors over which to compute marginal means
-(character vector). \code{NULL} calculates marginal means for all logical,
-character, or factor variables in the dataset used to fit \code{model}.}
+\item{variables}{character vector Categorical predictors over which to
+compute marginal means. \code{NULL} calculates marginal means for all logical,
+character, or factor variables in the dataset used to fit \code{model}. Set
+\code{interaction=TRUE} to compute marginal means at combinations of the
+predictors specified in the \code{variables} argument.}
 
-\item{variables_grid}{Categorical predictors used to construct the
+\item{variables_grid}{character vector Categorical predictors used to construct the
 prediction grid over which adjusted predictions are averaged (character
 vector). \code{NULL} creates a grid with all combinations of all categorical
 predictors. This grid can be very large when there are many variables and
 many response levels, so it is advisable to select a limited number of
 variables in the \code{variables} and \code{variables_grid} arguments.}
 
-\item{vcov}{Matrix or boolean
+\item{vcov}{Type of uncertainty estimates to report (e.g., for robust standard errors). Acceptable values:
 \itemize{
-\item FALSE: does not compute unit-level standard errors. This can speed up computation considerably.
-\item TRUE: computes unit-level standard errors using the default \code{vcov(model)} variance-covariance matrix.
-\item Named square matrix: computes standard errors with a user-supplied variance-covariance matrix. This matrix must be square and have dimensions equal to the number of coefficients in \code{get_coef(model)}.
+\item FALSE: Do not compute standard errors. This can speed up computation considerably.
+\item TRUE: Unit-level standard errors using the default \code{vcov(model)} variance-covariance matrix.
+\item String which indicates the kind of uncertainty estimates to return.
+\itemize{
+\item Heteroskedasticity-consistent: \code{"HC"}, \code{"HC0"}, \code{"HC1"}, \code{"HC2"}, \code{"HC3"}, \code{"HC4"}, \code{"HC4m"}, \code{"HC5"}. See \code{?sandwich::vcovHC}
+\item Heteroskedasticity and autocorrelation consistent: \code{"HAC"}
+\item Other: \code{"NeweyWest"}, \code{"KernHAC"}, \code{"OPG"}. See the \code{sandwich} package documentation.
+}
+\item One-sided formula which indicates the name of cluster variables (e.g., \code{~unit_id}). This formula is passed to the \code{cluster} argument of the \code{sandwich::vcovCL} function.
+\item Square covariance matrix
+\item Function which returns a covariance matrix (e.g., \code{stats::vcov(model)})
 }}
 
-\item{type}{Type(s) of prediction as string or character vector. This can
-differ based on the model type, but will typically be a string such as:
-"response", "link", "probs", or "zero".}
+\item{conf_level}{numeric value between 0 and 1. Confidence level to use to build a confidence interval.}
 
-\item{...}{Additional arguments are passed to the \code{predict()} method used to
-compute adjusted predictions. These arguments are particularly useful for
-mixed-effects or bayesian models (see the online vignettes on the
+\item{type}{string indicates the type (scale) of the predictions used to
+compute marginal effects or contrasts. This can differ based on the model
+type, but will typically be a string such as: "response", "link", "probs",
+or "zero". When an unsupported string is entered, the model-specific list of
+acceptable values is returned in an error message.}
+
+\item{transform_post}{(experimental) A function applied to the estimate and confidence interval just before returning the final results. For example, users can exponentiate their final results by setting \code{transform_post=exp} or transform contrasts made on the link scale for ease of interpretation.}
+
+\item{interaction}{TRUE, FALSE, or NULL
+\itemize{
+\item \code{FALSE}: Marginal means are computed for each predictor individually.
+\item \code{TRUE}: Marginal means are computed for each combination of predictors specified in the \code{variables} argument.
+\item \code{NULL} (default): Behaves like \code{TRUE} when the \code{variables} argument is specified and the model formula includes interactions. Behaves like \code{FALSE} otherwise.
+}}
+
+\item{...}{Additional arguments are passed to the \code{predict()} method
+supplied by the modeling package.These arguments are particularly useful
+for mixed-effects or bayesian models (see the online vignettes on the
 \code{marginaleffects} website). Available arguments can vary from model to
 model, depending on the range of supported arguments by each modeling
 package. See the "Model-Specific Arguments" section of the
-\code{?marginaleffects} document for a non-exhaustive list of available
+\code{?marginaleffects} documentation for a non-exhaustive list of available
 arguments.}
 }
 \value{
@@ -52,7 +78,15 @@ Data frame of marginal means with one row per variable-value
 combination.
 }
 \description{
-Compute estimated marginal means for specified factors.
+Compute estimated marginal means for specified factors. Marginal means are
+adjusted predictions, averaged across a grid of categorical predictors,
+holding other numeric predictors at their means. For more information, see
+the Details and Examples sections below, and in the vignettes on the
+\code{marginaleffects} website: \url{https://vincentarelbundock.github.io/marginaleffects/}
+\itemize{
+\item \href{https://vincentarelbundock.github.io/marginaleffects/#getting-started}{Getting Started}
+\item \href{https://vincentarelbundock.github.io/marginaleffects/articles/mfx04_marginalmeans.html}{Marginal Means Vignette}
+}
 }
 \details{
 This function begins by calling the \code{predictions} function to obtain a
@@ -85,8 +119,12 @@ marginal effects, predictions, marginal means, and contrasts.\tabular{llll}{
    \code{lme4} \tab \code{merMod} \tab \code{include_random} \tab \link[insight:get_predicted]{insight::get_predicted} \cr
     \tab  \tab \code{re.form} \tab \link[lme4:predict.merMod]{lme4::predict.merMod} \cr
     \tab  \tab \code{allow.new.levels} \tab \link[lme4:predict.merMod]{lme4::predict.merMod} \cr
-    \tab  \tab \code{random.only} \tab \link[lme4:predict.merMod]{lme4::predict.merMod} \cr
+   \code{glmmTMB} \tab \code{glmmTMB} \tab \code{re.form} \tab \link[glmmTMB:predict.glmmTMB]{glmmTMB::predict.glmmTMB} \cr
+    \tab  \tab \code{allow.new.levels} \tab \link[glmmTMB:predict.glmmTMB]{glmmTMB::predict.glmmTMB} \cr
+    \tab  \tab \code{zitype} \tab \link[glmmTMB:predict.glmmTMB]{glmmTMB::predict.glmmTMB} \cr
    \code{mgcv} \tab \code{bam} \tab \code{exclude} \tab \link[mgcv:predict.bam]{mgcv::predict.bam} \cr
+   \code{robustlmm} \tab \code{rlmerMod} \tab \code{re.form} \tab \link[robustlmm:rlmerMod-class]{robustlmm::predict.rlmerMod} \cr
+    \tab  \tab \code{allow.new.levels} \tab \link[robustlmm:rlmerMod-class]{robustlmm::predict.rlmerMod} \cr
 }
 }
 

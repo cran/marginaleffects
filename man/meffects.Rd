@@ -9,37 +9,73 @@ meffects(
   newdata = NULL,
   variables = NULL,
   vcov = TRUE,
+  conf_level = 0.95,
   type = "response",
+  eps = 1e-04,
   ...
 )
 }
 \arguments{
 \item{model}{Model object}
 
-\item{newdata}{A dataset over which to compute marginal effects. \code{NULL} uses
-the original data used to fit the model.}
-
-\item{variables}{Variables to consider (character vector). \code{NULL}
-calculates marginal effects for all terms in the model object.}
-
-\item{vcov}{Matrix or boolean
+\item{newdata}{\code{NULL}, data frame, string, or \code{datagrid()} call. Determines the predictor values for which to compute marginal effects.
 \itemize{
-\item FALSE: does not compute unit-level standard errors. This can speed up computation considerably.
-\item TRUE: computes unit-level standard errors using the default \code{vcov(model)} variance-covariance matrix.
-\item Named square matrix: computes standard errors with a user-supplied variance-covariance matrix. This matrix must be square and have dimensions equal to the number of coefficients in \code{get_coef(model)}.
+\item \code{NULL} (default): Unit-level marginal effects for each observed value in the original dataset.
+\item data frame: Unit-level marginal effects for each row of the \code{newdata} data frame.
+\item string:
+\itemize{
+\item "mean": Marginal Effects at the Mean. Marginal effects when each predictor is held at its mean or mode.
+\item "median": Marginal Effects at the Median. Marginal effects when each predictor is held at its median or mode.
+\item "marginalmeans": Marginal Effects at Marginal Means. See Details section below.
+}
+\item \code{\link[=datagrid]{datagrid()}} call to specify a custom grid of regressors. For example:
+\itemize{
+\item \code{newdata = datagrid(cyl = c(4, 6))}: \code{cyl} variable equal to 4 and 6 and other regressors fixed at their means or modes.
+\item See the Examples section and the \code{\link[=datagrid]{datagrid()}} documentation.
+}
 }}
 
-\item{type}{Type(s) of prediction as string or character vector. This can
-differ based on the model type, but will typically be a string such as:
-"response", "link", "probs", or "zero".}
+\item{variables}{\code{NULL} or character vector. The subset of variables for which to compute marginal effects.
+\itemize{
+\item \code{NULL}: compute contrasts for all the variables in the model object (can be slow).
+\item Character vector: subset of variables (usually faster).
+}}
 
-\item{...}{Additional arguments are passed to the \code{predict()} method used to
-compute adjusted predictions. These arguments are particularly useful for
-mixed-effects or bayesian models (see the online vignettes on the
+\item{vcov}{Type of uncertainty estimates to report (e.g., for robust standard errors). Acceptable values:
+\itemize{
+\item FALSE: Do not compute standard errors. This can speed up computation considerably.
+\item TRUE: Unit-level standard errors using the default \code{vcov(model)} variance-covariance matrix.
+\item String which indicates the kind of uncertainty estimates to return.
+\itemize{
+\item Heteroskedasticity-consistent: \code{"HC"}, \code{"HC0"}, \code{"HC1"}, \code{"HC2"}, \code{"HC3"}, \code{"HC4"}, \code{"HC4m"}, \code{"HC5"}. See \code{?sandwich::vcovHC}
+\item Heteroskedasticity and autocorrelation consistent: \code{"HAC"}
+\item Other: \code{"NeweyWest"}, \code{"KernHAC"}, \code{"OPG"}. See the \code{sandwich} package documentation.
+}
+\item One-sided formula which indicates the name of cluster variables (e.g., \code{~unit_id}). This formula is passed to the \code{cluster} argument of the \code{sandwich::vcovCL} function.
+\item Square covariance matrix
+\item Function which returns a covariance matrix (e.g., \code{stats::vcov(model)})
+}}
+
+\item{conf_level}{numeric value between 0 and 1. Confidence level to use to build a confidence interval.}
+
+\item{type}{string indicates the type (scale) of the predictions used to
+compute marginal effects or contrasts. This can differ based on the model
+type, but will typically be a string such as: "response", "link", "probs",
+or "zero". When an unsupported string is entered, the model-specific list of
+acceptable values is returned in an error message.}
+
+\item{eps}{A numeric value specifying the “step” size to use when
+calculating numerical derivatives. See the Details section below. Warning:
+the marginal effects computed for certain models can be sensitive to the
+choice of step (e.g., Bayesian mixed effects).}
+
+\item{...}{Additional arguments are passed to the \code{predict()} method
+supplied by the modeling package.These arguments are particularly useful
+for mixed-effects or bayesian models (see the online vignettes on the
 \code{marginaleffects} website). Available arguments can vary from model to
 model, depending on the range of supported arguments by each modeling
 package. See the "Model-Specific Arguments" section of the
-\code{?marginaleffects} document for a non-exhaustive list of available
+\code{?marginaleffects} documentation for a non-exhaustive list of available
 arguments.}
 }
 \value{
@@ -56,12 +92,28 @@ A \code{data.frame} with one row per observation (per term/group) and several co
 \description{
 This function calculates marginal effects (slopes) for each row of the
 dataset. The resulting object can processed by the \code{tidy()} or \code{summary()}
-functions, which compute Average Marginal Effects (AME). The \code{datagrid()}
-function and the \code{newdata} argument can be used to calculate Marginal
-Effects at the Mean (MEM) or Marginal Effects at User-Specified values (aka
-Marginal Effects at Representative values, MER). Additional information can
-be found in the Details and Examples sections below, and in the vignette on
-the \code{marginaleffects} website.
+functions, which compute Average Marginal Effects (AME) or Group-Average
+Marginal Effects (G-AME). The \code{datagrid()} function and the \code{newdata}
+argument can be used to calculate Marginal Effects at the Mean (MEM) or
+Marginal Effects at User-Specified values (aka Marginal Effects at
+Representative values, MER). For more information, see the Details and
+Examples sections below, and in the vignettes on the \code{marginaleffects}
+website: \url{https://vincentarelbundock.github.io/marginaleffects/}
+\itemize{
+\item \href{https://vincentarelbundock.github.io/marginaleffects/#getting-started}{Getting Started}
+\item \href{https://vincentarelbundock.github.io/marginaleffects/articles/mfx02_mfx.html}{Marginal Effects Vignette}
+\item \href{https://vincentarelbundock.github.io/marginaleffects/articles/mfx06_supported_models.html}{Supported Models}
+\item Case Studies
+\itemize{
+\item \href{https://vincentarelbundock.github.io/marginaleffects/articles/brms.html}{Bayesian analyses with \code{brms}}
+\item \href{https://vincentarelbundock.github.io/marginaleffects/articles/lme4.html}{Mixed effects models}
+\item \href{https://vincentarelbundock.github.io/marginaleffects/articles/gam.html}{Generalized Additive Models}
+\item \href{https://vincentarelbundock.github.io/marginaleffects/articles/mlogit.html}{Multinomial Logit and Discrete Choice Models}
+\item \href{https://vincentarelbundock.github.io/marginaleffects/articles/modelsummary.html}{Tables and plots}
+\item \href{https://vincentarelbundock.github.io/marginaleffects/articles/sandwich.html}{Robust standard errors and more}
+\item \href{https://vincentarelbundock.github.io/marginaleffects/articles/transformation.html}{Transformations and Custom Contrasts: Adjusted Risk Ratio Example}
+}
+}
 }
 \details{
 A "marginal effect" is the partial derivative of the regression equation
@@ -74,6 +126,17 @@ A detailed vignette on marginal effects and a list of supported models can
 be found on the package website:
 
 https://vincentarelbundock.github.io/marginaleffects/
+
+Numerical derivatives for the \code{marginaleffects} function are calculated
+using a simple epsilon difference approach: \eqn{\partial Y / \partial X = (f(X + \varepsilon) - f(X)) / \varepsilon}{dY/dX = (f(X + e) - f(X)) / e},
+where f is the \code{predict()} method associated with the model class, and
+\eqn{\varepsilon}{e} is determined by the \code{eps} argument.
+
+Warning: Some models are particularly sensitive to \code{eps}, so it is good
+practice to try different values of this argument.
+
+Standard errors for the marginal effects are obtained using the Delta
+method. See the "Technical Notes" vignette on the package website for details.
 }
 \section{Model-Specific Arguments}{
 
@@ -86,8 +149,12 @@ marginal effects, predictions, marginal means, and contrasts.\tabular{llll}{
    \code{lme4} \tab \code{merMod} \tab \code{include_random} \tab \link[insight:get_predicted]{insight::get_predicted} \cr
     \tab  \tab \code{re.form} \tab \link[lme4:predict.merMod]{lme4::predict.merMod} \cr
     \tab  \tab \code{allow.new.levels} \tab \link[lme4:predict.merMod]{lme4::predict.merMod} \cr
-    \tab  \tab \code{random.only} \tab \link[lme4:predict.merMod]{lme4::predict.merMod} \cr
+   \code{glmmTMB} \tab \code{glmmTMB} \tab \code{re.form} \tab \link[glmmTMB:predict.glmmTMB]{glmmTMB::predict.glmmTMB} \cr
+    \tab  \tab \code{allow.new.levels} \tab \link[glmmTMB:predict.glmmTMB]{glmmTMB::predict.glmmTMB} \cr
+    \tab  \tab \code{zitype} \tab \link[glmmTMB:predict.glmmTMB]{glmmTMB::predict.glmmTMB} \cr
    \code{mgcv} \tab \code{bam} \tab \code{exclude} \tab \link[mgcv:predict.bam]{mgcv::predict.bam} \cr
+   \code{robustlmm} \tab \code{rlmerMod} \tab \code{re.form} \tab \link[robustlmm:rlmerMod-class]{robustlmm::predict.rlmerMod} \cr
+    \tab  \tab \code{allow.new.levels} \tab \link[robustlmm:rlmerMod-class]{robustlmm::predict.rlmerMod} \cr
 }
 }
 
@@ -104,6 +171,7 @@ summary(mfx)
 tidy(mfx)
 plot(mfx)
 
+
 # Marginal Effect at the Mean (MEM)
 marginaleffects(mod, newdata = datagrid())
 
@@ -112,13 +180,21 @@ marginaleffects(mod, newdata = datagrid())
 marginaleffects(mod,
                 newdata = datagrid(hp = c(100, 110)))
 
+# Group-Average Marginal Effects (G-AME)
+# Calculate marginal effects for each observation, and then take the average
+# marginal effect within each subset of observations with different observed
+# values for the `cyl` variable:
+mod2 <- lm(mpg ~ hp * cyl, data = mtcars)
+mfx2 <- marginaleffects(mod2, variables = "hp")
+summary(mfx2, by = "cyl")
+
 # Marginal Effects at User-Specified Values (counterfactual)
 # Variables not explicitly included in `datagrid()` are held at their
 # original values, and the whole dataset is duplicated once for each
 # combination of the values in `datagrid()`
 mfx <- marginaleffects(mod,
                        newdata = datagrid(hp = c(100, 110),
-                                          grid.type = "counterfactual"))
+                                          grid_type = "counterfactual"))
 head(mfx)
 
 # Heteroskedasticity robust standard errors

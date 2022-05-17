@@ -5,9 +5,21 @@
 #' @inheritParams tidy.marginaleffects
 #' @return Data frame of summary statistics for an object produced by the
 #' `marginaleffects` function
+#' @examples
+#' mod <- lm(mpg ~ hp * wt + factor(gear), data = mtcars)
+#' mfx <- marginaleffects(mod)
+#'
+#' # average marginal effects
+#' summary(mfx)
+#'
+#' # average marginal effects by group
+#' summary(mfx, by = "gear")
 #' @export
-summary.marginaleffects <- function(object, conf.level = 0.95, ...) {
-    out <- tidy(object, conf.level = conf.level, ...)
+summary.marginaleffects <- function(object,
+                                    conf_level = 0.95,
+                                    by = NULL,
+                                    ...) {
+    out <- tidy(object, conf_level = conf_level, by = by, ...)
     class(out) <- c("marginaleffects.summary", class(out))
     attr(out, "type") <- attr(object, "type")
     attr(out, "model_type") <- attr(object, "model_type")
@@ -29,6 +41,11 @@ print.marginaleffects.summary <- function(x,
 
   out <- x
 
+  if ("group" %in% colnames(out) &&
+      all(out$group == "main_marginaleffects")) {
+      out$group <- NULL
+  }
+
   # title
   tit <- "Average marginal effects"
 
@@ -43,10 +60,10 @@ print.marginaleffects.summary <- function(x,
   }
 
 
-  if (is.null(attr(x, "conf.level"))) {
+  if (is.null(attr(x, "conf_level"))) {
       alpha <- NULL
   } else {
-      alpha <- 100 * (1 - attr(x, "conf.level"))
+      alpha <- 100 * (1 - attr(x, "conf_level"))
   }
 
   # contrast is sometimes useless
@@ -100,8 +117,8 @@ print.marginaleffects.summary <- function(x,
 #' @return Data frame of summary statistics for an object produced by the
 #' `marginalmeans` function
 #' @export
-summary.marginalmeans <- function(object, conf.level = 0.95, ...) {
-    out <- tidy(object, conf.level = conf.level, ...)
+summary.marginalmeans <- function(object, conf_level = 0.95, ...) {
+    out <- tidy(object, conf_level = conf_level, ...)
     class(out) <- c("marginalmeans.summary", class(out))
     attr(out, "type") <- attr(object, "type")
     attr(out, "model_type") <- attr(object, "model_type")
@@ -137,11 +154,12 @@ print.marginalmeans.summary <- function(x,
   }
 
 
-  if (is.null(attr(x, "conf.level"))) {
+  if (is.null(attr(x, "conf_level"))) {
       alpha <- NULL
   } else {
-      alpha <- 100 * (1 - attr(x, "conf.level"))
+      alpha <- 100 * (1 - attr(x, "conf_level"))
   }
+
 
   # rename
   dict <- c("group" = "Group",
@@ -222,10 +240,10 @@ print.predictions.summary <- function(x,
   }
 
 
-  if (is.null(attr(x, "conf.level"))) {
+  if (is.null(attr(x, "conf_level"))) {
       alpha <- NULL
   } else {
-      alpha <- 100 * (1 - attr(x, "conf.level"))
+      alpha <- 100 * (1 - attr(x, "conf_level"))
   }
 
   # contrast is sometimes useless
@@ -280,9 +298,24 @@ print.predictions.summary <- function(x,
 #' @inheritParams tidy.comparisons
 #' @return Data frame of summary statistics for an object produced by the
 #' `comparisons` function
+#' @examples
+#' mod <- lm(mpg ~ hp * wt + factor(gear), data = mtcars)
+#' con <- comparisons(mod)
+#'
+#' # average marginal effects
+#' summary(con)
+#'
+#' # average marginal effects by group
+#' summary(con, by = "gear")
 #' @export
-summary.comparisons <- function(object, conf.level = 0.95, ...) {
-    out <- tidy(object, conf.level = conf.level, ...)
+
+#' @export
+summary.comparisons <- function(object,
+                                conf_level = 0.95,
+                                by = NULL,
+                                transform_post = NULL,
+                                ...) {
+    out <- tidy(object, conf_level = conf_level, by = by, transform_post = transform_post, ...)
     class(out) <- c("comparisons.summary", class(out))
     attr(out, "type") <- attr(object, "type")
     attr(out, "model_type") <- attr(object, "model_type")
@@ -304,6 +337,7 @@ print.comparisons.summary <- function(x,
 
   out <- x
 
+
   # title
   tit <- "Average contrasts"
 
@@ -318,10 +352,10 @@ print.comparisons.summary <- function(x,
   }
 
 
-  if (is.null(attr(x, "conf.level"))) {
+  if (is.null(attr(x, "conf_level"))) {
       alpha <- NULL
   } else {
-      alpha <- 100 * (1 - attr(x, "conf.level"))
+      alpha <- 100 * (1 - attr(x, "conf_level"))
   }
 
   # contrast is sometimes useless
@@ -347,6 +381,11 @@ print.comparisons.summary <- function(x,
             "conf.high" = ifelse(is.null(alpha),
                                 "CI high",
                                 sprintf("%.1f %%", 100 - alpha / 2)))
+
+  if (all(out$term == "interaction")) {
+    out[["term"]] <- NULL
+    colnames(out) <- gsub("^contrast_", "", colnames(out))
+  }
 
   for (i in seq_along(dict)) {
     colnames(out)[colnames(out) == names(dict)[i]] <- dict[i]

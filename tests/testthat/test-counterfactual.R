@@ -11,7 +11,7 @@ test_that("old bug: counterfactual with a single regressor", {
 test_that("marginal effects does not overwrite counterfactual rowid", {
     mod <- glm(am ~ mpg + factor(cyl), data = mtcars, family = binomial)
     mfx <- marginaleffects(mod, newdata = datagrid(cyl = c(4, 6, 8), grid.type = "counterfactual"))
-    expect_true(all(mfx$rowid_original %in% 1:32))
+    expect_true(all(mfx$rowid_counterfactual %in% 1:32))
     expect_true(all(mfx$rowid %in% 1:96))
 })
 
@@ -75,5 +75,5 @@ test_that("datagrid(): factor, logical, numeric", {
 test_that("typical number of rows", {
     mod <- lm(mpg ~ hp * wt, data = mtcars)
     nd <- datagrid(model = mod, hp = c(100, 110))
-    expect_equal(dim(marginaleffects(mod, newdata = nd)), c(4, 7))
+    expect_equal(dim(marginaleffects(mod, newdata = nd)), c(4, 11))
 })
