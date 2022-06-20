@@ -122,6 +122,8 @@ summary.marginalmeans <- function(object, conf_level = 0.95, ...) {
     class(out) <- c("marginalmeans.summary", class(out))
     attr(out, "type") <- attr(object, "type")
     attr(out, "model_type") <- attr(object, "model_type")
+    attr(out, "variables") <- attr(object, "variables")
+    attr(out, "variables_grid") <- attr(object, "variables_grid")
     return(out)
 }
 
@@ -189,6 +191,12 @@ print.marginalmeans.summary <- function(x,
   cat("\n")
   cat("Model type: ", attr(x, "model_type"), "\n")
   cat("Prediction type: ", attr(x, "type"), "\n")
+
+  vg <- attr(x, "variables_grid")
+  if (length(vg) > 0) {
+    cat(sprintf("Results averaged over levels of: %s",
+                paste(vg, collapse = ", ")), "\n")
+  }
 
   return(invisible(x))
 }
@@ -313,12 +321,15 @@ print.predictions.summary <- function(x,
 summary.comparisons <- function(object,
                                 conf_level = 0.95,
                                 by = NULL,
-                                transform_post = NULL,
+                                transform_avg = NULL,
                                 ...) {
-    out <- tidy(object, conf_level = conf_level, by = by, transform_post = transform_post, ...)
+    out <- tidy(object, conf_level = conf_level, by = by, transform_avg = transform_avg, ...)
     class(out) <- c("comparisons.summary", class(out))
     attr(out, "type") <- attr(object, "type")
     attr(out, "model_type") <- attr(object, "model_type")
+    attr(out, "transform_post") <- attr(object, "transform_post")
+    attr(out, "transform_pre") <- attr(object, "transform_pre")
+    attr(out, "transform_avg") <- transform_avg
     return(out)
 }
 
@@ -400,6 +411,16 @@ print.comparisons.summary <- function(x,
   cat("\n")
   cat("Model type: ", attr(x, "model_type"), "\n")
   cat("Prediction type: ", attr(x, "type"), "\n")
+  if (!is.null(attr(x, "transform_pre"))) {
+      cat("Pre-transformation: ", paste(attr(x, "transform_pre"), collapse = ""), "\n")
+  }
+  if (!is.null(attr(x, "transform_post"))) {
+      cat("Post-transformation: ", paste(attr(x, "transform_post"), collapse = ""), "\n")
+  }
+  if (!is.null(attr(x, "transform_avg"))) {
+      cat("Average-transformation: ", paste(attr(x, "transform_average"), collapse = ""), "\n")
+  }
+
 
   return(invisible(x))
 }

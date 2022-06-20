@@ -11,12 +11,11 @@ comparisons(
   type = "response",
   vcov = TRUE,
   conf_level = 0.95,
-  contrast_factor = "reference",
-  contrast_numeric = 1,
   transform_pre = "difference",
   transform_post = NULL,
   interaction = NULL,
-  eps = 1e-04,
+  wts = NULL,
+  hypothesis = NULL,
   ...
 )
 }
@@ -44,11 +43,34 @@ comparisons(
 \itemize{
 \item \code{NULL}: compute contrasts for all the variables in the model object (can be slow).
 \item Character vector: subset of variables (usually faster).
-\item Named list: subset of variables with the type of contrasts to use, following the conventions in the \code{contrast_factor} and \code{contrast_numeric} arguments. Examples:
+\item Named list: names identify the subset of variables of interest, and values define the type of contrast to compute. Acceptable values depend on the variable type:
+\itemize{
+\item Factor or character variables:
+\itemize{
+\item "reference": Each factor level is compared to the factor reference (base) level
+\item "all": All combinations of observed levels
+\item "sequential": Each factor level is compared to the previous factor level
+\item "pairwise": Each factor level is compared to all other levels
+}
+\item Logical variables:
+\itemize{
+\item NULL: contrast between TRUE and FALSE
+}
+\item Numeric variables:
+\itemize{
+\item Numeric of length 1: Contrast for a gap of \code{x}, computed at the observed value plus and minus \code{x / 2}
+\item Numeric vector of length 2: Contrast between the 2nd element and the 1st element of the \code{x} vector.
+\item "iqr": Contrast across the interquartile range of the regressor.
+\item "sd": Contrast across one standard deviation around the regressor mean.
+\item "2sd": Contrast across two standard deviations around the regressor mean.
+\item "minmax": Contrast between the maximum and the minimum values of the regressor.
+}
+\item Examples:
 \itemize{
 \item \code{variables = list(gear = "pairwise", hp = 10)}
 \item \code{variables = list(gear = "sequential", hp = c(100, 120))}
-\item See the Examples section below.
+\item See the Examples section below for more.
+}
 }
 }}
 
@@ -75,24 +97,6 @@ acceptable values is returned in an error message.}
 
 \item{conf_level}{numeric value between 0 and 1. Confidence level to use to build a confidence interval.}
 
-\item{contrast_factor}{string. Which pairs of factors should be contrasted?
-\itemize{
-\item "reference": Each factor level is compared to the factor reference (base) level
-\item "all": All combinations of observed levels
-\item "sequential": Each factor level is compared to the previous factor level
-\item "pairwise": Each factor level is compared to all other levels
-}}
-
-\item{contrast_numeric}{string or numeric. Which pairs of numeric values should be contrasted?
-\itemize{
-\item Numeric of length 1: Contrast for a gap of \code{contrast_numeric}, computed at the observed value plus and minus \code{contrast_numeric / 2}
-\item Numeric vector of length 2: Contrast between the 2nd element and the 1st element of the \code{contrast_numeric} vector.
-\item "iqr": Contrast across the interquartile range of the regressor.
-\item "sd": Contrast across one standard deviation around the regressor mean.
-\item "2sd": Contrast across two standard deviations around the regressor mean.
-\item "minmax": Contrast between the maximum and the minimum values of the regressor.
-}}
-
 \item{transform_pre}{(experimental) string or function. How should pairs of adjusted predictions be contrasted?
 \itemize{
 \item string: shortcuts to common contrast functions.
@@ -103,11 +107,15 @@ acceptable values is returned in an error message.}
 \item "lnratio": \code{function(hi, lo) log(hi / lo)}
 \item "ratioavg": \code{function(hi, lo) mean(hi) / mean(lo)}
 \item "lnratioavg": \code{function(hi, lo) log(mean(hi) / mean(lo))}
+\item "lnoravg": \code{function(hi, lo) log((mean(hi)/(1 - mean(hi))) / (mean(lo)/(1 - mean(lo))))}
+\item "dydx": \code{function(hi, lo) (hi - lo) / eps}
+\item "dydx": `function(hi, lo) mean((hi - lo) / eps)'
+\item "expdydx": \code{function(hi, lo) ((exp(hi) - exp(lo)) / exp(e)) / e}
 }
 \item function: accept two equal-length numeric vectors of adjusted predictions (\code{hi} and \code{lo}) and returns a vector of contrasts of the same length, or a unique numeric value.
 }}
 
-\item{transform_post}{(experimental) A function applied to the estimate and confidence interval just before returning the final results. For example, users can exponentiate their final results by setting \code{transform_post=exp} or transform contrasts made on the link scale for ease of interpretation.}
+\item{transform_post}{(experimental) A function applied to unit-level estimates and confidence intervals just before the function returns results.}
 
 \item{interaction}{TRUE, FALSE, or NULL
 \itemize{
@@ -116,10 +124,31 @@ acceptable values is returned in an error message.}
 \item \code{NULL} (default): Behaves like \code{TRUE} when the \code{variables} argument is specified and the model formula includes interactions. Behaves like \code{FALSE} otherwise.
 }}
 
-\item{eps}{A numeric value specifying the “step” size to use when
-calculating numerical derivatives. See the Details section below. Warning:
-the marginal effects computed for certain models can be sensitive to the
-choice of step (e.g., Bayesian mixed effects).}
+\item{wts}{string or numeric: weights to use when computing average
+contrasts or marginaleffects. These weights only affect the averaging in
+\code{tidy()} or \code{summary()}, and not the unit-level estimates themselves.
+\itemize{
+\item string: column name of the weights variable in \code{newdata}. When supplying a column name to \code{wts}, it is recommended to supply the original data (including the weights variable) explicitly to \code{newdata}.
+\item numeric: vector of length equal to the number of rows in the original data or in \code{newdata} (if supplied).
+}}
+
+\item{hypothesis}{specify a hypothesis test or custom contrast using a vector, matrix, string, or string formula.
+\itemize{
+\item String:
+\itemize{
+\item "pairwise": pairwise differences between estimates in each row.
+\item "reference": differences between the estimates in each row and the estimate in the first row.
+}
+\item String formula to specify linear or non-linear hypothesis tests. If the \code{term} column uniquely identifies rows, terms can be used in the formula. Otherwise, use \code{b1}, \code{b2}, etc. to identify the position of each parameter. Examples:
+\itemize{
+\item \code{hp = drat}
+\item \code{hp + drat = 12}
+\item \code{b1 + b2 + b3 = 0}
+}
+\item Numeric vector: Weights to compute a linear combination of (custom contrast between) estimates. Length equal to the number of rows generated by the same function call, but without the \code{hypothesis} argument.
+\item Numeric matrix: Each column is a vector of weights, as describe above, used to compute a distinct linear combination of (contrast between) estimates.
+\item See the Examples section below and the vignette: https://vincentarelbundock.github.io/marginaleffects/articles/hypothesis.html
+}}
 
 \item{...}{Additional arguments are passed to the \code{predict()} method
 supplied by the modeling package.These arguments are particularly useful
@@ -131,42 +160,66 @@ package. See the "Model-Specific Arguments" section of the
 arguments.}
 }
 \description{
-This function calculates contrasts (or comparisons) between adjusted
-predictions for each row of the dataset. The resulting object can processed
-by the \code{tidy()} or \code{summary()} functions, which compute Average Contrasts
-(see \code{?summary.marginaleffects}). The \code{newdata} argument can be used to
-calculate a variety of contrasts, including "Contrasts at the Mean,"
-"Contrasts at User-Specified values" (aka Contrasts at Representative
-values), "Contrasts in Marginal Means", "Adjusted Risk Ratios", and much
-more. For more information, see the Details and Examples sections below, and
-in the vignettes on the \code{marginaleffects} website: \url{https://vincentarelbundock.github.io/marginaleffects/}
+Difference, ratio, or function of adjusted predictions, calculated for
+meaningfully different predictor values. The \code{tidy()} and \code{summary()}
+functions can be used to aggregate and summarize the output of
+\code{comparisons()}. To learn more, read the contrasts vignette, visit the
+package website, or scroll down this page for a full list of vignettes:
 \itemize{
-\item \href{https://vincentarelbundock.github.io/marginaleffects/#getting-started}{Getting Started}
-\item \href{https://vincentarelbundock.github.io/marginaleffects/articles/mfx03_contrasts.html}{Contrasts Vignette}
-\item \href{https://vincentarelbundock.github.io/marginaleffects/articles/mfx06_supported_models.html}{Supported Models}
-\item Case Studies
-\itemize{
-\item \href{https://vincentarelbundock.github.io/marginaleffects/articles/brms.html}{Bayesian analyses with \code{brms}}
-\item \href{https://vincentarelbundock.github.io/marginaleffects/articles/lme4.html}{Mixed effects models}
-\item \href{https://vincentarelbundock.github.io/marginaleffects/articles/gam.html}{Generalized Additive Models}
-\item \href{https://vincentarelbundock.github.io/marginaleffects/articles/mlogit.html}{Multinomial Logit and Discrete Choice Models}
-\item \href{https://vincentarelbundock.github.io/marginaleffects/articles/modelsummary.html}{Tables and plots}
-\item \href{https://vincentarelbundock.github.io/marginaleffects/articles/sandwich.html}{Robust standard errors and more}
-\item \href{https://vincentarelbundock.github.io/marginaleffects/articles/transformation.html}{Transformations and Custom Contrasts: Adjusted Risk Ratio Example}
-}
+\item \url{https://vincentarelbundock.github.io/marginaleffects/articles/contrasts.html}
+\item \url{https://vincentarelbundock.github.io/marginaleffects/}
 }
 }
 \details{
-A "contrast" is the difference between two adjusted predictions, calculated
-for meaningfully different regressor values (e.g., College graduates vs.
-Others). Uncertainty estimates are computed using the delta method.
+A "contrast" is a difference, ratio of function of adjusted predictions,
+calculated for meaningfully different predictor values (e.g., College
+graduates vs. Others). Uncertainty estimates are computed using the delta
+method.
 
-Detailed vignettes on contrasts, marginal effects, predictions, and marginal
-means, as well as a list of supported models can be found on the package
-website:
-
-https://vincentarelbundock.github.io/marginaleffects/
+The \code{newdata} argument can be used to control the kind of contrasts to report:
+\itemize{
+\item Average Contrasts
+\item Adjusted Risk Ratios
+\item Adjusted Risk Differences
+\item Group-Average Contrasts
+\item Contrasts at the Mean
+\item Contrasts at User-Specified values (aka Contrasts at Representative values, MER).
+\item Custom contrasts using arbitrary functions
 }
+}
+\section{Vignettes and documentation}{
+
+
+Vignettes:
+\itemize{
+\item \href{https://vincentarelbundock.github.io/marginaleffects/articles/predictions.html}{Adjusted Predictions}
+\item \href{https://vincentarelbundock.github.io/marginaleffects/articles/contrasts.html}{Contrasts}
+\item \href{https://vincentarelbundock.github.io/marginaleffects/articles/marginaleffects.html}{Marginal Effects}
+\item \href{https://vincentarelbundock.github.io/marginaleffects/articles/marginalmeans.html}{Marginal Means}
+\item \href{https://vincentarelbundock.github.io/marginaleffects/articles/hypothesis.html}{Hypothesis Tests and Custom Contrasts using the Delta Method}
+}
+
+Case studies:
+\itemize{
+\item \href{https://vincentarelbundock.github.io/marginaleffects/articles/brms.html}{Bayesian Analyses with \code{brms}}
+\item \href{https://vincentarelbundock.github.io/marginaleffects/articles/gformula.html}{Causal Inference with the g-Formula}
+\item \href{https://vincentarelbundock.github.io/marginaleffects/articles/gam.html}{Generalized Additive Models}
+\item \href{https://vincentarelbundock.github.io/marginaleffects/articles/lme4.html}{Mixed effects models}
+\item \href{https://vincentarelbundock.github.io/marginaleffects/articles/mlogit.html}{Multinomial Logit and Discrete Choice Models}
+\item \href{https://vincentarelbundock.github.io/marginaleffects/articles/multiple_imputation.html}{Multiple Imputation}
+}
+
+Tips and technical notes:
+\itemize{
+\item \href{https://vincentarelbundock.github.io/marginaleffects/articles/supported_models.html}{64 Supported Classes of Models}
+\item \href{https://vincentarelbundock.github.io/marginaleffects/reference/index.html}{Index of Functions and Documentation}
+\item \href{https://vincentarelbundock.github.io/marginaleffects/articles/sandwich.html}{Standard Errors}
+\item \href{https://vincentarelbundock.github.io/marginaleffects/articles/modelsummary.html}{Tables and Plots}
+\item \href{https://vincentarelbundock.github.io/marginaleffects/articles/performance.html}{Performance}
+\item \href{https://vincentarelbundock.github.io/marginaleffects/articles/alternative_software.html}{Alternative Software}
+}
+}
+
 \section{Model-Specific Arguments}{
 
 
@@ -196,9 +249,9 @@ library(magrittr)
 tmp <- mtcars
 tmp$am <- as.logical(tmp$am)
 mod <- lm(mpg ~ am + factor(cyl), tmp)
-comparisons(mod, contrast_factor = "reference") \%>\% tidy()
-comparisons(mod, contrast_factor = "sequential") \%>\% tidy()
-comparisons(mod, contrast_factor = "pairwise") \%>\% tidy()
+comparisons(mod, variables = list(cyl = "reference")) \%>\% tidy()
+comparisons(mod, variables = list(cyl = "sequential")) \%>\% tidy()
+comparisons(mod, variables = list(cyl = "pairwise")) \%>\% tidy()
 
 # GLM with different scale types
 mod <- glm(am ~ factor(gear), data = mtcars)
@@ -216,14 +269,14 @@ comparisons(mod, newdata = datagrid(am = 0, cyl = tmp$cyl))
 
 # Numeric contrasts
 mod <- lm(mpg ~ hp, data = mtcars)
-comparisons(mod, contrast_numeric = 1) \%>\% tidy()
-comparisons(mod, contrast_numeric = 5) \%>\% tidy()
-comparisons(mod, contrast_numeric = c(90, 100)) \%>\% tidy()
-comparisons(mod, contrast_numeric = "iqr") \%>\% tidy()
-comparisons(mod, contrast_numeric = "sd") \%>\% tidy()
-comparisons(mod, contrast_numeric = "minmax") \%>\% tidy()
+comparisons(mod, variables = list(hp = 1)) \%>\% tidy()
+comparisons(mod, variables = list(hp = 5)) \%>\% tidy()
+comparisons(mod, variables = list(hp = c(90, 100))) \%>\% tidy()
+comparisons(mod, variables = list(hp = "iqr")) \%>\% tidy()
+comparisons(mod, variables = list(hp = "sd")) \%>\% tidy()
+comparisons(mod, variables = list(hp = "minmax")) \%>\% tidy()
 
-# Adjusted Risk Ratio (see Case Study vignette on the website)
+# Adjusted Risk Ratio: see the contrasts vignette
 mod <- glm(vs ~ mpg, data = mtcars, family = binomial)
 cmp <- comparisons(mod, transform_pre = "lnratioavg")
 summary(cmp, transform_post = exp)
@@ -239,5 +292,35 @@ summary(cmp)
 # variable-specific contrasts
 cmp <- comparisons(mod, variables = list(gear = "sequential", hp = 10))
 summary(cmp)
+
+# hypothesis test: is the `hp` marginal effect at the mean equal to the `drat` marginal effect
+mod <- lm(mpg ~ wt + drat, data = mtcars)
+
+comparisons(
+    mod,
+    newdata = "mean",
+    hypothesis = "wt = drat")
+
+# same hypothesis test using row indices
+comparisons(
+    mod,
+    newdata = "mean",
+    hypothesis = "b1 - b2 = 0")
+
+# same hypothesis test using numeric vector of weights
+comparisons(
+    mod,
+    newdata = "mean",
+    hypothesis = c(1, -1))
+
+# two custom contrasts using a matrix of weights
+lc <- matrix(c(
+    1, -1,
+    2, 3),
+    ncol = 2)
+comparisons(
+    mod,
+    newdata = "mean",
+    hypothesis = lc)
 
 }

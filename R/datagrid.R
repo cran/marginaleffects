@@ -15,8 +15,12 @@
 #' @param FUN_other the function to be applied to other variable types.
 #' @details
 #' If `datagrid` is used in a `marginaleffects` or `predictions` call as the
-#' `newdata` argument, users do not need to specify the `model` or `newdata`
-#' argument. The data is extracted automatically from the model.
+#' `newdata` argument, the model is automatically inserted in the function
+#' call, and users do not need to specify either the `model` or `newdata`
+#' arguments. Note that only the variables used to fit the models will be
+#' attached to the results. If a user wants to attach other variables as well
+#' (e.g., weights or grouping variables), they can supply a data.frame
+#' explicitly to the `newdata` argument inside `datagrid()`.
 #'
 #' If users supply a model, the data used to fit that model is retrieved using
 #' the `insight::get_data` function.
@@ -232,16 +236,26 @@ prep_datagrid <- function(..., model = NULL, newdata = NULL) {
         variables <- NULL
     }
 
-    variables_list <- sanitize_variables(model = model,
-                                         newdata = newdata,
-                                         variables = variables)
+    variables_list <- suppressWarnings(
+        sanitize_variables(model = model,
+            newdata = newdata,
+            variables = variables))
     variables_all <- unique(unlist(variables_list))
     variables_manual <- names(at)
     variables_automatic <- setdiff(variables_all, variables_manual)
 
     # fill in missing data after sanity checks
     if (is.null(newdata)) {
-        newdata <- insight::get_data(model)
+        newdata <- suppressWarnings(insight::get_data(model))
+    }
+
+    if (any(sapply(newdata, function(x) "matrix" %in% class(x)))) {
+        msg <- format_msg(
+        "The `datagrid()`, `marginalmeans()`, `plot_cap()`, and `plot_cme()` functions
+        do not support datasets with matrix columns. You can construct your own
+        prediction dataset and supply it explicitly to the `newdata` argument of the
+        `predictions()`, `marginaleffects()`, or `comparisons()` functions instead.")
+        stop(msg, call. = FALSE)
     }
 
     # check `at` names
@@ -292,7 +306,12 @@ prep_datagrid <- function(..., model = NULL, newdata = NULL) {
         }
 
         if (length(cluster_ids) > 0) {
-            msg <- "Some cluster or group identifiers are numeric. Unless otherwise instructed, `datagrid()` sets all numeric variables to their mean. This is probably inappropriate in the case of cluster or group identifiers. A safer strategy is to convert them to factors before fitting the model."
+            msg <- format_msg(
+            "Some cluster or group identifiers are numeric. Unless otherwise
+            instructed, `datagrid()` sets all numeric variables to their mean.
+            This is probably inappropriate in the case of cluster or group
+            identifiers. A safer strategy is to convert them to factors before
+            fitting the model.")
             warning(msg, call. = FALSE)
         }
     }

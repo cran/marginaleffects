@@ -3,10 +3,6 @@
 generics::tidy
 
 
-#' @importFrom generics glance
-#' @export
-generics::glance
-
 
 #' Tidy a `marginaleffects` object
 #'
@@ -55,24 +51,19 @@ tidy.marginaleffects <- function(x,
 }
 
 
+#' Tidy a `deltamethod` object
+#' @inheritParams tidy.marginaleffects
 #' @export
-glance.marginaleffects <- function(x, ...) {
-    assert_dependency("modelsummary")
-    model <- attr(x, "model")
-    gl <- suppressMessages(suppressWarnings(try(
-        modelsummary::get_gof(model, ...), silent = TRUE)))
-    if (inherits(gl, "data.frame")) {
-        out <- data.frame(gl)
-    } else {
-        out <- NULL
+tidy.deltamethod <- function(x, ...) {
+    if (any(!c("term", "estimate") %in% colnames(x)) || !inherits(x, c("deltamethod", "data.frame"))) {
+        msg <- format_msg(
+        "The `tidy()` method only supports `deltamethod` objects produced by the
+        `marginaleffects::deltamethod()` function.")
+        stop(msg, call. = FALSE)
     }
-    vcov.type <- attr(x, "vcov.type")
-    if (is.null(out) && !is.null(vcov.type)) {
-        out <- data.frame("vcov.type" = vcov.type)
-    } else if (!is.null(out)) {
-        out[["vcov.type"]] <- vcov.type
-    }
-    return(out)
+    # the object is already in a tidy format. We need this method for
+    # `modelsummary` and other functions that rely on `tidy()`.
+    return(x)
 }
 
 
@@ -92,24 +83,14 @@ tidy.marginalmeans <- function(x,
     out <- x
     colnames(out)[colnames(out) == "marginalmean"] <- "estimate"
 
-    if (!"statistic" %in% colnames(out) && "std.error" %in% colnames(out)) {
-        out$statistic <- out$estimate / out$std.error
-    }
+    draws <- attr(x, "posterior_draws")
 
-    if (!"p.value" %in% colnames(out) && "std.error" %in% colnames(out)) {
-        out$p.value <- 2 * (1 - stats::pnorm(abs(out$statistic)))
-    }
-
-    out <- out
-
-    # confidence intervals
-    if ("std.error" %in% colnames(out)) {
-        if (!"conf.low" %in% colnames(out)) {
-            alpha <- 1 - conf_level
-            out$conf.low <- out$estimate + stats::qnorm(alpha / 2) * out$std.error
-            out$conf.high <- out$estimate - stats::qnorm(alpha / 2) * out$std.error
-        }
-    }
+    out <- get_ci(
+        out,
+        overwrite = FALSE,
+        conf_level = conf_level,
+        draws = draws,
+        estimate = "estimate")
 
     # sort and subset columns
     cols <- c("type", "term", "value", "estimate", "std.error", "statistic", "p.value", "conf.low", "conf.high")
@@ -122,17 +103,6 @@ tidy.marginalmeans <- function(x,
 }
 
 
-#' @export
-glance.marginalmeans <- glance.marginaleffects
-
-
-#' @export
-glance.predictions <- glance.marginaleffects
-
-
-#' @export
-glance.comparisons <- glance.marginaleffects
-
 
 #' Tidy a `predictions` object
 #'
@@ -140,6 +110,7 @@ glance.comparisons <- glance.marginaleffects
 #' unit-level adjusted predictions computed by the `predictions` function.
 #'
 #' @param x An object produced by the `predictions` function.
+#' @param by Character vector of variable names over which to compute group-averaged contrasts.
 #' @inheritParams predictions
 #' @return A "tidy" `data.frame` of summary statistics which conforms to the
 #' `broom` package specification.
@@ -148,20 +119,66 @@ glance.comparisons <- glance.marginaleffects
 #' mod <- lm(mpg ~ hp * wt + factor(gear), data = mtcars)
 #' mfx <- predictions(mod)
 #' tidy(mfx)
-tidy.predictions <- function(x, ...) {
+tidy.predictions <- function(x,
+                             conf_level = 0.95,
+                             by = NULL,
+                             ...) {
+    x_dt <- copy(data.table(x))
 
-    # Average Adjusted Predictions
-    idx <- intersect(colnames(x), c("type", "group"))
-    out <- data.table(x)[, .(estimate = mean(predicted, na.rm = TRUE)), by = idx]
+    marginaleffects_wts_internal <- attr(x, "weights")
 
-    ## This might be a useful implementation of weights
-    # if (is.null(attr(x, "weights"))) {
-    #     dydx <- stats::aggregate(f, data = x, FUN = mean)
-    # } else {
-    #     dydx <- stats::aggregate(f, data = x, FUN = weighted.mean, w = attr(x, "weights"))
-    # }
+    by <- c("group", by)
+    by <- intersect(by, colnames(x))
+    if (length(by) == 0) by <- NULL
 
-    setDF(out)
+    fun <- function(...) {
+        dots <- list(...)
+        dots[["eps"]] <- NULL
+        dots[["vcov"]] <- FALSE
+        out <- data.table(do.call("predictions", dots))
+        if (!is.null(marginaleffects_wts_internal)) {
+            out[, "marginaleffects_wts_internal" := marginaleffects_wts_internal]
+            out <- out[,
+                .(estimate = stats::weighted.mean(
+                    predicted,
+                    marginaleffects_wts_internal,
+                    na.rm = TRUE)),
+                by = by]
+        } else {
+            out <- out[,
+                .(estimate = mean(predicted)),
+                by = by]
+        }
+        return(out$estimate)
+    }
+
+    if (!is.null(marginaleffects_wts_internal)) {
+        x_dt[, "marginaleffects_wts_internal" := marginaleffects_wts_internal]
+        x_dt <- x_dt[,
+            .(estimate = stats::weighted.mean(
+                predicted,
+                marginaleffects_wts_internal,
+                na.rm = TRUE)),
+            by = by]
+    } else {
+        x_dt <- x_dt[,
+            .(estimate = mean(predicted)),
+            by = by]
+    }
+
+    se <- get_se_delta(
+        model = attr(x, "model"),
+        newdata = attr(x, "newdata"),
+        vcov = attr(x, "vcov"),
+        type = attr(x, "type"),
+        FUN = fun,
+        ...)
+
+    if (!is.null(se)) {
+        x_dt[, "std.error" := se]
+    }
+
+    out <- get_ci(x_dt, estimate = "estimate", conf_level = conf_level)
     return(out)
 }
 
@@ -173,6 +190,7 @@ tidy.predictions <- function(x, ...) {
 #'
 #' @param x An object produced by the `comparisons` function.
 #' @param by Character vector of variable names over which to compute group-averaged contrasts.
+#' @param transform_avg (experimental) A function applied to the estimates and confidence intervals *after* the unit-level estimates have been averaged.
 #' @inheritParams comparisons
 #' @inheritParams tidy.marginaleffects
 #' @return A "tidy" `data.frame` of summary statistics which conforms to the
@@ -193,19 +211,24 @@ tidy.predictions <- function(x, ...) {
 #' @export
 #' @examples
 #' mod <- lm(mpg ~ factor(gear), data = mtcars)
-#' contr <- comparisons(mod, contrast_factor = "sequential")
+#' contr <- comparisons(mod, variables = list(gear = "sequential"))
 #' tidy(contr)
 tidy.comparisons <- function(x,
                              conf_level = 0.95,
                              by = NULL,
-                             transform_post = NULL,
+                             transform_avg = NULL,
                              ...) {
 
     dots <- list(...)
-    FUN <- mean
     conf_level <- sanitize_conf_level(conf_level, ...)
     checkmate::assert_character(by, null.ok = TRUE)
-    checkmate::assert_function(transform_post, null.ok = TRUE)
+    checkmate::assert_function(transform_avg, null.ok = TRUE)
+
+    transform_avg <- deprecation_arg(
+        transform_avg,
+        newname = "transform_avg",
+        oldname = "transform_post",
+        ...)
 
     # we only know the delta method formula for the average marginal effect,
     # not for arbitrary functions
@@ -219,20 +242,25 @@ tidy.comparisons <- function(x,
         flag <- isTRUE(checkmate::check_character(by)) &&
                 isTRUE(checkmate::check_true(all(by %in% colnames(x))))
         if (!isTRUE(flag)) {
-            msg <- "The `by` argument must be a character vector and every element of the vector must correspond to a column name in the `x` marginal effects object."
+            msg <- format_msg(
+            "The `by` argument must be a character vector and every element of the vector
+            must correspond to a column name in the `x` marginal effects object.")
             stop(msg, call. = FALSE)
         }
     }
 
     x_dt <- data.table(x)
 
+    marginaleffects_wts_internal <- attr(x, "weights")
+
+    draws <- attr(x, "posterior_draws")
+
     # empty initial mfx data.frame means there were no numeric variables in the
     # model
-    if ("term" %in% colnames(x_dt)) {
+    if ("term" %in% colnames(x_dt) || inherits(x, "predictions")) {
 
-        J <- attr(x, "J")
+        J <- attr(x, "jacobian")
         V <- attr(x, "vcov")
-        draws <- attr(x, "posterior_draws")
 
         idx_by <- c("type", "group", "term", "contrast", by,
                     grep("^contrast_\\w+", colnames(x_dt), value = TRUE))
@@ -240,7 +268,17 @@ tidy.comparisons <- function(x,
         idx_na <- is.na(x_dt$comparison)
 
         # average marginal effects
-        ame <- x_dt[idx_na == FALSE, .(estimate = mean(comparison, na.rm = TRUE)), by = idx_by]
+        if (is.null(marginaleffects_wts_internal)) {
+            ame <- x_dt[idx_na == FALSE, .(estimate = mean(comparison, na.rm = TRUE)), by = idx_by]
+        } else {
+            x_dt[, "marginaleffects_wts_internal" := marginaleffects_wts_internal]
+            ame <- x_dt[idx_na == FALSE,
+                        .(estimate = stats::weighted.mean(
+                            comparison,
+                            marginaleffects_wts_internal,
+                            na.rm = TRUE)),
+                        by = idx_by]
+        }
 
         if (is.matrix(J) && is.matrix(V)) {
             # Jacobian at the group mean
@@ -261,7 +299,20 @@ tidy.comparisons <- function(x,
             tmp <- paste0(idx_by, "_marginaleffects_index")
 
             if (isTRUE(include_se)) {
-                J_mean <- J[, lapply(.SD, FUN, na.rm = TRUE), by = tmp]
+                if (is.null(marginaleffects_wts_internal)) {
+                    J_mean <- J[, lapply(.SD, mean, na.rm = TRUE), by = tmp]
+                } else {
+                    J[, "marginaleffects_wts_internal" := marginaleffects_wts_internal]
+                    J_mean <- J[,
+                    lapply(.SD,
+                           stats::weighted.mean,
+                           w = marginaleffects_wts_internal,
+                           na.rm = TRUE),
+                    by = tmp]
+                }
+                if ("marginaleffects_wts_internal" %in% colnames(J_mean)) {
+                    tmp <- c("marginaleffects_wts_internal", tmp)
+                }
                 J_mean <- J_mean[, !..tmp]
                 J_mean <- as.matrix(J_mean)
 
@@ -276,6 +327,11 @@ tidy.comparisons <- function(x,
             }
 
         } else if (!is.null(draws)) {
+            # bayes not supported: what to do with CI?
+            if (!is.null(marginaleffects_wts_internal)) {
+                msg <- "Weights are not supported for models of this class."
+                warning(msg, call. = FALSE)
+            }
             draws <- posteriordraws(x)
             setDT(draws)
             ame[, "estimate" := NULL]
@@ -284,8 +340,8 @@ tidy.comparisons <- function(x,
             # uncertainty around the average marginal effect in two steps:
             # 1. mean for each draw gives 4000 samples of the average mfx
             # 2. quantiles of the means
-            drawavg <- draws[, .(estimate = FUN(draw)), by = c(idx_by, "drawid")]
-            es <- drawavg[, .(estimate = FUN(estimate)), by = idx_by]
+            drawavg <- draws[, .(estimate = mean(draw)), by = c(idx_by, "drawid")]
+            es <- drawavg[, .(estimate = mean(estimate)), by = idx_by]
             if (isTRUE(getOption("marginaleffects_credible_interval", default = "eti") == "hdi")) {
                 f_ci <- get_hdi
             } else {
@@ -301,35 +357,23 @@ tidy.comparisons <- function(x,
         ame <- data.frame()
     }
 
-    if (!"statistic" %in% colnames(ame) && "std.error" %in% colnames(ame)) {
-        ame$statistic <- ame$estimate / ame$std.error
-    }
-
-    if (!"p.value" %in% colnames(ame) && "std.error" %in% colnames(ame)) {
-        ame$p.value <- 2 * (1 - stats::pnorm(abs(ame$statistic)))
-    }
-
-    out <- ame
-
-    # confidence intervals
-    if ("std.error" %in% colnames(out)) {
-        if (!"conf.low" %in% colnames(out)) {
-            alpha <- 1 - conf_level
-            out$conf.low <- out$estimate + stats::qnorm(alpha / 2) * out$std.error
-            out$conf.high <- out$estimate - stats::qnorm(alpha / 2) * out$std.error
-        }
-    }
+    out <- get_ci(
+        ame,
+        overwrite = FALSE,
+        conf_level = conf_level,
+        draws = draws,
+        estimate = "estimate")
 
     # remove terms with precise zero estimates. typically the case in
     # multi-equation models where some terms only affect one response
     out <- out[out$estimate != 0, ]
 
     # back transformation
-    if (!is.null(transform_post)) {
-        if (!is.null(attr(x, "transform_post"))) {
+    if (!is.null(transform_avg)) {
+        if (!is.null(attr(x, "transform_avg"))) {
             warning("Estimates were transformed twice: once during the initial computation, and once more when summarizing the results in `tidy()` or `summary()`.", call. = FALSE)
         }
-        out <- backtransform(out, transform_post)
+        out <- backtransform(out, transform_avg)
     }
 
     # sort and subset columns
@@ -350,7 +394,7 @@ tidy.comparisons <- function(x,
     }
 
     if (exists("J_mean")) {
-        attr(out, "J") <- J_mean
+        attr(out, "jacobian") <- J_mean
     }
 
     return(out)

@@ -27,6 +27,9 @@ sanity_newdata <- function(model, newdata) {
         stop(msg, call. = FALSE)
     }
 
+    # matrix columns are only partially supported
+    matrix_columns <- names(newdata)[sapply(newdata, is.matrix)]
+
     # required for the type of column indexing to follow
     data.table::setDF(newdata)
 
@@ -39,8 +42,16 @@ sanity_newdata <- function(model, newdata) {
     }
 
     # rbindlist breaks on matrix columns
-    idx <- sapply(newdata, function(x) class(x)[1] != "matrix")
-    newdata <- newdata[, idx, drop = FALSE]
+    idx <- sapply(newdata, function(x) class(x)[1] == "matrix")
+    if (any(idx)) {
+        # unpacking matrix columns works with {mgcv} but breaks {mclogit}
+        # Issue #363
+        if (inherits(model, "gam")) {
+            newdata <- unpack_matrix_cols(newdata)
+        } else {
+            newdata <- newdata[, !idx, drop = FALSE]
+        }
+    }
 
     # if there are no categorical variables in `newdata`, check the model terms
     # to find transformation and warn accordingly.
@@ -67,6 +78,8 @@ sanity_newdata <- function(model, newdata) {
     if (!"rowid" %in% colnames(newdata)) {
         newdata$rowid <- seq_len(nrow(newdata))
     }
+
+    attr(newdata, "matrix_columns") <- matrix_columns
 
     return(newdata)
 }

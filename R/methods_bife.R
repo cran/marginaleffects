@@ -1,5 +1,5 @@
 #' @include get_predict.R
-#' @rdname @get_predict
+#' @rdname get_predict
 #' @keywords internal
 #' @export
 get_predict.bife <- function(model,
@@ -9,7 +9,7 @@ get_predict.bife <- function(model,
                              type = "response",
                              ...) {
 
-    type <- sanity_type(model, type)
+    type <- sanitize_type(model, type)
 
     pred <- stats::predict(model,
                            X_new = newdata,

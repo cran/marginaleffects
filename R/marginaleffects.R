@@ -1,36 +1,33 @@
 #' Marginal Effects (Slopes)
 #'
-#' This function calculates marginal effects (slopes) for each row of the
-#' dataset. The resulting object can processed by the `tidy()` or `summary()`
-#' functions, which compute Average Marginal Effects (AME) or Group-Average
-#' Marginal Effects (G-AME). The `datagrid()` function and the `newdata`
-#' argument can be used to calculate Marginal Effects at the Mean (MEM) or
-#' Marginal Effects at User-Specified values (aka Marginal Effects at
-#' Representative values, MER). For more information, see the Details and
-#' Examples sections below, and in the vignettes on the `marginaleffects`
-#' website: <https://vincentarelbundock.github.io/marginaleffects/>
-#' * [Getting Started](https://vincentarelbundock.github.io/marginaleffects/#getting-started)
-#' * [Marginal Effects Vignette](https://vincentarelbundock.github.io/marginaleffects/articles/mfx02_mfx.html)
-#' * [Supported Models](https://vincentarelbundock.github.io/marginaleffects/articles/mfx06_supported_models.html)
-#' * Case Studies
-#'    - [Bayesian analyses with `brms`](https://vincentarelbundock.github.io/marginaleffects/articles/brms.html)
-#'    - [Mixed effects models](https://vincentarelbundock.github.io/marginaleffects/articles/lme4.html)
-#'    - [Generalized Additive Models](https://vincentarelbundock.github.io/marginaleffects/articles/gam.html)
-#'    - [Multinomial Logit and Discrete Choice Models](https://vincentarelbundock.github.io/marginaleffects/articles/mlogit.html)
-#'    - [Tables and plots](https://vincentarelbundock.github.io/marginaleffects/articles/modelsummary.html)
-#'    - [Robust standard errors and more](https://vincentarelbundock.github.io/marginaleffects/articles/sandwich.html)
-#'    - [Transformations and Custom Contrasts: Adjusted Risk Ratio Example](https://vincentarelbundock.github.io/marginaleffects/articles/transformation.html)
+#' Partial derivative (slope) of the regression equation with respect to a
+#' regressor of interest. The `tidy()` and `summary()` functions can be used to
+#' aggregate and summarize the output of `marginaleffects()`. To learn more,
+#' read the marginal effects vignette, visit the package website, or scroll
+#' down this page for a full list of vignettes:
+#' * <https://vincentarelbundock.github.io/marginaleffects/articles/marginaleffects.html>
+#' * <https://vincentarelbundock.github.io/marginaleffects/>
 #'
+#' @section Vignettes and documentation:
+#'
+#' ```{r child = "vignettes/toc.Rmd"}
+#' ```
+#' 
+#' @details
 #' A "marginal effect" is the partial derivative of the regression equation
 #' with respect to a variable in the model. This function uses automatic
 #' differentiation to compute marginal effects for a vast array of models,
 #' including non-linear models with transformations (e.g., polynomials).
 #' Uncertainty estimates are computed using the delta method.
 #'
-#' A detailed vignette on marginal effects and a list of supported models can
-#' be found on the package website:
+#' The `newdata` argument can be used to control the kind of marginal effects to report:
+#' 
+#' * Average Marginal Effects (AME)
+#' * Group-Average Marginal Effects (G-AME)
+#' * Marginal Effects at the Mean (MEM) or
+#' * Marginal Effects at User-Specified values (aka Marginal Effects at Representative values, MER).
 #'
-#' https://vincentarelbundock.github.io/marginaleffects/
+#' See the [marginaleffects vignette for worked-out examples of each kind of marginal effect.](https://vincentarelbundock.github.io/marginaleffects/articles/marginaleffects.html)
 #'
 #' Numerical derivatives for the `marginaleffects` function are calculated
 #' using a simple epsilon difference approach: \eqn{\partial Y / \partial X = (f(X + \varepsilon) - f(X)) / \varepsilon}{dY/dX = (f(X + e) - f(X)) / e},
@@ -41,7 +38,8 @@
 #' practice to try different values of this argument.
 #'
 #' Standard errors for the marginal effects are obtained using the Delta
-#' method. See the "Technical Notes" vignette on the package website for details.
+#' method. See the "Standard Errors" vignette on the package website for
+#' details (link above).
 #'
 #' @param model Model object
 #' @param variables `NULL` or character vector. The subset of variables for which to compute marginal effects.
@@ -73,10 +71,27 @@
 #' type, but will typically be a string such as: "response", "link", "probs",
 #' or "zero". When an unsupported string is entered, the model-specific list of
 #' acceptable values is returned in an error message.
-#' @param eps A numeric value specifying the “step” size to use when
-#' calculating numerical derivatives. See the Details section below. Warning:
-#' the marginal effects computed for certain models can be sensitive to the
-#' choice of step (e.g., Bayesian mixed effects).
+#' @param wts string or numeric: weights to use when computing average
+#' contrasts or marginaleffects. These weights only affect the averaging in
+#' `tidy()` or `summary()`, and not the unit-level estimates themselves.
+#' + string: column name of the weights variable in `newdata`. When supplying a column name to `wts`, it is recommended to supply the original data (including the weights variable) explicitly to `newdata`.
+#' + numeric: vector of length equal to the number of rows in the original data or in `newdata` (if supplied). 
+#' @param hypothesis specify a hypothesis test or custom contrast using a vector, matrix, string, or string formula.
+#' + String:
+#'   - "pairwise": pairwise differences between estimates in each row.
+#'   - "reference": differences between the estimates in each row and the estimate in the first row.
+#' + String formula to specify linear or non-linear hypothesis tests. If the `term` column uniquely identifies rows, terms can be used in the formula. Otherwise, use `b1`, `b2`, etc. to identify the position of each parameter. Examples:
+#'   - `hp = drat`
+#'   - `hp + drat = 12`
+#'   - `b1 + b2 + b3 = 0`
+#' + Numeric vector: Weights to compute a linear combination of (custom contrast between) estimates. Length equal to the number of rows generated by the same function call, but without the `hypothesis` argument.
+#' + Numeric matrix: Each column is a vector of weights, as describe above, used to compute a distinct linear combination of (contrast between) estimates.
+#' + See the Examples section below and the vignette: https://vincentarelbundock.github.io/marginaleffects/articles/hypothesis.html
+#' @param eps NULL or numeric value which determines the step size to use when
+#' calculating numerical derivatives: (f(x+eps)-f(x))/eps. When `eps` is
+#' `NULL`, the step size is step to 0.0001 multiplied by the range of the
+#' variable with respect to which we are taking the derivative. Changing this
+#' value may be necessary to avoid numerical problems in certain models.
 #' @param ... Additional arguments are passed to the `predict()` method
 #' supplied by the modeling package.These arguments are particularly useful
 #' for mixed-effects or bayesian models (see the online vignettes on the
@@ -136,6 +151,36 @@
 #' # Heteroskedasticity robust standard errors
 #' marginaleffects(mod, vcov = sandwich::vcovHC(mod))
 #'
+#' # hypothesis test: is the `hp` marginal effect at the mean equal to the `drat` marginal effect
+#' mod <- lm(mpg ~ wt + drat, data = mtcars)
+#'
+#' marginaleffects(
+#'     mod,
+#'     newdata = "mean",
+#'     hypothesis = "wt = drat")
+#' 
+#' # same hypothesis test using row indices
+#' marginaleffects(
+#'     mod,
+#'     newdata = "mean",
+#'     hypothesis = "b1 - b2 = 0")
+#' 
+#' # same hypothesis test using numeric vector of weights
+#' marginaleffects(
+#'     mod,
+#'     newdata = "mean",
+#'     hypothesis = c(1, -1))
+#' 
+#' # two custom contrasts using a matrix of weights
+#' lc <- matrix(c(
+#'     1, -1,
+#'     2, 3),
+#'     ncol = 2)
+#' marginaleffects(
+#'     mod,
+#'     newdata = "mean",
+#'     hypothesis = lc)
+#' 
 #' @export
 marginaleffects <- function(model,
                             newdata = NULL,
@@ -143,7 +188,9 @@ marginaleffects <- function(model,
                             vcov = TRUE,
                             conf_level = 0.95,
                             type = "response",
-                            eps = 1e-4,
+                            wts = NULL,
+                            hypothesis = NULL,
+                            eps = NULL,
                             ...) {
 
 
@@ -165,6 +212,16 @@ marginaleffects <- function(model,
                 newdata <- eval.parent(as.call(lcall))
             }
         }
+
+    } else {
+        if (is.null(newdata) && !is.null(hypothesis)) {
+            newdata <- "mean"
+            msg <- format_msg(
+            'The `hypothesis` argument of the `marginaleffects()` function must be used in
+            conjunction with the `newdata` argument. `newdata` was switched from NULL to
+            "mean" automatically.')
+            warning(msg, call. = FALSE)
+        }
     }
 
     # modelbased::visualisation_matrix attaches useful info for plotting
@@ -174,23 +231,40 @@ marginaleffects <- function(model,
     attributes_newdata <- attributes_newdata[idx]
 
     # sanity checks and pre-processing
-    model <- sanitize_model(model = model, newdata = newdata, calling_function = "marginaleffects", ...)
+    model <- sanitize_model(model = model, newdata = newdata, wts = wts, calling_function = "marginaleffects", ...)
     sanity_dots(model = model, calling_function = "marginaleffects", ...)
-    sanity_type(model = model, type = type, calling_function = "marginaleffects")
+    sanitize_type(model = model, type = type, calling_function = "marginaleffects")
     conf_level <- sanitize_conf_level(conf_level, ...)
     newdata <- sanity_newdata(model, newdata)
-    variables <- sanitize_variables(model, newdata, variables)
+    variables_list <- sanitize_variables(model, newdata, variables)
+    eps <- sanitize_eps(eps = eps, model = model, variables = variables_list)
+
+    # matrix columns not supported
+    matrix_columns <- attr(newdata, "matrix_columns")
+    if (any(matrix_columns %in% c(names(variables), variables))) {
+        msg <- "Matrix columns are not supported by the `variables` argument."
+        stop(msg, call. = FALSE)
+    }
+
+    # weights
+    sanity_wts(wts, newdata) # after sanity_newdata
+    if (!is.null(wts) && !isTRUE(checkmate::check_string(wts))) {
+        newdata[["marginaleffects_wts"]] <- wts
+        wts <- "marginaleffects_wts"
+    }
 
     # variables is a list but we need a vector (and we drop cluster)
-    variables_vec <- unique(unlist(variables))
+    variables_vec <- unique(unlist(variables_list))
     # this won't be triggered for multivariate outcomes in `brms`, which
     # produces a list of lists where top level names correspond to names of the
     # outcomes. There should be a more robust way to handle those, but it seems
     # to work for now.
-    if ("conditional" %in% names(variables)) {
+    if ("conditional" %in% names(variables_list)) {
         # unlist() needed for sampleSelection objects, which nest "outcome" and "selection" variables
-        variables_vec <- intersect(variables_vec, unlist(variables[["conditional"]]))
+        variables_vec <- intersect(variables_vec, unlist(variables_list[["conditional"]]))
     }
+
+    variables_vec <- setdiff(variables_vec, matrix_columns)
 
     out <- comparisons(
         model,
@@ -199,6 +273,8 @@ marginaleffects <- function(model,
         vcov = vcov,
         conf_level = conf_level,
         type = type,
+        wts = wts,
+        hypothesis = hypothesis,
         eps = eps,
         # hard-coded. Users should use comparisons() for more flexibility
         transform_pre = "difference",
@@ -221,7 +297,7 @@ marginaleffects <- function(model,
     attributes_comparisons <- attributes_comparisons[idx]
 
     # clean columns
-    stubcols <- c("rowid", "type", "group", "term", "contrast", "dydx", "std.error", "statistic", "p.value", "conf.low", "conf.high",
+    stubcols <- c("rowid", "type", "group", "term", "contrast", "hypothesis", "dydx", "std.error", "statistic", "p.value", "conf.low", "conf.high",
                   sort(grep("^predicted", colnames(newdata), value = TRUE)))
     cols <- intersect(stubcols, colnames(out))
     cols <- unique(c(cols, colnames(out)))
@@ -267,3 +343,4 @@ marginaleffects <- function(model,
 #' @keywords internal
 #' @export
 meffects <- marginaleffects
+

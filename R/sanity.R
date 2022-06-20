@@ -13,6 +13,21 @@ check_dependency <- function(library_name) {
 assert_dependency <- checkmate::makeAssertionFunction(check_dependency)
 
 
+sanity_wts <- function(wts, newdata) {
+    # weights must be available in the `comparisons()` function, NOT in
+    # `tidy()`, because comparisons will often duplicate newdata for
+    # multivariate outcomes and the like. We need to track which row matches
+    # which.
+    if (!is.null(wts)) {
+        flag1 <- isTRUE(checkmate::check_string(wts)) && isTRUE(wts %in% colnames(newdata))
+        flag2 <- isTRUE(checkmate::check_numeric(wts, len = nrow(newdata)))
+        if (!flag1 && !flag2) {
+            msg <- sprintf("The `wts` argument must be a numeric vector of length %s, or a string which matches a column name in `newdata`. If you did not supply a `newdata` explicitly, `marginaleffects` extracted it automatically from the model object, and the `wts` variable may not have been available. The easiest strategy is often to supply a data frame such as the original data to `newdata` explicitly, and to make sure that it includes an appropriate column of weights, identified by the `wts` argument.",
+                           nrow(newdata))
+            stop(msg, call. = FALSE)
+        }
+    }
+}
 
 sanity_predict_vector <- function(pred, model, newdata, type) {
     if (!isTRUE(checkmate::check_atomic_vector(pred)) &&
@@ -54,29 +69,6 @@ sanity_contrast_factor <- function(contrast_factor, assertion = TRUE) {
         stop('Contrasts for factor or character variables can be: "reference", "sequential", "pairwise", or "all".', call. = FALSE)
     } else {
         return(flag)
-    }
-}
-
-
-sanitize_interaction <- function(interaction, variables, model) {
-    # interaction: flip NULL to TRUE if there are interactions in the formula and FALSE otherwise
-
-    checkmate::assert_flag(interaction, null.ok = TRUE)
-
-    if (isTRUE(interaction) && is.null(variables)) {
-        msg <- "When `interaction=TRUE` you must use the `variables` argument to specify which variables should be interacted."
-        stop(msg, call. = TRUE)
-    }
-
-    if (isTRUE(checkmate::check_flag(interaction))) {
-        return(interaction)
-    }
-
-    inter <- try(insight::find_interactions(model, flatten = TRUE), silent = TRUE)
-    if (!is.null(variables) && isTRUE(length(inter) > 0)) {
-        return(TRUE)
-    } else {
-        return(FALSE)
     }
 }
 

@@ -1,3 +1,41 @@
+# marginaleffects 0.6.0
+
+New supported packages and models:
+
+* `tidymodels` objects of class `tidy_model` are supported if the fit engine is supported by `marginaleffects`.
+
+New function:
+
+* `deltamethod()`: Hypothesis tests on functions of parameters
+* `plot_cco()`: Plot conditional contrasts
+
+New arguments:
+
+* `hypothesis` for hypothesis tests and custom contrasts
+* `transform_post` in `predictions()`
+* `wts` argument in `predictions()` only affects average predictions in `tidy()` or `summary()`.
+
+New or improved vignettes:
+
+* Hypothesis Tests and Custom Contrasts using the Delta Method: https://vincentarelbundock.github.io/marginaleffects/articles/hypothesis.html
+* Multiple Imputation: https://vincentarelbundock.github.io/marginaleffects/articles/multiple_imputation.html
+* Causal Inference with the g-Formula: https://vincentarelbundock.github.io/marginaleffects/articles/gformula.html
+ (Thanks to Rohan Kapre for the idea)
+
+Deprecated or renamed arguments:
+
+* `contrast_factor` and `contrast_numeric` arguments are deprecated in `comparisons()`. Use a named list in the `variables` argument instead. Backward compatibility is maintained.
+* The `transform_post` argument in `tidy()` and `summary()` is renamed to `transform_avg` to disambiguate against the argument of the same name in `comparisons()`. Backward compatibility is preserved.
+
+Misc:
+
+* `tidy.predictions()` computes standard errors using the delta method for average predictions
+* Support `gam` models with matrix columns.
+* `eps` in `marginaleffects()` is now "adaptive" by default: it equals 0.0001 multiplied the range of the predictor variable
+* `comparisons()` now supports "log of marginal odds ratio" in the `transform_pre` argument. Thanks to Noah Greifer.
+* New `transform_pre` shortcuts: dydx, expdydx
+* `tidy.predictions()` computes standard errors and confidence intervals for linear models or GLM on the link scale.
+
 # marginaleffects 0.5.0
 
 Breaking changes:

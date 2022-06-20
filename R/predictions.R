@@ -1,29 +1,32 @@
 #' Adjusted Predictions
+#' Outcome predicted by a fitted model on a specified scale for a given
+#' combination of values of the predictor variables, such as their observed
+#' values, their means, or factor levels (a.k.a. "reference grid"). The
+#' `tidy()` and `summary()` functions can be used to aggregate the output of
+#' `predictions()`. To learn more, read the predictions vignette, visit the
+#' package website, or scroll down this page for a full list of vignettes:
+#' * <https://vincentarelbundock.github.io/marginaleffects/articles/predictions.html>
+#' * <https://vincentarelbundock.github.io/marginaleffects/>
 #'
-#' Calculate adjusted predictions for each row of the dataset. The `datagrid()`
-#' function and the `newdata` argument can be used to calculate Average
-#' Adjusted Predictions (AAP), Average Predictions at the Mean (APM), or
-#' Predictions at User-Specified Values of the regressors (aka Adjusted
-#' Predictions at Representative values, APR). For more information, see the
-#' Details and Examples sections below, and in the vignettes on the
-#' `marginaleffects` website: <https://vincentarelbundock.github.io/marginaleffects/>
-#' * [Getting Started](https://vincentarelbundock.github.io/marginaleffects/#getting-started)
-#' * [Predictions Vignette](https://vincentarelbundock.github.io/marginaleffects/articles/mfx01_predictions.html)
-#' * [Supported Models](https://vincentarelbundock.github.io/marginaleffects/articles/mfx06_supported_models.html)
+#' @section Vignettes and documentation:
 #'
-#' An "adjusted prediction" is the outcome predicted by a model for some
-#' combination of the regressors' values, such as their observed values, their
-#' means, or factor levels (a.k.a. “reference grid”). 
-
-#' When possible, this function uses the delta method to compute the standard
-#' error associated with the adjusted predictions.
+#' ```{r child = "vignettes/toc.Rmd"}
+#' ```
 #'
-#' A detailed vignette on adjusted predictions is published on the package
-#' website:
+#' @details
+#' The `newdata` argument, the `tidy()` function, and `datagrid()` function can be used to control the kind of predictions to report:
+#' 
+#' * Average Predictions
+#' * Predictions at the Mean
+#' * Predictions at User-Specified values (aka Predictions at Representative values).
 #'
-#' https://vincentarelbundock.github.io/marginaleffects/
-
-#' Compute model-adjusted predictions (fitted values) for a "grid" of regressor values.
+#' When possible, `predictions()` delegates the computation of confidence
+#' intervals to the `insight::get_predicted()` function, which uses back
+#' transformation to produce adequate confidence intervals on the scale
+#' specified by the `type` argument. When this is not possible, `predictions()`
+#' uses the Delta Method to compute standard errors around adjusted
+#' predictions.
+#'
 #' @inheritParams marginaleffects
 #' @param model Model object
 #' @param variables Character vector. Compute Adjusted Predictions for
@@ -36,6 +39,7 @@
 #'       - `newdata = datagrid()`: contrast at the mean
 #'       - `newdata = datagrid(cyl = c(4, 6))`: `cyl` variable equal to 4 and 6 and other regressors fixed at their means or modes.
 #'       - See the Examples section and the [datagrid()] documentation for more.
+#' @param transform_post (experimental) A function applied to unit-level adjusted predictions and confidence intervals just before the function returns results. For bayesian models, this function is applied to individual draws from the posterior distribution, before computing summaries.
 #'
 #' @template model_specific_arguments
 #'
@@ -69,6 +73,37 @@
 #'
 #' # Conditional Adjusted Predictions
 #' plot_cap(mod, condition = "hp")
+#'
+#' # hypothesis test: is the prediction in the 1st row equal to the prediction in the 2nd row
+#' mod <- lm(mpg ~ wt + drat, data = mtcars)
+#' 
+#' predictions(
+#'     mod,
+#'     newdata = datagrid(wt = 2:3),
+#'     hypothesis = "b1 = b2")
+#' 
+#' # same hypothesis test using row indices
+#' predictions(
+#'     mod,
+#'     newdata = datagrid(wt = 2:3),
+#'     hypothesis = "b1 - b2 = 0")
+#' 
+#' # same hypothesis test using numeric vector of weights
+#' predictions(
+#'     mod,
+#'     newdata = datagrid(wt = 2:3),
+#'     hypothesis = c(1, -1))
+#' 
+#' # two custom contrasts using a matrix of weights
+#' lc <- matrix(c(
+#'     1, -1,
+#'     2, 3),
+#'     ncol = 2)
+#' predictions(
+#'     mod,
+#'     newdata = datagrid(wt = 2:3),
+#'     hypothesis = lc)
+#' 
 #' @export
 predictions <- function(model,
                         newdata = NULL,
@@ -76,6 +111,9 @@ predictions <- function(model,
                         vcov = TRUE,
                         conf_level = 0.95,
                         type = "response",
+                        wts = NULL,
+                        transform_post = NULL,
+                        hypothesis = NULL,
                         ...) {
 
 
@@ -102,8 +140,10 @@ predictions <- function(model,
     # model <- sanitize_model(model)
 
     # input sanity checks
+    checkmate::assert_function(transform_post, null.ok = TRUE)
     sanity_dots(model = model, ...)
     sanity_model_specific(model = model, newdata = newdata, vcov = vcov, calling_function = "predictions", ...)
+    hypothesis <- sanitize_hypothesis(hypothesis, ...)
     conf_level <- sanitize_conf_level(conf_level, ...)
     levels_character <- attr(variables, "levels_character")
 
@@ -136,6 +176,14 @@ predictions <- function(model,
         variables <- sanitize_variables(model, newdata, variables)
     }
 
+    # weights
+    sanity_wts(wts, newdata) # after sanity_newdata
+    if (!is.null(wts) && isTRUE(checkmate::check_string(wts))) {
+        newdata[["marginaleffects_wts_internal"]] <- newdata[[wts]]
+    } else {
+        newdata[["marginaleffects_wts_internal"]] <- wts
+    }
+
     # trust newdata$rowid
     if (!"rowid" %in% colnames(newdata)) {
         newdata[["rowid"]] <- seq_len(nrow(newdata))
@@ -160,33 +208,68 @@ predictions <- function(model,
     }
 
     # predictions
-    tmp <- myTryCatch(get_predict(
+    # the default get_predict() method tries to get confidence intervals using
+    # `insight::get_predicted`. That function does not preserve J, which we
+    # need for average adjusted predictions. So we take fast predictions and
+    # handle SE internally for known models.
+    flag <- isTRUE(class(model)[1] == "lm") ||
+            (isTRUE(class(model)[1] == "glm") && isTRUE(type == "link"))
+
+    if (isTRUE(flag)) {
+        vcov_tmp <- FALSE
+        # get_modelmatrix() sometimes breaks when there is no outcome in `data`
+        resp <- insight::find_response(model)
+        if (!resp %in% colnames(newdata)) {
+            newdata[[resp]] <- 0
+        }
+        J <- insight::get_modelmatrix(model, data = newdata)
+    } else {
+        vcov_tmp <- vcov
+        J <- NULL
+    }
+                        
+    tmp <- myTryCatch(get_predictions(
         model,
         newdata = newdata,
-        vcov = vcov,
+        vcov = vcov_tmp,
         conf_level = conf_level,
         type = type,
+        hypothesis = hypothesis,
         ...))
 
     if (isTRUE(grepl("type.*models", tmp[["error"]]))) {
         stop(tmp$error$message, call. = FALSE)
+
     } else if (!inherits(tmp[["value"]], "data.frame")) {
+        if (isTRUE(grepl("row indices", tmp$error$message))) stop(tmp$error$message, call. = FALSE)
         if (!is.null(tmp$warning)) warning(tmp$warning$message, call. = FALSE)
         if (!is.null(tmp$error)) warning(tmp$error$message, call. = FALSE)
-        msg <- sprintf("Unable to compute adjusted predictions for model of class `%s`. You can try specifying a different value for the `newdata` argument. If this does not work and you believe that this model class should be supported by `marginaleffects`, please file a feature request on the Github issue tracker: https://github.com/vincentarelbundock/marginaleffects/issues", 
-                       class(model)[1])
+        msg <- format_msg(
+            "Unable to compute adjusted predictions for model of class `%s`. You can try to
+            specify a different value for the `newdata` argument. If this does not work and
+            you believe that this model class should be supported by `marginaleffects`,
+            please file a feature request on the Github issue tracker:
+
+            https://github.com/vincentarelbundock/marginaleffects/issues")
+        msg <- sprintf(msg, class(model)[1])
         stop(msg, call. = FALSE)
+
     } else if (inherits(tmp[["warning"]], "warning") &&
                isTRUE(grepl("vcov.*supported", tmp)) &&
                !is.null(vcov) &&
                !isFALSE(vcov)) {
-        msg <- sprintf("The object passed to the `vcov` argument is of class `%s`, which is not supported for models of class `%s`. Please set `vcov` to `TRUE`, `FALSE`, `NULL`, or supply a variance-covariance `matrix` object.",
-                       class(model)[1])
+        msg <- format_msg(
+            "The object passed to the `vcov` argument is of class `%s`, which is not
+            supported for models of class `%s`. Please set `vcov` to `TRUE`, `FALSE`,
+            `NULL`, or supply a variance-covariance `matrix` object.")
+        msg <- sprintf(msg, class(model)[1])
         stop(msg, call. = FALSE)
+
     } else if (inherits(tmp[["warning"]], "warning")) {
         msg <- tmp$warning$message
         warning(msg, call. = FALSE)
         tmp <- tmp[["value"]]
+
     } else {
         tmp <- tmp[["value"]]
     }
@@ -214,37 +297,51 @@ predictions <- function(model,
 
     # bayesian posterior draws
     draws <- attr(tmp, "posterior_draws")
+    if (!is.null(transform_post)) {
+        draws <- transform_post(draws)
+    }
 
-    # try to extract standard errors via the delta method if missing
-    if (!isFALSE(vcov) &&
-        !"std.error" %in% colnames(tmp) &&
-        is.null(draws)) {
+    V <- NULL
+    if (!isFALSE(vcov)) {
 
         V <- get_vcov(model, vcov = vcov)
-        if (isTRUE(checkmate::check_matrix(V))) {
-            # vcov = FALSE to speed things up
-            fun <- function(...) get_predict(vcov = FALSE, ...)[["predicted"]]
-            se <- standard_errors_delta(model,
-                                        newdata = newdata,
-                                        vcov = V,
-                                        type = type,
-                                        FUN = fun,
-                                        eps = 1e-4, # avoid pushing through ...
-                                        ...)
-            if (is.numeric(se) && length(se) == nrow(tmp)) {
-                tmp[["std.error"]] <- se
-                flag <- tryCatch(insight::model_info(model)$is_linear,
-                                 error = function(e) FALSE)
-                if (isTRUE(flag) &&
-                    is.numeric(conf_level) &&
-                    # sometimes get_predicted fails on SE but succeeds on CI (e.g., betareg)
-                    !"conf.low" %in% colnames(tmp)) {
-                    critical_z <- abs(stats::qnorm((1 - conf_level) / 2))
-                    tmp[["conf.low"]] <- tmp[["predicted"]] - critical_z * tmp[["std.error"]]
-                    tmp[["conf.high"]] <- tmp[["predicted"]] + critical_z * tmp[["std.error"]]
+
+        # Delta method
+        if (!"std.error" %in% colnames(tmp) && is.null(draws)) {
+            if (isTRUE(checkmate::check_matrix(V))) {
+                # vcov = FALSE to speed things up
+                fun <- function(...) get_predictions(vcov = FALSE, ...)$predicted
+                se <- get_se_delta(
+                    model,
+                    newdata = newdata,
+                    vcov = V,
+                    type = type,
+                    FUN = fun,
+                    J = J,
+                    eps = 1e-4, # avoid pushing through ...
+                    hypothesis = hypothesis,
+                    ...)
+                if (is.numeric(se) && length(se) == nrow(tmp)) {
+                    tmp[["std.error"]] <- se
                 }
             }
         }
+
+        # Manual confidence intervals only in linear or Bayesian models
+        # others rely on `insight::get_predicted()`
+        linpred <- tryCatch(
+            insight::model_info(model)$is_linear || type == "link",
+            error = function(e) FALSE)
+        if (!is.null(draws) || isTRUE(linpred)) {
+            tmp <- get_ci(
+                tmp,
+                conf_level = conf_level,
+                # sometimes insight::get_predicted fails on SE but succeeds on CI (e.g., betareg)
+                overwrite = FALSE,
+                draws = draws,
+                estimate = "predicted")
+        }
+
     }
 
     out <- data.table(tmp)
@@ -258,14 +355,27 @@ predictions <- function(model,
 
     # return data
     # very import to avoid sorting, otherwise bayesian draws won't fit predictions
-    out <- merge(out, newdata, by = "rowid", sort = FALSE)
+    # merge only with rowid; not available for hypothesis
+    if ("rowid" %in% colnames(out)) {
+        out <- merge(out, newdata, by = "rowid", sort = FALSE)
+    }
 
     setDF(out)
 
+    # save as attribute and not column
+    marginaleffects_wts_internal <- out[["marginaleffects_wts_internal"]]
+    out[["marginaleffects_wts_internal"]] <- NULL
+
+    # transform already applied to bayesian draws before computing confidence interval
+    if (is.null(draws) && !is.null(transform_post)) {
+        out <- backtransform(out, transform_post = transform_post)
+    }
 
     # clean columns
-    stubcols <- c("rowid", "type", "term", "group", "predicted", "std.error", "statistic", "p.value", "conf.low", "conf.high",
-                  sort(grep("^predicted", colnames(newdata), value = TRUE)))
+    stubcols <- c(
+        "rowid", "type", "term", "group", "hypothesis", "predicted", "std.error",
+        "statistic", "p.value", "conf.low", "conf.high", "marginaleffects_wts",
+        sort(grep("^predicted", colnames(newdata), value = TRUE)))
     cols <- intersect(stubcols, colnames(out))
     cols <- unique(c(cols, colnames(out)))
     out <- out[, cols, drop = FALSE]
@@ -276,32 +386,30 @@ predictions <- function(model,
     attr(out, "model_type") <- class(model)[1]
     attr(out, "variables") <- variables
     attr(out, "vcov.type") <- get_vcov_label(vcov)
+    attr(out, "jacobian") <- J
+    attr(out, "vcov") <- V
+    attr(out, "posterior_draws") <- draws
+    attr(out, "newdata") <- newdata
+    attr(out, "weights") <- marginaleffects_wts_internal
 
     # modelbased::visualisation_matrix attaches useful info for plotting
     for (a in names(attributes_newdata)) {
         attr(out, paste0("newdata_", a)) <- attributes_newdata[[a]]
     }
 
-    # bayesian: store draws posterior density draws
-    attr(out, "posterior_draws") <- draws
-    if (!is.null(draws)) {
-        flag <- getOption("marginaleffects_credible_interval", default = "eti")
-        if (isTRUE(flag == "hdi")) {
-            tmp <- apply(draws, 1, get_hdi, credMass = conf_level)
-        } else {
-            tmp <- apply(draws, 1, get_eti, credMass = conf_level)
-        }
-        out[["predicted"]] <- apply(draws, 1, stats::median)
-        out[["std.error"]] <- NULL
-        out[["conf.low"]] <- tmp[1, ]
-        out[["conf.high"]] <- tmp[2, ]
-        attr(out, "posterior_draws") <- draws
-    }
-
-
     if ("group" %in% names(out) && all(out$group == "main_marginaleffect")) {
         out$group <- NULL
     }
 
+    return(out)
+}
+
+ 
+# wrapper used only for standard_error_delta
+get_predictions <- function(..., hypothesis = NULL) {
+    out <- get_predict(...)
+    if (!is.null(hypothesis)) {
+        out <- get_hypothesis(out, hypothesis, column = "predicted")
+    }
     return(out)
 }
