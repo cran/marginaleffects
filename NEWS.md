@@ -1,3 +1,37 @@
+# marginaleffects 0.7.0
+
+Breaking changes:
+
+* `by` is deprecated in `summary()` and `tidy()`. Use the same `by` argument in the main functions instead: `comparisons()`, `marginaleffects()`, `predictions()`
+* Character vectors are no longer supported in the `variables` argument of the `predictions()` function. Use `newdata="fivenum"` or "grid", "mean", or "median" instead.
+
+Critical bug fix:
+
+* Contrasts with interactions were incorrect in version 0.6.0. The error should have been obvious to most analysts in most cases (weird-looking alignment). Thanks to @vmikk. 
+
+New supported packages and models:
+
+* `survival::clogit`
+* `biglm`: The main quantities can be computed, but not the delta method standard errors. See https://github.com/vincentarelbundock/marginaleffects/issues/387
+
+New vignette:
+
+* Elasticity
+* Frequently Asked Questions
+
+New features:
+
+* Elasticity and semi-elasticity using the new `slope` argument in `marginaleffects()`: eyex, dyex, eydx
+* `datagrid()` accepts functions: `datagrid(newdata = mtcars, hp = range, mpg = fivenum, wt = sd)`
+* New `datagridcf()` function to create counterfactual datasets. This is a shortcut to the `datagrid()` function with default to `grid_type = "counterfactual"`
+* New `by` arguments in `predictions()`, `comparisons()`, `marginaleffects()`
+* New `newdata` shortcuts: "tukey", "grid"
+* New string shortcuts for `transform_pre` in `comparisons()`
+* `marginalmeans()` now back transforms confidence intervals when possible.
+* `vcov` argument string shortcuts are now case-insensitive
+* The default contrast in `comparisons()` for binary predictors is now a difference between 1 and 0, rather than +1 relative to baseline.
+* documentation improvements
+
 # marginaleffects 0.6.0
 
 New supported packages and models:

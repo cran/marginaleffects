@@ -24,7 +24,8 @@ plot_cco(
 
 \item{condition}{String or vector of two strings. The first is a variable
 name to be displayed on the x-axis. The second is a variable whose values
-will be displayed in different colors.}
+will be displayed in different colors. Other numeric variables are held at
+their means. Other categorical variables are held at their modes.}
 
 \item{type}{string indicates the type (scale) of the predictions used to
 compute marginal effects or contrasts. This can differ based on the model
@@ -40,6 +41,7 @@ acceptable values is returned in an error message.}
 \itemize{
 \item Heteroskedasticity-consistent: \code{"HC"}, \code{"HC0"}, \code{"HC1"}, \code{"HC2"}, \code{"HC3"}, \code{"HC4"}, \code{"HC4m"}, \code{"HC5"}. See \code{?sandwich::vcovHC}
 \item Heteroskedasticity and autocorrelation consistent: \code{"HAC"}
+\item Mixed-Models degrees of freedom: "satterthwaite", "kenward-roger"
 \item Other: \code{"NeweyWest"}, \code{"KernHAC"}, \code{"OPG"}. See the \code{sandwich} package documentation.
 }
 \item One-sided formula which indicates the name of cluster variables (e.g., \code{~unit_id}). This formula is passed to the \code{cluster} argument of the \code{sandwich::vcovCL} function.
@@ -49,22 +51,17 @@ acceptable values is returned in an error message.}
 
 \item{conf_level}{numeric value between 0 and 1. Confidence level to use to build a confidence interval.}
 
-\item{transform_pre}{(experimental) string or function. How should pairs of adjusted predictions be contrasted?
+\item{transform_pre}{string or function. How should pairs of adjusted predictions be contrasted?
 \itemize{
 \item string: shortcuts to common contrast functions.
 \itemize{
-\item "difference" (default): \code{function(hi, lo) hi - lo}
-\item "differenceavg": \code{function(hi, lo) mean(hi) - mean(lo)}
-\item "ratio": \code{function(hi, lo) hi / lo}
-\item "lnratio": \code{function(hi, lo) log(hi / lo)}
-\item "ratioavg": \code{function(hi, lo) mean(hi) / mean(lo)}
-\item "lnratioavg": \code{function(hi, lo) log(mean(hi) / mean(lo))}
-\item "lnoravg": \code{function(hi, lo) log((mean(hi)/(1 - mean(hi))) / (mean(lo)/(1 - mean(lo))))}
-\item "dydx": \code{function(hi, lo) (hi - lo) / eps}
-\item "dydx": `function(hi, lo) mean((hi - lo) / eps)'
-\item "expdydx": \code{function(hi, lo) ((exp(hi) - exp(lo)) / exp(e)) / e}
+\item Supported shortcuts strings: difference, differenceavg, dydx, eyex, eydx, dyex, dydxavg, eyexavg, eydxavg, dyexavg, ratio, ratioavg, lnratio, lnratioavg, lnor, lnoravg, expdydx, expdydxavg
+\item See the Transformations section below for definitions of each transformation.
 }
 \item function: accept two equal-length numeric vectors of adjusted predictions (\code{hi} and \code{lo}) and returns a vector of contrasts of the same length, or a unique numeric value.
+\itemize{
+\item See the Transformations section below for examples of valid functions.
+}
 }}
 
 \item{transform_post}{(experimental) A function applied to unit-level estimates and confidence intervals just before the function returns results.}

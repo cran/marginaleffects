@@ -2,17 +2,7 @@
 % Please edit documentation in R/predictions.R
 \name{predictions}
 \alias{predictions}
-\title{Adjusted Predictions
-Outcome predicted by a fitted model on a specified scale for a given
-combination of values of the predictor variables, such as their observed
-values, their means, or factor levels (a.k.a. "reference grid"). The
-\code{tidy()} and \code{summary()} functions can be used to aggregate the output of
-\code{predictions()}. To learn more, read the predictions vignette, visit the
-package website, or scroll down this page for a full list of vignettes:
-\itemize{
-\item \url{https://vincentarelbundock.github.io/marginaleffects/articles/predictions.html}
-\item \url{https://vincentarelbundock.github.io/marginaleffects/}
-}}
+\title{Adjusted Predictions}
 \usage{
 predictions(
   model,
@@ -21,6 +11,7 @@ predictions(
   vcov = TRUE,
   conf_level = 0.95,
   type = "response",
+  by = NULL,
   wts = NULL,
   transform_post = NULL,
   hypothesis = NULL,
@@ -33,6 +24,15 @@ predictions(
 \item{newdata}{A data frame over which to compute quantities of interest.
 \itemize{
 \item \code{NULL}: adjusted predictions for each observed value in the original dataset.
+}
+\itemize{
+\item "mean": Marginal Effects at the Mean. Marginal effects when each predictor is held at its mean or mode.
+\item "median": Marginal Effects at the Median. Marginal effects when each predictor is held at its median or mode.
+\item "marginalmeans": Marginal Effects at Marginal Means. See Details section below.
+\item "tukey": Marginal Effects at Tukey's 5 numbers.
+\item "grid": Marginal Effects on a grid of representative numbers (Tukey's 5 numbers and unique values of categorical predictors).
+}
+\itemize{
 \item The \code{\link[=datagrid]{datagrid()}} function can be used to specify a custom grid of regressors. For example:
 \itemize{
 \item \code{newdata = datagrid()}: contrast at the mean
@@ -41,10 +41,11 @@ predictions(
 }
 }}
 
-\item{variables}{Character vector. Compute Adjusted Predictions for
-combinations of each of these variables. Factor levels are considered at
-each of their levels. Numeric variables variables are considered at Tukey's
-Five-Number Summaries. \code{NULL} uses the original data used to fit the model.}
+\item{variables}{Named list of variables with values to create a
+counterfactual grid of predictions. The entire dataset replicated
+for each unique combination of the variables in this list. See the Examples
+section below. Warning: This can use a lot of memory if there are many
+variables and values, and when the dataset is large.}
 
 \item{vcov}{Type of uncertainty estimates to report (e.g., for robust standard errors). Acceptable values:
 \itemize{
@@ -54,6 +55,7 @@ Five-Number Summaries. \code{NULL} uses the original data used to fit the model.
 \itemize{
 \item Heteroskedasticity-consistent: \code{"HC"}, \code{"HC0"}, \code{"HC1"}, \code{"HC2"}, \code{"HC3"}, \code{"HC4"}, \code{"HC4m"}, \code{"HC5"}. See \code{?sandwich::vcovHC}
 \item Heteroskedasticity and autocorrelation consistent: \code{"HAC"}
+\item Mixed-Models degrees of freedom: "satterthwaite", "kenward-roger"
 \item Other: \code{"NeweyWest"}, \code{"KernHAC"}, \code{"OPG"}. See the \code{sandwich} package documentation.
 }
 \item One-sided formula which indicates the name of cluster variables (e.g., \code{~unit_id}). This formula is passed to the \code{cluster} argument of the \code{sandwich::vcovCL} function.
@@ -68,6 +70,8 @@ compute marginal effects or contrasts. This can differ based on the model
 type, but will typically be a string such as: "response", "link", "probs",
 or "zero". When an unsupported string is entered, the model-specific list of
 acceptable values is returned in an error message.}
+
+\item{by}{Character vector of variable names over which to compute group-wise estimates.}
 
 \item{wts}{string or numeric: weights to use when computing average
 contrasts or marginaleffects. These weights only affect the averaging in
@@ -119,7 +123,6 @@ A \code{data.frame} with one row per observation and several columns:
 }
 }
 \description{
-Adjusted Predictions
 Outcome predicted by a fitted model on a specified scale for a given
 combination of values of the predictor variables, such as their observed
 values, their means, or factor levels (a.k.a. "reference grid"). The
@@ -162,6 +165,7 @@ Case studies:
 \itemize{
 \item \href{https://vincentarelbundock.github.io/marginaleffects/articles/brms.html}{Bayesian Analyses with \code{brms}}
 \item \href{https://vincentarelbundock.github.io/marginaleffects/articles/gformula.html}{Causal Inference with the g-Formula}
+\item \href{https://vincentarelbundock.github.io/marginaleffects/articles/elasticity.html}{Elasticity}
 \item \href{https://vincentarelbundock.github.io/marginaleffects/articles/gam.html}{Generalized Additive Models}
 \item \href{https://vincentarelbundock.github.io/marginaleffects/articles/lme4.html}{Mixed effects models}
 \item \href{https://vincentarelbundock.github.io/marginaleffects/articles/mlogit.html}{Multinomial Logit and Discrete Choice Models}
@@ -170,12 +174,13 @@ Case studies:
 
 Tips and technical notes:
 \itemize{
-\item \href{https://vincentarelbundock.github.io/marginaleffects/articles/supported_models.html}{64 Supported Classes of Models}
+\item \href{https://vincentarelbundock.github.io/marginaleffects/articles/supported_models.html}{68 Supported Classes of Models}
 \item \href{https://vincentarelbundock.github.io/marginaleffects/reference/index.html}{Index of Functions and Documentation}
 \item \href{https://vincentarelbundock.github.io/marginaleffects/articles/sandwich.html}{Standard Errors}
 \item \href{https://vincentarelbundock.github.io/marginaleffects/articles/modelsummary.html}{Tables and Plots}
 \item \href{https://vincentarelbundock.github.io/marginaleffects/articles/performance.html}{Performance}
 \item \href{https://vincentarelbundock.github.io/marginaleffects/articles/alternative_software.html}{Alternative Software}
+\item \href{https://vincentarelbundock.github.io/marginaleffects/articles/faq.html}{Frequently Asked Questions}
 }
 }
 
@@ -221,6 +226,20 @@ predictions(mod, newdata = datagrid(am = 0:1, grid_type = "counterfactual")) \%>
 
 # Conditional Adjusted Predictions
 plot_cap(mod, condition = "hp")
+
+# Counterfactual predictions with the `variables` argument
+# the `mtcars` dataset has 32 rows
+
+mod <- lm(mpg ~ hp + am, data = mtcars)
+p <- predictions(mod)
+head(p)
+nrow(p)
+
+# counterfactual predictions obtained by replicating the entire for different
+# values of the predictors
+p <- predictions(mod, variables = list(hp = c(90, 110)))
+nrow(p)
+
 
 # hypothesis test: is the prediction in the 1st row equal to the prediction in the 2nd row
 mod <- lm(mpg ~ wt + drat, data = mtcars)

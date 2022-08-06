@@ -107,7 +107,20 @@ marginalmeans <- function(model,
                           by = NULL,
                           ...) {
 
-    newdata <- insight::get_data(model)
+    # backtransform if possible
+    linv <- tryCatch(
+        insight::link_inverse(model),
+        error = function(e) NULL)
+    if (identical(type, "response") &&
+        is.null(transform_post) &&
+        class(model)[1] %in% type_dictionary$class &&
+        isTRUE("link" %in% subset(type_dictionary, class == class(model)[1])$base) &&
+        is.function(linv)) {
+        type <- "link"
+        transform_post <- linv
+    }
+
+    newdata <- hush(insight::get_data(model))
 
     checkmate::assert_character(by, null.ok = TRUE)
     checkmate::assert_function(transform_post, null.ok = TRUE)
@@ -238,6 +251,7 @@ marginalmeans <- function(model,
             out,
             conf_level = conf_level,
             df = NULL,
+            vcov = vcov,
             overwrite = FALSE,
             estimate = "marginalmean")
     }

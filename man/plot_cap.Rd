@@ -20,7 +20,9 @@ plot_cap(
 
 \item{condition}{String or vector of two strings. The first is a variable
 name to be displayed on the x-axis. The second is a variable whose values
-will be displayed in different colors.}
+will be displayed in different colors. Other numeric variables are held at
+their means. Other categorical variables are held at their modes. Other
+numeric variables are held at their means.}
 
 \item{type}{string indicates the type (scale) of the predictions used to
 compute marginal effects or contrasts. This can differ based on the model
@@ -36,6 +38,7 @@ acceptable values is returned in an error message.}
 \itemize{
 \item Heteroskedasticity-consistent: \code{"HC"}, \code{"HC0"}, \code{"HC1"}, \code{"HC2"}, \code{"HC3"}, \code{"HC4"}, \code{"HC4m"}, \code{"HC5"}. See \code{?sandwich::vcovHC}
 \item Heteroskedasticity and autocorrelation consistent: \code{"HAC"}
+\item Mixed-Models degrees of freedom: "satterthwaite", "kenward-roger"
 \item Other: \code{"NeweyWest"}, \code{"KernHAC"}, \code{"OPG"}. See the \code{sandwich} package documentation.
 }
 \item One-sided formula which indicates the name of cluster variables (e.g., \code{~unit_id}). This formula is passed to the \code{cluster} argument of the \code{sandwich::vcovCL} function.

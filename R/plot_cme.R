@@ -8,7 +8,8 @@
 #' @param effect Name of the variable whose marginal effect we want to plot on the y-axis
 #' @param condition String or vector of two strings. The first is a variable
 #' name to be displayed on the x-axis. The second is a variable whose values
-#' will be displayed in different colors.
+#' will be displayed in different colors. Other numeric variables are held at
+#' their means. Other categorical variables are held at their modes.
 #' @param draw `TRUE` returns a `ggplot2` plot. `FALSE` returns a `data.frame` of the underlying data.
 #' @inheritParams plot.marginaleffects
 #' @inheritParams marginaleffects
@@ -31,17 +32,11 @@ plot_cme <- function(model,
                      ...) {
 
     # get data to know over what range of values we should plot
-    dat <- suppressWarnings(insight::get_data(model))
+    dat <- hush(insight::get_data(model))
     resp <- insight::find_response(model)[1]
 
     # eventually we might allow multiple conditions and/or effects
     checkmate::assert_character(effect, len = 1)
-    effect_mfx <- list()
-    if (isTRUE(find_variable_class(effect, model = model, newdata = dat) == "numeric")) {
-        effect_mfx[[effect]] <- "dydx"
-    } else {
-        effect_mfx[[effect]] <- "reference"
-    }
 
     # allow multiple conditions and/or effects
     checkmate::assert_character(condition, min.len = 1, max.len = 2)
@@ -64,12 +59,13 @@ plot_cme <- function(model,
 
     out <- plot_cco(
         model = model,
-        effect = effect_mfx,
+        effect = effect,
         condition = condition,
         type = type,
         vcov = vcov,
         conf_level = conf_level,
         draw = draw,
+        transform_pre = "dydx",
         ...)
 
     if (inherits(out, "ggplot")) {

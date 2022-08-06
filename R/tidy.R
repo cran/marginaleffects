@@ -7,7 +7,6 @@ generics::tidy
 #' Tidy a `marginaleffects` object
 #'
 #' @param x An object produced by the `marginaleffects` function.
-#' @param by Character vector of variable names over which to compute group-averaged marginal effects.
 #' @inheritParams marginaleffects
 #' @return A "tidy" `data.frame` of summary statistics which conforms to the
 #' `broom` package specification.
@@ -34,18 +33,16 @@ generics::tidy
 #'
 #' # average marginal effects
 #' tidy(mfx)
-#'
-#' # average marginal effects by group
-#' tidy(mfx, by = "gear")
 tidy.marginaleffects <- function(x,
                                  conf_level = 0.95,
-                                 by = NULL,
                                  ...) {
+
+
+
     x_dt <- copy(x)
     setnames(x_dt, old = "dydx", new = "comparison")
     out <- tidy.comparisons(x_dt,
                             conf_level = conf_level,
-                            by = by,
                             ...)
     return(out)
 }
@@ -110,7 +107,6 @@ tidy.marginalmeans <- function(x,
 #' unit-level adjusted predictions computed by the `predictions` function.
 #'
 #' @param x An object produced by the `predictions` function.
-#' @param by Character vector of variable names over which to compute group-averaged contrasts.
 #' @inheritParams predictions
 #' @return A "tidy" `data.frame` of summary statistics which conforms to the
 #' `broom` package specification.
@@ -121,15 +117,27 @@ tidy.marginalmeans <- function(x,
 #' tidy(mfx)
 tidy.predictions <- function(x,
                              conf_level = 0.95,
-                             by = NULL,
                              ...) {
+
+    # I left the `by` code below in case I eventually want to revert. Much
+    # of it needs to stay anyway because we need the `delta` in `tidy` for
+    # average predicted values, but Isome stuff could eventually be cleaned up.
+    if ("by" %in% names(list(...))) {
+        msg <- 
+        "The `by` argument is deprecated in this function. You can use `by` in the `comparisons()`, 
+        `marginaleffects()`, and `predictions()` functions instead."
+        stop(msg, call. = FALSE)
+    }
+
     x_dt <- copy(data.table(x))
 
     marginaleffects_wts_internal <- attr(x, "weights")
 
-    by <- c("group", by)
-    by <- intersect(by, colnames(x))
-    if (length(by) == 0) by <- NULL
+    if ("group" %in% colnames(x_dt)) {
+        idx <- "group"
+    } else {
+        idx <- NULL
+    }
 
     fun <- function(...) {
         dots <- list(...)
@@ -139,44 +147,43 @@ tidy.predictions <- function(x,
         if (!is.null(marginaleffects_wts_internal)) {
             out[, "marginaleffects_wts_internal" := marginaleffects_wts_internal]
             out <- out[,
-                .(estimate = stats::weighted.mean(
-                    predicted,
-                    marginaleffects_wts_internal,
-                    na.rm = TRUE)),
-                by = by]
+                .(predicted = stats::weighted.mean(predicted, marginaleffects_wts_internal, na.rm = TRUE)),
+                by = idx]
         } else {
-            out <- out[,
-                .(estimate = mean(predicted)),
-                by = by]
+            out <- out[, .(predicted = mean(predicted)), by = idx]
         }
-        return(out$estimate)
+        return(out$predicted)
     }
 
-    if (!is.null(marginaleffects_wts_internal)) {
-        x_dt[, "marginaleffects_wts_internal" := marginaleffects_wts_internal]
-        x_dt <- x_dt[,
-            .(estimate = stats::weighted.mean(
+    # only aggregate if predictions were not already aggregated before
+    if (is.null(attr(x, "by"))) {
+        if (!is.null(marginaleffects_wts_internal)) {
+            x_dt[, "marginaleffects_wts_internal" := marginaleffects_wts_internal]
+            x_dt <- x_dt[,
+            .(predicted = stats::weighted.mean(
                 predicted,
                 marginaleffects_wts_internal,
                 na.rm = TRUE)),
-            by = by]
-    } else {
-        x_dt <- x_dt[,
-            .(estimate = mean(predicted)),
-            by = by]
+            by = idx]
+        } else {
+            x_dt <- x_dt[, .(predicted = mean(predicted)), by = idx]
+        }
     }
 
-    se <- get_se_delta(
-        model = attr(x, "model"),
-        newdata = attr(x, "newdata"),
-        vcov = attr(x, "vcov"),
-        type = attr(x, "type"),
-        FUN = fun,
-        ...)
-
-    if (!is.null(se)) {
-        x_dt[, "std.error" := se]
+    if (!"std.error" %in% colnames(x_dt)) {
+        se <- get_se_delta(
+            model = attr(x, "model"),
+            newdata = attr(x, "newdata"),
+            vcov = attr(x, "vcov"),
+            type = attr(x, "type"),
+            FUN = fun,
+            ...)
+        if (!is.null(se)) {
+            x_dt[, "std.error" := se]
+        }
     }
+
+    setnames(x_dt, old = "predicted", new = "estimate")
 
     out <- get_ci(x_dt, estimate = "estimate", conf_level = conf_level)
     return(out)
@@ -189,7 +196,6 @@ tidy.predictions <- function(x,
 #' unit-level contrasts computed by the `predictions` function.
 #'
 #' @param x An object produced by the `comparisons` function.
-#' @param by Character vector of variable names over which to compute group-averaged contrasts.
 #' @param transform_avg (experimental) A function applied to the estimates and confidence intervals *after* the unit-level estimates have been averaged.
 #' @inheritParams comparisons
 #' @inheritParams tidy.marginaleffects
@@ -215,13 +221,26 @@ tidy.predictions <- function(x,
 #' tidy(contr)
 tidy.comparisons <- function(x,
                              conf_level = 0.95,
-                             by = NULL,
                              transform_avg = NULL,
                              ...) {
 
+    if (identical(attr(x, "transform_pre"), "lnor")) {
+        msg <- 
+        'The `tidy()` and `summary()` functions take the average of estimates
+        over the whole dataset. However, the unit-level estimates you requested 
+        are not collapsible. Please use `transform_pre="lnoravg"` instead.' 
+        stop(msg, call. = FALSE)
+    }
+
+    if ("by" %in% names(list(...))) {
+        msg <- 
+        "The `by` argument is deprecated in this function. You can use `by` in the `comparisons()`, 
+        `marginaleffects()`, and `predictions()` functions instead."
+        stop(msg, call. = FALSE)
+    }
+
     dots <- list(...)
     conf_level <- sanitize_conf_level(conf_level, ...)
-    checkmate::assert_character(by, null.ok = TRUE)
     checkmate::assert_function(transform_avg, null.ok = TRUE)
 
     transform_avg <- deprecation_arg(
@@ -237,17 +256,6 @@ tidy.comparisons <- function(x,
     # custom summary function
     FUN_label <- "mean"
 
-    # group averages
-    if (!is.null(by)) {
-        flag <- isTRUE(checkmate::check_character(by)) &&
-                isTRUE(checkmate::check_true(all(by %in% colnames(x))))
-        if (!isTRUE(flag)) {
-            msg <- format_msg(
-            "The `by` argument must be a character vector and every element of the vector
-            must correspond to a column name in the `x` marginal effects object.")
-            stop(msg, call. = FALSE)
-        }
-    }
 
     x_dt <- data.table(x)
 
@@ -257,12 +265,12 @@ tidy.comparisons <- function(x,
 
     # empty initial mfx data.frame means there were no numeric variables in the
     # model
-    if ("term" %in% colnames(x_dt) || inherits(x, "predictions")) {
+    if (is.null(attr(x, "by")) && ("term" %in% colnames(x_dt) || inherits(x, "predictions"))) {
 
         J <- attr(x, "jacobian")
         V <- attr(x, "vcov")
 
-        idx_by <- c("type", "group", "term", "contrast", by,
+        idx_by <- c("type", "group", "term", "contrast", 
                     grep("^contrast_\\w+", colnames(x_dt), value = TRUE))
         idx_by <- intersect(idx_by, colnames(x_dt))
         idx_na <- is.na(x_dt$comparison)
@@ -341,7 +349,7 @@ tidy.comparisons <- function(x,
             # 1. mean for each draw gives 4000 samples of the average mfx
             # 2. quantiles of the means
             drawavg <- draws[, .(estimate = mean(draw)), by = c(idx_by, "drawid")]
-            es <- drawavg[, .(estimate = mean(estimate)), by = idx_by]
+            es <- drawavg[, .(estimate = stats::median(estimate)), by = idx_by]
             if (isTRUE(getOption("marginaleffects_credible_interval", default = "eti") == "hdi")) {
                 f_ci <- get_hdi
             } else {
@@ -354,7 +362,8 @@ tidy.comparisons <- function(x,
 
     } else {
         # avoids namespace conflict with `margins`
-        ame <- data.frame()
+        ame <- x_dt
+        setnames(ame, old = "comparison", new = "estimate")
     }
 
     out <- get_ci(
@@ -377,11 +386,13 @@ tidy.comparisons <- function(x,
     }
 
     # sort and subset columns
-    cols <- c("type", "group", "term", "contrast", by,
+    cols <- c("type", "group", "term", "contrast",
+              attr(x, "by"),
               grep("^contrast_\\w+", colnames(x_dt), value = TRUE),
               "estimate", "std.error", "statistic", "p.value", "conf.low", "conf.high")
     cols <- intersect(cols, colnames(out))
     out <- out[, cols, drop = FALSE, with = FALSE]
+
 
     setDF(out)
 

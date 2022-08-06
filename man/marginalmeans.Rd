@@ -42,6 +42,7 @@ number of variables in the \code{variables} and \code{variables_grid} arguments.
 \itemize{
 \item Heteroskedasticity-consistent: \code{"HC"}, \code{"HC0"}, \code{"HC1"}, \code{"HC2"}, \code{"HC3"}, \code{"HC4"}, \code{"HC4m"}, \code{"HC5"}. See \code{?sandwich::vcovHC}
 \item Heteroskedasticity and autocorrelation consistent: \code{"HAC"}
+\item Mixed-Models degrees of freedom: "satterthwaite", "kenward-roger"
 \item Other: \code{"NeweyWest"}, \code{"KernHAC"}, \code{"OPG"}. See the \code{sandwich} package documentation.
 }
 \item One-sided formula which indicates the name of cluster variables (e.g., \code{~unit_id}). This formula is passed to the \code{cluster} argument of the \code{sandwich::vcovCL} function.
@@ -149,6 +150,7 @@ Case studies:
 \itemize{
 \item \href{https://vincentarelbundock.github.io/marginaleffects/articles/brms.html}{Bayesian Analyses with \code{brms}}
 \item \href{https://vincentarelbundock.github.io/marginaleffects/articles/gformula.html}{Causal Inference with the g-Formula}
+\item \href{https://vincentarelbundock.github.io/marginaleffects/articles/elasticity.html}{Elasticity}
 \item \href{https://vincentarelbundock.github.io/marginaleffects/articles/gam.html}{Generalized Additive Models}
 \item \href{https://vincentarelbundock.github.io/marginaleffects/articles/lme4.html}{Mixed effects models}
 \item \href{https://vincentarelbundock.github.io/marginaleffects/articles/mlogit.html}{Multinomial Logit and Discrete Choice Models}
@@ -157,12 +159,13 @@ Case studies:
 
 Tips and technical notes:
 \itemize{
-\item \href{https://vincentarelbundock.github.io/marginaleffects/articles/supported_models.html}{64 Supported Classes of Models}
+\item \href{https://vincentarelbundock.github.io/marginaleffects/articles/supported_models.html}{68 Supported Classes of Models}
 \item \href{https://vincentarelbundock.github.io/marginaleffects/reference/index.html}{Index of Functions and Documentation}
 \item \href{https://vincentarelbundock.github.io/marginaleffects/articles/sandwich.html}{Standard Errors}
 \item \href{https://vincentarelbundock.github.io/marginaleffects/articles/modelsummary.html}{Tables and Plots}
 \item \href{https://vincentarelbundock.github.io/marginaleffects/articles/performance.html}{Performance}
 \item \href{https://vincentarelbundock.github.io/marginaleffects/articles/alternative_software.html}{Alternative Software}
+\item \href{https://vincentarelbundock.github.io/marginaleffects/articles/faq.html}{Frequently Asked Questions}
 }
 }
 

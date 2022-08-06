@@ -4,6 +4,7 @@ get_ci <- function(
     estimate,
     df = NULL,
     draws = NULL,
+    vcov = TRUE,
     overwrite = FALSE) {
 
     if (!is.null(draws)) {
@@ -39,7 +40,10 @@ get_ci <- function(
     if (!"p.value" %in% colnames(x) || isTRUE(overwrite)) {
         if ("df" %in% colnames(x)) {
             x[["p.value"]] <- 2 * stats::pt(-abs(x$statistic), df = x[["df"]])
-        } else {
+        # get_predicted does not save DF and does not compute p.value. We try
+        # to extract df in predictions(), but this does not always work
+        # (e.g., with hypothesis). When we don't have DF, normal p.value is misleading.
+        } else if (!identical(vcov, "satterthwaite") || !identical(vcov, "kenward-roger")) {
             x[["p.value"]] <- 2 * stats::pnorm(-abs(x$statistic))
         }
     }
@@ -64,11 +68,17 @@ get_ci_draws <- function(
     FUN <- ifelse(isTRUE(flag == "hdi"), get_hdi, get_eti)
 
     if (!"conf.low" %in% colnames(x) || isTRUE(overwrite)) {
-        tmp <- apply(draws, 1, FUN, credMass = conf_level)
         x[["std.error"]] <- NULL
-        x[[estimate]] <- apply(draws, 1, stats::median)
-        x[["conf.low"]] <- tmp[1, ]
-        x[["conf.high"]] <- tmp[2, ]
+        CIs <- t(apply(draws, 1, FUN, credMass = conf_level))
+        Bs <- apply(draws, 1, stats::median)
+        # transform_pre returns a single value
+        if (nrow(x) < nrow(CIs)) {
+            CIs <- unique(CIs)
+            Bs <- unique(Bs)
+        }
+        x[[estimate]] <- Bs
+        x[["conf.low"]] <- CIs[, "lower"]
+        x[["conf.high"]] <- CIs[, "upper"]
     }
 
     return(x)

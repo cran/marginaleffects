@@ -8,7 +8,8 @@
 #' @param effect Name of the variable whose contrast we want to plot on the y-axis
 #' @param condition String or vector of two strings. The first is a variable
 #' name to be displayed on the x-axis. The second is a variable whose values
-#' will be displayed in different colors.
+#' will be displayed in different colors. Other numeric variables are held at
+#' their means. Other categorical variables are held at their modes.
 #' @param draw `TRUE` returns a `ggplot2` plot. `FALSE` returns a `data.frame` of the underlying data.
 #' @inheritParams comparisons
 #' @inheritParams plot_cme
@@ -35,7 +36,7 @@ plot_cco <- function(model,
                      ...) {
 
     # get data to know over what range of values we should plot
-    dat <- suppressWarnings(insight::get_data(model))
+    dat <- hush(insight::get_data(model))
     resp <- insight::find_response(model)[1]
 
     # eventually we might allow multiple conditions and/or effects
@@ -114,6 +115,7 @@ plot_cco <- function(model,
         variables = effect,
         transform_pre = transform_pre,
         transform_post = transform_post,
+        interaction = FALSE,
         ...)
 
     draws <- attr(datplot, "posterior_draws")

@@ -1,4 +1,5 @@
 #' Adjusted Predictions
+#'
 #' Outcome predicted by a fitted model on a specified scale for a given
 #' combination of values of the predictor variables, such as their observed
 #' values, their means, or factor levels (a.k.a. "reference grid"). The
@@ -29,12 +30,31 @@
 #'
 #' @inheritParams marginaleffects
 #' @param model Model object
-#' @param variables Character vector. Compute Adjusted Predictions for
-#'   combinations of each of these variables. Factor levels are considered at
-#'   each of their levels. Numeric variables variables are considered at Tukey's
-#'   Five-Number Summaries. `NULL` uses the original data used to fit the model.
+#' @param variables Named list of variables with values to create a
+#' counterfactual grid of predictions. The entire dataset replicated
+#' for each unique combination of the variables in this list. See the Examples
+#' section below. Warning: This can use a lot of memory if there are many
+#' variables and values, and when the dataset is large.
+#' @param newdata `NULL`, data frame, string, or `datagrid()` call. Determines the grid of predictors on which we make predictions.
+#' + `NULL` (default): Predictions for each observed value in the original dataset.
+#' + data frame: Predictions for each row of the `newdata` data frame.
+#' + string:
+#'   - "mean": Predictions at the Mean. Predictions when each predictor is held at its mean or mode.
+#'   - "median": Predictions at the Median. Predictions when each predictor is held at its median or mode.
+#'   - "marginalmeans": Predictions at Marginal Means. See Details section below.
+#'   - "tukey": Predictions at Tukey's 5 numbers.
+#'   - "grid": Predictions on a grid of representative numbers (Tukey's 5 numbers and unique values of categorical predictors).
+#' + [datagrid()] call to specify a custom grid of regressors. For example:
+#'   - `newdata = datagrid(cyl = c(4, 6))`: `cyl` variable equal to 4 and 6 and other regressors fixed at their means or modes.
+#'   - See the Examples section and the [datagrid()] documentation.
 #' @param newdata A data frame over which to compute quantities of interest.
 #'   + `NULL`: adjusted predictions for each observed value in the original dataset.
+#'   - "mean": Marginal Effects at the Mean. Marginal effects when each predictor is held at its mean or mode.
+#'   - "median": Marginal Effects at the Median. Marginal effects when each predictor is held at its median or mode.
+#'   - "marginalmeans": Marginal Effects at Marginal Means. See Details section below.
+#'   - "tukey": Marginal Effects at Tukey's 5 numbers.
+#'   - "grid": Marginal Effects on a grid of representative numbers (Tukey's 5 numbers and unique values of categorical predictors).
+
 #'   + The [datagrid()] function can be used to specify a custom grid of regressors. For example:
 #'       - `newdata = datagrid()`: contrast at the mean
 #'       - `newdata = datagrid(cyl = c(4, 6))`: `cyl` variable equal to 4 and 6 and other regressors fixed at their means or modes.
@@ -74,6 +94,20 @@
 #' # Conditional Adjusted Predictions
 #' plot_cap(mod, condition = "hp")
 #'
+#' # Counterfactual predictions with the `variables` argument
+#' # the `mtcars` dataset has 32 rows
+#' 
+#' mod <- lm(mpg ~ hp + am, data = mtcars)
+#' p <- predictions(mod)
+#' head(p)
+#' nrow(p)
+#' 
+#' # counterfactual predictions obtained by replicating the entire for different
+#' # values of the predictors
+#' p <- predictions(mod, variables = list(hp = c(90, 110)))
+#' nrow(p)
+#' 
+#'
 #' # hypothesis test: is the prediction in the 1st row equal to the prediction in the 2nd row
 #' mod <- lm(mpg ~ wt + drat, data = mtcars)
 #' 
@@ -111,6 +145,7 @@ predictions <- function(model,
                         vcov = TRUE,
                         conf_level = 0.95,
                         type = "response",
+                        by = NULL,
                         wts = NULL,
                         transform_post = NULL,
                         hypothesis = NULL,
@@ -123,14 +158,14 @@ predictions <- function(model,
     if (is.call(scall)) {
         lcall <- as.list(scall)
         fun_name <- as.character(scall)[1]
-        if (fun_name %in% c("datagrid", "typical", "counterfactual")) {
+        if (fun_name %in% c("datagrid", "datagridcf", "typical", "counterfactual")) {
             if (!any(c("model", "newdata") %in% names(lcall))) {
                 lcall <- c(lcall, list("model" = model))
                 newdata <- eval.parent(as.call(lcall))
             }
         } else if (fun_name == "visualisation_matrix") {
             if (!"x" %in% names(lcall)) {
-                lcall <- c(lcall, list("x" = insight::get_data(model)))
+                lcall <- c(lcall, list("x" = hush(insight::get_data(model))))
                 newdata <- eval.parent(as.call(lcall))
             }
         }
@@ -142,39 +177,38 @@ predictions <- function(model,
     # input sanity checks
     checkmate::assert_function(transform_post, null.ok = TRUE)
     sanity_dots(model = model, ...)
-    sanity_model_specific(model = model, newdata = newdata, vcov = vcov, calling_function = "predictions", ...)
+    sanity_model_specific(
+        model = model,
+        newdata = newdata,
+        vcov = vcov,
+        calling_function = "predictions", ...)
     hypothesis <- sanitize_hypothesis(hypothesis, ...)
     conf_level <- sanitize_conf_level(conf_level, ...)
-    levels_character <- attr(variables, "levels_character")
+    type <- sanitize_type(model = model, type = type, calling_function = "predictions")
+    newdata <- sanitize_newdata(model = model, newdata = newdata)
 
-    # modelbased::visualisation_matrix attaches useful info for plotting
-    attributes_newdata <- attributes(newdata)
-    idx <- c("class", "row.names", "names", "data", "reference")
-    idx <- !names(attributes_newdata) %in% idx
-    attributes_newdata <- attributes_newdata[idx]
+    # `variables` si character vector: Tukey's 5 or uniques
+    checkmate::assert_list(variables, names = "unique", null.ok = TRUE)
 
-    # after modelbased attribute extraction
-    newdata <- sanity_newdata(model, newdata)
-
-    # check before inferring `newdata`
+    # analogous to comparisons(variables=list(...))
     if (!is.null(variables)) {
-        variables <- sanitize_variables(model, newdata, variables)
-        # get new data if it doesn't exist
-        variables <- unique(unlist(variables))
-        args <- list("newdata" = newdata, "model" = model)
-        for (v in variables) {
-            vcl <- find_variable_class(v, newdata = newdata, model = model)
-            if (isTRUE(vcl == "numeric")) {
-                args[[v]] <- stats::fivenum(newdata[[v]])
-            } else {
-                args[[v]] <- unique(newdata[[v]])
-            }
+        args <- list(
+            "model" = model,
+            "newdata" = newdata,
+            "grid_type" = "counterfactual")
+        tmp <- sanitize_variables(
+            variables = variables,
+            model = model,
+            newdata = newdata)$conditional
+        for (v in tmp) {
+            args[[v$name]] <- v$value
         }
         newdata <- do.call("datagrid", args)
-        newdata[["rowid"]] <- NULL # the original rowids are no longer valid after averaging et al.
-    } else {
-        variables <- sanitize_variables(model, newdata, variables)
+        # the original rowids are no longer valid after averaging et al.
+        newdata[["rowid"]] <- NULL 
     }
+
+    character_levels <- attr(newdata, "newdata_character_levels")
 
     # weights
     sanity_wts(wts, newdata) # after sanity_newdata
@@ -203,31 +237,21 @@ predictions <- function(model,
     if (inherits(model, "mlogit")) {
         padding <- data.frame()
     } else {
-        padding <- complete_levels(newdata, levels_character)
-        newdata <- rbindlist(list(padding, newdata))
-    }
-
-    # predictions
-    # the default get_predict() method tries to get confidence intervals using
-    # `insight::get_predicted`. That function does not preserve J, which we
-    # need for average adjusted predictions. So we take fast predictions and
-    # handle SE internally for known models.
-    flag <- isTRUE(class(model)[1] == "lm") ||
-            (isTRUE(class(model)[1] == "glm") && isTRUE(type == "link"))
-
-    if (isTRUE(flag)) {
-        vcov_tmp <- FALSE
-        # get_modelmatrix() sometimes breaks when there is no outcome in `data`
-        resp <- insight::find_response(model)
-        if (!resp %in% colnames(newdata)) {
-            newdata[[resp]] <- 0
+        padding <- complete_levels(newdata, character_levels)
+        if (nrow(padding) > 0) {
+            newdata <- rbindlist(list(padding, newdata))
         }
-        J <- insight::get_modelmatrix(model, data = newdata)
-    } else {
-        vcov_tmp <- vcov
-        J <- NULL
     }
-                        
+
+
+    if (is.null(by)) {
+        vcov_tmp <- vcov
+    } else {
+        vcov_tmp <- FALSE
+    }
+
+    J <- NULL
+
     tmp <- myTryCatch(get_predictions(
         model,
         newdata = newdata,
@@ -235,6 +259,7 @@ predictions <- function(model,
         conf_level = conf_level,
         type = type,
         hypothesis = hypothesis,
+        by = by,
         ...))
 
     if (isTRUE(grepl("type.*models", tmp[["error"]]))) {
@@ -274,6 +299,7 @@ predictions <- function(model,
         tmp <- tmp[["value"]]
     }
 
+
     # two cases when tmp is a data.frame
     # insight::get_predicted gets us Predicted et al. but now rowid
     # get_predict gets us rowid with the original rows
@@ -285,18 +311,42 @@ predictions <- function(model,
     } else {
         tmp <- data.frame(newdata$rowid, type, tmp)
         colnames(tmp) <- c("rowid", "type", "predicted")
-        if ("rowid_counterfactual" %in% colnames(newdata)) {
-            tmp[["rowid_counterfactual"]] <- newdata[["rowid_counterfactual"]]
+        if ("rowidcf" %in% colnames(newdata)) {
+            tmp[["rowidcf"]] <- newdata[["rowidcf"]]
         }
     }
-    tmp$type <- type
+
+    # default type column is the `predict()` method
+    if (!is.na(type)) {
+        tmp$type <- type
+    # alternative type is the `insight` name
+    } else {
+        tmp$type <- names(type)
+    }
 
     if (!"rowid" %in% colnames(tmp) && nrow(tmp) == nrow(newdata)) {
         tmp$rowid <- newdata$rowid
     }
 
+    # degrees of freedom
+    if (isTRUE(vcov == "satterthwaite") || isTRUE(vcov == "kenward-roger")) {
+        df <- tryCatch(
+            insight::get_df(model, data = newdata, type = vcov),
+            error = function(e) NULL)
+        if (isTRUE(length(df) == nrow(tmp))) {
+            tmp$df <- df
+        }
+    }
+
+
     # bayesian posterior draws
     draws <- attr(tmp, "posterior_draws")
+
+    # bayesian: unpad draws (done in get_predictions for frequentist)
+    if (!is.null(draws) && "rowid" %in% colnames(newdata)) {
+        draws <- draws[newdata$rowid > 0, , drop = FALSE]
+    }
+
     if (!is.null(transform_post)) {
         draws <- transform_post(draws)
     }
@@ -310,7 +360,7 @@ predictions <- function(model,
         if (!"std.error" %in% colnames(tmp) && is.null(draws)) {
             if (isTRUE(checkmate::check_matrix(V))) {
                 # vcov = FALSE to speed things up
-                fun <- function(...) get_predictions(vcov = FALSE, ...)$predicted
+                fun <- function(...) get_predictions(..., vcov = FALSE)$predicted
                 se <- get_se_delta(
                     model,
                     newdata = newdata,
@@ -320,6 +370,8 @@ predictions <- function(model,
                     J = J,
                     eps = 1e-4, # avoid pushing through ...
                     hypothesis = hypothesis,
+                    by = by,
+                    conf_level = conf_level,
                     ...)
                 if (is.numeric(se) && length(se) == nrow(tmp)) {
                     tmp[["std.error"]] <- se
@@ -337,28 +389,31 @@ predictions <- function(model,
                 tmp,
                 conf_level = conf_level,
                 # sometimes insight::get_predicted fails on SE but succeeds on CI (e.g., betareg)
+                vcov = vcov,
                 overwrite = FALSE,
                 draws = draws,
                 estimate = "predicted")
         }
-
     }
 
     out <- data.table(tmp)
 
-    # unpad factors
-    out <- out[(nrow(padding) + 1):nrow(out),]
-    newdata <- newdata[(nrow(padding) + 1):nrow(newdata), , drop = FALSE]
-    if (!is.null(draws)) {
-        draws <- draws[(nrow(padding) + 1):nrow(draws), , drop = FALSE]
-    }
 
     # return data
     # very import to avoid sorting, otherwise bayesian draws won't fit predictions
     # merge only with rowid; not available for hypothesis
-    if ("rowid" %in% colnames(out)) {
-        out <- merge(out, newdata, by = "rowid", sort = FALSE)
+    mergein <- setdiff(colnames(newdata), colnames(out))
+    if ("rowid" %in% colnames(out) && "rowid" %in% colnames(newdata) && length(mergein) > 0) {
+        idx <- c("rowid", mergein)
+        tmp <- data.table(newdata)[, ..idx]
+        # TODO: this breaks in mclogit. maybe there's a more robust merge
+        # solution for weird grouped data. But it seems fine because
+        # `predictions()` output does include the original predictors.
+        out <- tryCatch(
+            merge(out, tmp, by = "rowid", sort = FALSE),
+            error = function(e) out)
     }
+
 
     setDF(out)
 
@@ -372,30 +427,30 @@ predictions <- function(model,
     }
 
     # clean columns
-    stubcols <- c(
-        "rowid", "type", "term", "group", "hypothesis", "predicted", "std.error",
-        "statistic", "p.value", "conf.low", "conf.high", "marginaleffects_wts",
+    stubcols <- c( 
+        "rowid", "rowidcf", "type", "term", "group", "hypothesis",
+        by,
+        "predicted", "std.error", "statistic", "p.value", "conf.low",
+        "conf.high", "marginaleffects_wts",
         sort(grep("^predicted", colnames(newdata), value = TRUE)))
     cols <- intersect(stubcols, colnames(out))
     cols <- unique(c(cols, colnames(out)))
     out <- out[, cols, drop = FALSE]
 
     class(out) <- c("predictions", class(out))
+    out <- set_attributes(
+        out,
+        get_attributes(newdata, include_regex = "^newdata"))
     attr(out, "model") <- model
     attr(out, "type") <- type
     attr(out, "model_type") <- class(model)[1]
-    attr(out, "variables") <- variables
     attr(out, "vcov.type") <- get_vcov_label(vcov)
     attr(out, "jacobian") <- J
     attr(out, "vcov") <- V
     attr(out, "posterior_draws") <- draws
     attr(out, "newdata") <- newdata
     attr(out, "weights") <- marginaleffects_wts_internal
-
-    # modelbased::visualisation_matrix attaches useful info for plotting
-    for (a in names(attributes_newdata)) {
-        attr(out, paste0("newdata_", a)) <- attributes_newdata[[a]]
-    }
+    attr(out, "by") <- by
 
     if ("group" %in% names(out) && all(out$group == "main_marginaleffect")) {
         out$group <- NULL
@@ -406,10 +461,54 @@ predictions <- function(model,
 
  
 # wrapper used only for standard_error_delta
-get_predictions <- function(..., hypothesis = NULL) {
-    out <- get_predict(...)
+get_predictions <- function(model,
+                            newdata,
+                            vcov,
+                            conf_level,
+                            type,
+                            by = NULL,
+                            hypothesis = NULL,
+                            ...) {
+
+
+    out <- get_predict(
+        model,
+        newdata = newdata,
+        vcov = vcov,
+        conf_level = conf_level,
+        type = type,
+        ...)
+    setDT(out)
+
+    # unpad factors before averaging
+    if ("rowid" %in% colnames(out)) {
+        out <- out[rowid > 0, drop = FALSE]
+    }
+
+    # averaging by groups
+    if (!is.null(by)) {
+        tmp <- intersect(
+            c("rowid", "marginaleffects_wts_internal", by),
+            colnames(newdata))
+        tmp <- data.frame(newdata)[, tmp]
+        out <- merge(out, tmp, by = "rowid")
+        if ("marginaleffects_wts_internal" %in% colnames(newdata)) {
+            out <- out[,
+            .(predicted = stats::weighted.mean(
+                predicted,
+                marginaleffects_wts_internal,
+                na.rm = TRUE)),
+            by = by]
+        } else {
+            out <- out[,
+            .(predicted = mean(predicted)),
+            by = by]
+        }
+    }
+
     if (!is.null(hypothesis)) {
         out <- get_hypothesis(out, hypothesis, column = "predicted")
     }
+
     return(out)
 }

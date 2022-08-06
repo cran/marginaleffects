@@ -4,14 +4,12 @@
 \alias{tidy.marginaleffects}
 \title{Tidy a \code{marginaleffects} object}
 \usage{
-\method{tidy}{marginaleffects}(x, conf_level = 0.95, by = NULL, ...)
+\method{tidy}{marginaleffects}(x, conf_level = 0.95, ...)
 }
 \arguments{
 \item{x}{An object produced by the \code{marginaleffects} function.}
 
 \item{conf_level}{numeric value between 0 and 1. Confidence level to use to build a confidence interval.}
-
-\item{by}{Character vector of variable names over which to compute group-averaged marginal effects.}
 
 \item{...}{Additional arguments are passed to the \code{predict()} method
 supplied by the modeling package.These arguments are particularly useful
@@ -51,7 +49,4 @@ mfx <- marginaleffects(mod)
 
 # average marginal effects
 tidy(mfx)
-
-# average marginal effects by group
-tidy(mfx, by = "gear")
 }

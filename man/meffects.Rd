@@ -11,6 +11,8 @@ meffects(
   vcov = TRUE,
   conf_level = 0.95,
   type = "response",
+  slope = "dydx",
+  by = NULL,
   wts = NULL,
   hypothesis = NULL,
   eps = NULL,
@@ -29,6 +31,8 @@ meffects(
 \item "mean": Marginal Effects at the Mean. Marginal effects when each predictor is held at its mean or mode.
 \item "median": Marginal Effects at the Median. Marginal effects when each predictor is held at its median or mode.
 \item "marginalmeans": Marginal Effects at Marginal Means. See Details section below.
+\item "tukey": Marginal Effects at Tukey's 5 numbers.
+\item "grid": Marginal Effects on a grid of representative numbers (Tukey's 5 numbers and unique values of categorical predictors).
 }
 \item \code{\link[=datagrid]{datagrid()}} call to specify a custom grid of regressors. For example:
 \itemize{
@@ -51,6 +55,7 @@ meffects(
 \itemize{
 \item Heteroskedasticity-consistent: \code{"HC"}, \code{"HC0"}, \code{"HC1"}, \code{"HC2"}, \code{"HC3"}, \code{"HC4"}, \code{"HC4m"}, \code{"HC5"}. See \code{?sandwich::vcovHC}
 \item Heteroskedasticity and autocorrelation consistent: \code{"HAC"}
+\item Mixed-Models degrees of freedom: "satterthwaite", "kenward-roger"
 \item Other: \code{"NeweyWest"}, \code{"KernHAC"}, \code{"OPG"}. See the \code{sandwich} package documentation.
 }
 \item One-sided formula which indicates the name of cluster variables (e.g., \code{~unit_id}). This formula is passed to the \code{cluster} argument of the \code{sandwich::vcovCL} function.
@@ -65,6 +70,16 @@ compute marginal effects or contrasts. This can differ based on the model
 type, but will typically be a string such as: "response", "link", "probs",
 or "zero". When an unsupported string is entered, the model-specific list of
 acceptable values is returned in an error message.}
+
+\item{slope}{string indicates the type of slope or (semi-)elasticity to compute:
+\itemize{
+\item "dydx": dY/dX
+\item "eyex": dY/dX * Y / X
+\item "eydx": dY/dX * Y
+\item "dyex": dY/dX / X
+}}
+
+\item{by}{Character vector of variable names over which to compute group-wise estimates.}
 
 \item{wts}{string or numeric: weights to use when computing average
 contrasts or marginaleffects. These weights only affect the averaging in
@@ -174,6 +189,7 @@ Case studies:
 \itemize{
 \item \href{https://vincentarelbundock.github.io/marginaleffects/articles/brms.html}{Bayesian Analyses with \code{brms}}
 \item \href{https://vincentarelbundock.github.io/marginaleffects/articles/gformula.html}{Causal Inference with the g-Formula}
+\item \href{https://vincentarelbundock.github.io/marginaleffects/articles/elasticity.html}{Elasticity}
 \item \href{https://vincentarelbundock.github.io/marginaleffects/articles/gam.html}{Generalized Additive Models}
 \item \href{https://vincentarelbundock.github.io/marginaleffects/articles/lme4.html}{Mixed effects models}
 \item \href{https://vincentarelbundock.github.io/marginaleffects/articles/mlogit.html}{Multinomial Logit and Discrete Choice Models}
@@ -182,12 +198,13 @@ Case studies:
 
 Tips and technical notes:
 \itemize{
-\item \href{https://vincentarelbundock.github.io/marginaleffects/articles/supported_models.html}{64 Supported Classes of Models}
+\item \href{https://vincentarelbundock.github.io/marginaleffects/articles/supported_models.html}{68 Supported Classes of Models}
 \item \href{https://vincentarelbundock.github.io/marginaleffects/reference/index.html}{Index of Functions and Documentation}
 \item \href{https://vincentarelbundock.github.io/marginaleffects/articles/sandwich.html}{Standard Errors}
 \item \href{https://vincentarelbundock.github.io/marginaleffects/articles/modelsummary.html}{Tables and Plots}
 \item \href{https://vincentarelbundock.github.io/marginaleffects/articles/performance.html}{Performance}
 \item \href{https://vincentarelbundock.github.io/marginaleffects/articles/alternative_software.html}{Alternative Software}
+\item \href{https://vincentarelbundock.github.io/marginaleffects/articles/faq.html}{Frequently Asked Questions}
 }
 }
 
@@ -238,8 +255,8 @@ marginaleffects(mod,
 # marginal effect within each subset of observations with different observed
 # values for the `cyl` variable:
 mod2 <- lm(mpg ~ hp * cyl, data = mtcars)
-mfx2 <- marginaleffects(mod2, variables = "hp")
-summary(mfx2, by = "cyl")
+mfx2 <- marginaleffects(mod2, variables = "hp", by = "cyl")
+summary(mfx2)
 
 # Marginal Effects at User-Specified Values (counterfactual)
 # Variables not explicitly included in `datagrid()` are held at their

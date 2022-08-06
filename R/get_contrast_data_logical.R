@@ -1,0 +1,18 @@
+get_contrast_data_logical <- function(model,
+                                      newdata,
+                                      variable,
+                                      ...) {
+    lo <- hi <- newdata
+    lo[[variable$name]] <- FALSE
+    hi[[variable$name]] <- TRUE
+    lab <- suppressWarnings(tryCatch(
+        sprintf(variable$label, TRUE, FALSE),
+        error = function(e) variable$label))
+    out <- list(rowid = seq_len(nrow(newdata)),
+        lo = lo,
+        hi = hi,
+        original = newdata,
+        ter = rep(variable$name, nrow(newdata)),
+        lab = rep(lab, nrow(newdata)))
+    return(out)
+}
