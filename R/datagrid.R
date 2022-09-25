@@ -29,6 +29,7 @@
 #' A `data.frame` in which each row corresponds to one combination of the named
 #' predictors supplied by the user via the `...` dots. Variables which are not
 #' explicitly defined are held at their mean or mode.
+#' @family grid
 #' @export
 #' @examples
 #' # The output only has 2 rows, and all the variables except `hp` are at their
@@ -108,6 +109,10 @@ datagrid <- function(
         args <- c(dots, args)
         out <- do.call("counterfactual", args)
     }
+
+    # better to assume "standard" class as output
+    setDF(out)
+
     return(out)
 }
 
@@ -139,6 +144,7 @@ datagrid <- function(
 #' head(dat)
 #' dim(dat)
 #'
+#' @family grid
 #' @export
 datagridcf <- function(
     ...,
@@ -169,7 +175,8 @@ counterfactual <- function(..., model = NULL, newdata = NULL) {
 
     rowid <- data.frame(rowidcf = seq_len(nrow(dat)))
     if (length(variables_automatic) > 0) {
-        dat_automatic <- dat[, intersect(variables_automatic, colnames(dat)), drop = FALSE]
+        idx <- intersect(variables_automatic, colnames(dat))
+        dat_automatic <- dat[, ..idx, drop = FALSE]
         dat_automatic <- cbind(rowid, dat_automatic)
         out <- merge(dat_automatic, at, all = TRUE)
     }  else {
@@ -208,8 +215,10 @@ typical <- function(
         variables_automatic <- setdiff(variables_automatic, insight::find_response(model))
     }
 
+
     if (length(variables_automatic) > 0) {
-        dat_automatic <- dat[, intersect(variables_automatic, colnames(dat)), drop = FALSE]
+        idx <- intersect(variables_automatic, colnames(dat))
+        dat_automatic <- dat[, ..idx, drop = FALSE]
         dat_automatic <- stats::na.omit(dat_automatic)
         out <- list()
         # na.omit destroys attributes, and we need the "factor" attribute
@@ -237,7 +246,6 @@ typical <- function(
             out[n] <- at[n]
         }
     }
-
 
     # unique before counting
     out <- lapply(out, unique)
@@ -283,7 +291,6 @@ prep_datagrid <- function(..., model = NULL, newdata = NULL) {
         not both).")
         stop(msg, call. = FALSE)
     }
-
 
     if (!is.null(model)) {
         variables_list <- insight::find_variables(model)
@@ -358,6 +365,8 @@ prep_datagrid <- function(..., model = NULL, newdata = NULL) {
     } else {
         variables_cluster <- NULL
     }
+
+    setDT(newdata)
 
     out <- list("newdata" = newdata,
                 "at" = at,

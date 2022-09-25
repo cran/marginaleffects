@@ -1,3 +1,24 @@
+# marginaleffects 0.7.1
+
+* New supported model class: `gamlss`. Thanks to Marcio Augusto Diniz.
+* `marginalmeans()` accepts a `wts` argument with values: "equal", "proportional", "cells".
+* `by` argument 
+  - accepts data frames for complex groupings.
+  - `in `marginalmeans` only accepts data frames.
+  - accepts "group" to group by response level.
+  - works with bayesian models.
+* `byfun` argument for the `predictions()` function to aggregate using different functions.
+* `hypothesis` argument
+  - The matrix column names are used as labels for hypothesis tests.
+  - Better labels with "sequential", "reference", "pairwise".
+  - new shortcuts "revpairwise", "revsequential", "revreference"
+* `wts` argument is respected in `by` argument and with `*avg` shortcuts in the `transform_pre` argument.
+* `tidy.predictions()` and `tidy.marginalmeans()` get a new `transform_avg` argument.
+* New vignettes: 
+  - Unit-level contrasts in logistic regressions. Thanks to @arthur-albuquerque.
+  - New vignette: Python Numpy models in `marginaleffects`. Thanks to @timpipeseek.
+  - New vignette: Bootstrap example in standard errors vignette.
+
 # marginaleffects 0.7.0
 
 Breaking changes:

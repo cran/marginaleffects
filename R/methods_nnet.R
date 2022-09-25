@@ -1,7 +1,7 @@
 #' @include set_coef.R
 #' @rdname set_coef
 #' @export
-set_coef.multinom <- function(model, coefs) {
+set_coef.multinom <- function(model, coefs, ...) {
     # internally, coefficients are held in the `wts` vector, with 0s
     # interspersed. When transforming that vector to a matrix, we see that the
     # first row and first column are all zeros. 
@@ -50,6 +50,18 @@ get_predict.multinom <- function(model,
 
     type <- sanitize_type(model, type)
 
+    is_latent <- is_mclogit <- is_nnet <- FALSE
+    if (isTRUE(type == "latent") && inherits(model, c("mblogit", "mclogit"))) {
+        is_latent <- TRUE
+        is_mclogit <- TRUE
+        type <- "link"
+
+    } else if (isTRUE(type == "latent") && inherits(model, "multinom")) {
+        is_latent <- TRUE
+        is_nnet <- TRUE
+        type <- "probs"
+    } 
+
     # needed because `predict.multinom` uses `data` rather than `newdata`
     pred <- stats::predict(model,
                            newdata = newdata,
@@ -57,14 +69,44 @@ get_predict.multinom <- function(model,
                            ...)
 
     # atomic vector means there is only one row in `newdata`
+    # two levels DV returns a vector 
     if (isTRUE(checkmate::check_atomic_vector(pred))) {
-        pred <- matrix(pred, nrow = 1, dimnames = list(NULL, names(pred)))
+        y_original <- sort(unique(insight::get_response(model)))
+        two_levels <- length(y_original) == 2
+        if (isTRUE(two_levels)) {
+            pred <- matrix(pred)
+            colnames(pred) <- as.character(y_original[2])
+        } else {
+            pred <- matrix(pred, nrow = 1, dimnames = list(NULL, names(pred)))
+        }
+
     }
+
+    if (is_latent && is_mclogit) {
+        missing_level <- as.character(unique(insight::get_response(model)))
+        missing_level <- setdiff(missing_level, colnames(pred))
+        if (length(missing_level == 1)) {
+            pred <- cbind(0, pred)
+            colnames(pred)[1] <- missing_level
+            pred <- pred - rowMeans(pred)
+        } else {
+            stop("Unable to compute predictions on the latent scale.", call. = FALSE)
+        }
+
+    } else if (is_latent && is_nnet) {
+        inverse_softMax <- function(mu) {
+            log_mu <- log(mu)
+            return(sweep(log_mu, 1, STATS = rowMeans(log_mu), FUN = "-"))
+        }
+        pred <- inverse_softMax(pred)
+    }
+
 
     # matrix with outcome levels as columns
     out <- data.frame(
         group = rep(colnames(pred), each = nrow(pred)),
         predicted = c(pred))
+
 
     # usually when `newdata` is supplied by `comparisons`
     if ("rowid" %in% colnames(newdata)) {

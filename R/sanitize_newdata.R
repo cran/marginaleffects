@@ -1,44 +1,51 @@
-sanitize_newdata <- function(model, newdata) {
+sanitize_newdata <- function(model, newdata, by = NULL, modeldata = NULL) {
 
     checkmate::assert(
         checkmate::check_data_frame(newdata, null.ok = TRUE),
         checkmate::check_choice(newdata, choices = c("mean", "median", "tukey", "grid", "marginalmeans")),
         combine = "or")
 
+    # to respect the `by` argument, we need all values to be preserved
+    if (isTRUE(checkmate::check_data_frame(by))) {
+        by <- setdiff(colnames(by), "by")
+    }
+    args <- list(model = model)
+    for (b in by) {
+        args[[b]] <- unique
+    }
+
     # we always need this to extract attributes
-    modeldata <- hush(insight::get_data(model))
+    if (is.null(modeldata)) {
+        modeldata <- hush(insight::get_data(model))
+        # cannot extract data on unsupported custom models (e.g., numpyro)
+        if (is.null(modeldata)) {
+            modeldata <- newdata
+        }
+    }
 
     if (is.null(newdata)) {
         newdata <- modeldata
 
     } else if (identical(newdata, "mean")) {
-        newdata <- datagrid(model = model)
+        newdata <- do.call("datagrid", args)
 
     } else if (identical(newdata, "median")) {
-        newdata <- datagrid(
-            model = model,
-            FUN.numeric = function(x) stats::median(x, na.rm = TRUE))
+        args[["FUN.numeric"]] <- function(x) stats::median(x, na.rm = TRUE)
+        newdata <- do.call("datagrid", args)
 
     } else if (identical(newdata, "tukey")) {
-        newdata <- datagrid(
-            model = model,
-            FUN.numeric = function(x) stats::fivenum(x, na.rm = TRUE))
+        args[["FUN.numeric"]] <- function(x) stats::fivenum(x, na.rm = TRUE)
+        newdata <- do.call("datagrid", args)
 
     } else if (identical(newdata, "grid")) {
-        newdata <- datagrid(
-            model = model,
-            FUN.numeric = function(x) stats::fivenum(x, na.rm = TRUE),
-            FUN.factor = unique,
-            FUN.character = unique,
-            FUN.logical = unique)
+        args[["FUN.numeric"]] <- function(x) stats::fivenum(x, na.rm = TRUE)
+        args[["FUN.factor"]] <- args[["FUN.character"]] <- args[["FUN.logical"]] <- unique
+        newdata <- do.call("datagrid", args)
 
     # grid with all unique values of categorical variables, and numerics at their means
     } else if (identical(newdata, "marginalmeans")) {
-        newdata <- datagrid(
-            model = model,
-            FUN.factor = unique,
-            FUN.character = unique,
-            FUN.logical = unique)
+        args[["FUN.factor"]] <- args[["FUN.character"]] <- args[["FUN.logical"]] <- unique
+        newdata <- do.call("datagrid", args)
     }
 
     if (!inherits(newdata, "data.frame")) {
@@ -50,6 +57,9 @@ sanitize_newdata <- function(model, newdata) {
         msg <- sprintf(msg, class(model)[1])
         stop(msg, call. = FALSE)
     }
+
+    # column subsets later and predict
+    setDF(modeldata)
 
     # column attributes
     mc <- Filter(function(x) is.matrix(modeldata[[x]]), colnames(modeldata))
@@ -109,6 +119,17 @@ sanitize_newdata <- function(model, newdata) {
     # do it in a centralized upfront way.
     if (!"rowid" %in% colnames(newdata)) {
         newdata$rowid <- seq_len(nrow(newdata))
+    }
+
+    # placeholder response; sometimes insight::get_predicted breaks without this
+    resp <- insight::find_response(model)
+    if (isTRUE(checkmate::check_character(resp, len = 1)) &&
+        !resp %in% colnames(newdata)) {
+        y <- insight::get_response(model)
+        # protect df or matrix response
+        if (isTRUE(checkmate::check_atomic_vector(y))) {
+            newdata[[resp]] <- y[1]
+        }
     }
 
     return(newdata)

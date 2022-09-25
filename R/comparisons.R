@@ -43,7 +43,7 @@
 #'   - Logical variables:
 #'     * NULL: contrast between TRUE and FALSE
 #'   - Numeric variables:
-#'     * Numeric of length 1: Contrast for a gap of `x`, computed at the observed value plus and minus `x / 2`
+#'     * Numeric of length 1: Contrast for a gap of `x`, computed at the observed value plus and minus `x / 2`. For example, estimating a `+1` contrast compares adjusted predictions when the regressor is equal to its observed value minus 0.5 and its observed value plus 0.5.
 #'     * Numeric vector of length 2: Contrast between the 2nd element and the 1st element of the `x` vector.
 #'     * "iqr": Contrast across the interquartile range of the regressor.
 #'     * "sd": Contrast across one standard deviation around the regressor mean.
@@ -73,7 +73,10 @@
 #' * function: accept two equal-length numeric vectors of adjusted predictions (`hi` and `lo`) and returns a vector of contrasts of the same length, or a unique numeric value.
 #'   - See the Transformations section below for examples of valid functions.
 #' @param transform_post (experimental) A function applied to unit-level estimates and confidence intervals just before the function returns results.
-#' @param by Character vector of variable names over which to compute group-wise estimates.
+#' @param by Compute group-wise average estimates. Valid inputs:
+#'   - Character vector of column names in `newdata` or in the data frame produced by calling the function without the `by` argument.
+#'   - Data frame with a `by` column of group labels, and merging columns shared by `newdata` or the data frame produced by calling the same function without the `by` argument.
+#'   - See examples below.
 #' @param interaction TRUE, FALSE, or NULL
 #' * `FALSE`: Contrasts represent the change in adjusted predictions when one predictor changes and all other variables are held constant.
 #' * `TRUE`: Contrasts represent the changes in adjusted predictions when the predictors specified in the `variables` argument are manipulated simultaneously.
@@ -166,11 +169,24 @@
 #'     newdata = "mean",
 #'     hypothesis = lc)
 #' 
+#' 
+#' # `by` argument
+#' mod <- lm(mpg ~ hp * am * vs, data = mtcars)
+#' cmp <- comparisons(mod, variables = "hp", by = c("vs", "am"))
+#' summary(cmp)
+#' 
+#' library(nnet)
+#' mod <- multinom(factor(gear) ~ mpg + am * vs, data = mtcars, trace = FALSE)
+#' by <- data.frame(
+#'     group = c("3", "4", "5"),
+#'     by = c("3,4", "3,4", "5"))
+#' comparisons(mod, type = "probs", by = by)
+#' 
 #' @export
 comparisons <- function(model,
                         newdata = NULL,
                         variables = NULL,
-                        type = "response",
+                        type = NULL,
                         vcov = TRUE,
                         conf_level = 0.95,
                         transform_pre = "difference",
@@ -192,7 +208,6 @@ comparisons <- function(model,
         transform_post_label <- deparse(substitute(transform_post))
     }
 
-
     # marginaleffects()` **must** run its own sanity checks and hardcode valid arguments
     internal_call <- dots[["internal_call"]]
     if (!isTRUE(internal_call)) {
@@ -213,6 +228,7 @@ comparisons <- function(model,
             model = model,
             newdata = newdata,
             wts = wts,
+            vcov = vcov,
             calling_function = "comparisons",
             ...)
         interaction <- sanitize_interaction(interaction, variables, model)
@@ -229,7 +245,7 @@ comparisons <- function(model,
     if (!is.null(by)) {
         if (isTRUE(insight::model_info(model)$is_bayesian)) {
             msg <- format_msg(
-            'The `by` argument is not supported for bayesian models. Users can call the `posteriordraws()` function and compute the quantities manually.')
+            "The `by` argument of the `comparisons()` and `marginaleffects()` functions is not supported for bayesian models. Users can call the `posteriordraws()` function and compute the quantities manually.")
             stop(msg, call. = FALSE)
         }
     }
@@ -258,26 +274,14 @@ comparisons <- function(model,
     marginalmeans <- isTRUE(checkmate::check_choice(newdata, choices = "marginalmeans")) 
 
     # before sanitize_variables
-    newdata <- sanitize_newdata(model = model, newdata = newdata)
+    newdata <- sanitize_newdata(model = model, newdata = newdata, by = by)
 
-    # sanitize by after newdata
-    if (!is.null(by)) {
-        flag <- isTRUE(checkmate::check_character(by)) &&
-                isTRUE(checkmate::check_true(all(by %in% colnames(newdata))))
-        if (!isTRUE(flag)) {
-            cols <- sort(setdiff(colnames(newdata), "rowid"))
-            cols <- paste(cols, collapse = ", ")
-            msg <- format_msg(
-            "The `by` argument must be a character vector and every element of the vector
-            must be one of the following column names:
-
-            %s. 
-
-            You can supply a data frame with more columns to the `newdata` argument to 
-            group on different categories.")
-            msg <- sprintf(msg, cols)
-            stop(msg, call. = FALSE)
-        }
+    # weights: before sanitize_variables
+    sanity_wts(wts, newdata) # after sanity_newdata
+    if (!is.null(wts) && isTRUE(checkmate::check_string(wts))) {
+        newdata[["marginaleffects_wts_internal"]] <- newdata[[wts]]
+    } else {
+        newdata[["marginaleffects_wts_internal"]] <- wts
     }
 
     # after sanitize_newdata
@@ -293,13 +297,9 @@ comparisons <- function(model,
 
     hypothesis <- sanitize_hypothesis(hypothesis, ...)
 
-    # weights
-    sanity_wts(wts, newdata) # after sanity_newdata
-    if (!is.null(wts) && isTRUE(checkmate::check_string(wts))) {
-        newdata[["marginaleffects_wts_internal"]] <- newdata[[wts]]
-    } else {
-        newdata[["marginaleffects_wts_internal"]] <- wts
-    }
+    # after sanitize_newdata
+    sanity_by(by, newdata)
+
 
     # get dof before transforming the vcov arg
     if (is.character(vcov) &&
@@ -317,8 +317,9 @@ comparisons <- function(model,
         dof <- NULL
     }
 
+    vcov_false <- isTRUE(vcov == FALSE)
     vcov.type <- get_vcov_label(vcov)
-    vcov <- get_vcov(model, vcov = vcov)
+    vcov <- get_vcov(model, vcov = vcov, ...)
 
     predictors <- variables_list$conditional
 
@@ -336,9 +337,10 @@ comparisons <- function(model,
                  newdata = newdata,
                  variables = predictors,
                  type = type,
-                 original = contrast_data$original,
-                 hi = contrast_data$hi,
-                 lo = contrast_data$lo,
+                 original = contrast_data[["original"]],
+                 hi = contrast_data[["hi"]],
+                 lo = contrast_data[["lo"]],
+                 wts = contrast_data[["marginaleffects_wts_internal"]],
                  by = by,
                  marginalmeans = marginalmeans,
                  interaction = interaction,
@@ -352,7 +354,7 @@ comparisons <- function(model,
         J <- NULL
 
     # standard errors via delta method
-    } else if (isTRUE(checkmate::check_matrix(vcov))) {
+    } else if (!vcov_false && isTRUE(checkmate::check_matrix(vcov))) {
         idx <- intersect(colnames(mfx), c("type", "group", "term", "contrast"))
         idx <- mfx[, (idx), drop = FALSE]
         args <- list(model,
@@ -383,7 +385,7 @@ comparisons <- function(model,
 
     # merge original data back in
     # HACK: relies on NO sorting at ANY point
-    if (isTRUE(nrow(mfx) == nrow(contrast_data$original))) {
+    if (is.null(by) && "rowid" %in% colnames(mfx)) {
         idx <- setdiff(colnames(contrast_data$original), colnames(mfx))
         mfx <- data.table(mfx, contrast_data$original[, ..idx])
     }
@@ -406,23 +408,30 @@ comparisons <- function(model,
          mfx$group <- "main_marginaleffect"
     }
 
+
+    # clean columns
+    stubcols <- c("rowid", "rowidcf", "type", "group", "term", "hypothesis",
+                  grep("^contrast", colnames(mfx), value = TRUE),
+                  "comparison", "std.error", "statistic", "p.value", "conf.low", "conf.high", "df",
+                  "predicted", "predicted_hi", "predicted_lo")
+    cols <- intersect(stubcols, colnames(mfx))
+    cols <- unique(c(cols, colnames(mfx)))
+    mfx <- mfx[, ..cols, drop = FALSE]
+
+    # bayesian draws
+    attr(mfx, "posterior_draws") <- draws
+
+    # after draws attribute
     if (!is.null(transform_post)) {
         mfx <- backtransform(mfx, transform_post)
     }
 
-    # clean columns
-    bad <- c("predicted_or", "predicted")
-    stubcols <- c("rowid", "rowidcf", "type", "group", "term", "hypothesis",
-                  grep("^contrast", colnames(mfx), value = TRUE),
-                  "comparison", "std.error", "statistic", "p.value", "conf.low", "conf.high", "df",
-                  sort(grep("^predicted", colnames(newdata), value = TRUE)))
-    cols <- intersect(stubcols, colnames(mfx))
-    cols <- unique(c(cols, colnames(mfx)))
-    cols <- setdiff(cols, bad)
-    mfx <- mfx[, ..cols, drop = FALSE]
-
     # save as attribute and not column
-    marginaleffects_wts_internal <- mfx[["marginaleffects_wts_internal"]]
+    if (any(!is.na(mfx[["marginaleffects_wts_internal"]]))) {
+        marginaleffects_wts_internal <- mfx[["marginaleffects_wts_internal"]]
+    } else {
+        marginaleffects_wts_internal <- NULL
+    }
     mfx[["marginaleffects_wts_internal"]] <- NULL
 
     out <- mfx
@@ -435,11 +444,9 @@ comparisons <- function(model,
         setDF(out)
     }
 
-    class(out) <- c("comparisons", class(out))
     out <- set_attributes(
         out,
         get_attributes(newdata, include_regex = "^newdata"))
-    attr(out, "posterior_draws") <- draws
     attr(out, "model") <- model
     attr(out, "type") <- type
     attr(out, "model_type") <- class(model)[1]
@@ -460,5 +467,6 @@ comparisons <- function(model,
         }
     }
 
+    class(out) <- c("comparisons", class(out))
     return(out)
 }

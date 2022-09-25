@@ -39,6 +39,7 @@ get_se_delta_contrasts <- function(model,
         hi = hi,
         original = original,
         interaction = interaction,
+        verbose = FALSE,
         ...
     )$comparison
 }
@@ -70,7 +71,7 @@ get_se_delta <- function(model,
         return(NULL)
     }
 
-    coefs <- get_coef(model)
+    coefs <- get_coef(model, ...)
 
     # TODO: this is a terrible sanity check
     # some vcov methods return an unnamed matrix
@@ -81,9 +82,10 @@ get_se_delta <- function(model,
     # input: named vector of coefficients
     # output: gradient
     inner <- function(x) {
-        model_tmp <- set_coef(model, stats::setNames(x, names(coefs)))
+        model_tmp <- set_coef(model, stats::setNames(x, names(coefs)) ,...)
         # do not pass NULL arguments. Important for `deltam` to allow users to supply FUN without ...
         args <- c(list(model = model_tmp, hypothesis = hypothesis), list(...))
+        if (inherits(model, "gamlss")) args[["safe"]] <- FALSE
         if (!is.null(eps)) args[["eps"]] <- eps
         if (!is.null(type)) args[["type"]] <- type
         if (!is.null(newdata)) args[["newdata"]] <- newdata
@@ -102,7 +104,7 @@ get_se_delta <- function(model,
             args[["eps"]] <- eps
         }
         J <- do.call("get_jacobian", args)
-        colnames(J) <- names(get_coef(model))
+        colnames(J) <- names(get_coef(model, ...))
     }
 
     # Var(dydx) = J Var(beta) J'

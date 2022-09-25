@@ -8,7 +8,7 @@ requiet("insight")
 # Issue #438: backtransforms allows us to match `emmeans` exactly
 mod <- glm(vs ~ mpg + factor(cyl), data = mtcars, family = binomial)
 em <- emmeans(mod, ~cyl, type = "response")
-mm <- marginalmeans(mod)
+mm <- marginalmeans(mod, type = "response")
 expect_equal(data.frame(em)$prob, mm$marginalmean)
 expect_equal(data.frame(em)$asymp.LCL, mm$conf.low)
 expect_equal(data.frame(em)$asymp.UCL, mm$conf.high)
@@ -20,13 +20,6 @@ expect_equal(data.frame(em)$response, mm$marginalmean)
 # TODO: 1/eta link function inverts order of CI. Should we clean this up?
 expect_equal(data.frame(em)$asymp.LCL, mm$conf.high)
 expect_equal(data.frame(em)$asymp.UCL, mm$conf.low)
-
-
-# as.factor and as.logical in formula
-mod <- lm(mpg ~ factor(cyl) + as.factor(gear) + as.logical(am), data = mtcars)
-mm <- marginalmeans(mod, variables = "cyl", by = "am")
-expect_inherits(mm, "marginalmeans")
-expect_equal(nrow(mm), 6)
 
 
 # old tests used to require pre-conversion
@@ -110,14 +103,30 @@ mod <- lm(hp ~ mpg, mtcars)
 expect_error(marginalmeans(mod), pattern = "was found")
 
 
-# by argument
-dat <- mtcars
-dat$am <- as.logical(dat$am)
-dat$vs <- factor(dat$vs)
-dat$cyl <- factor(dat$cyl)
-mod <- glm(gear ~ cyl + vs + am, data = dat, family = poisson)
-mm <- marginalmeans(mod, by = "am")
-expect_inherits(mm, "marginalmeans")
-expect_equal(nrow(mm), 10)
+# wts
+mod1 <- lm(vs ~ factor(am) + factor(gear) + factor(cyl), data = mtcars)
+mod2 <- glm(vs ~ factor(am) + factor(gear) + mpg, data = mtcars, family = binomial)
 
+# wts = "cells"
+em <- data.frame(emmeans(mod1, ~am, weights = "cells"))
+mm <- marginalmeans(mod1, variables = "am", wts = "cells")
+expect_equivalent(mm$marginalmean, em$emmean)
+expect_equivalent(mm$std.error, em$SE)
 
+em <- data.frame(emmeans(mod2, ~am, weights = "cells", type = "response"))
+mm <- marginalmeans(mod2, variables = "am", wts = "cells")
+expect_equivalent(mm$marginalmean, em$prob)
+expect_equivalent(mm$conf.low, em$asymp.LCL)
+expect_equivalent(mm$conf.high, em$asymp.UCL)
+
+# wts = "proportional"
+em <- data.frame(emmeans(mod1, ~am, weights = "proportional"))
+mm <- marginalmeans(mod1, variables = "am", wts = "proportional")
+expect_equivalent(mm$marginalmean, em$emmean)
+expect_equivalent(mm$std.error, em$SE)
+
+em <- data.frame(emmeans(mod2, ~am, weights = "proportional", type = "response"))
+mm <- marginalmeans(mod2, variables = "am", wts = "proportional")
+expect_equivalent(mm$marginalmean, em$prob)
+expect_equivalent(mm$conf.low, em$asymp.LCL)
+expect_equivalent(mm$conf.high, em$asymp.UCL)

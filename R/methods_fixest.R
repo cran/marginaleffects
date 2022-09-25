@@ -44,30 +44,63 @@ get_predict.fixest <- function(model,
         }
     }
 
-    args <- c(args, dots)
-    fun <- stats::predict
-    pred <- try(do.call("fun", args), silent = TRUE)
+    # args <- c(args, dots)
+    # fun <- stats::predict
+    # pred <- try(do.call("fun", args), silent = TRUE)
+
+    # fixest is super slow when using do call because of some `deparse()` call
+    pred <- try(stats::predict(
+        object = args$object,
+        newdata = args$newdata,
+        type = args$type,
+        interval = args$interval,
+        level = args$level,
+        vcov = args$vcov,
+        ...),
+    silent = TRUE)
 
     # unable to compute confidence intervals; try again
     if (!is.null(conf_level) && inherits(pred, "try-error")) {
         args[["interval"]] <- "none"
         args[["level"]] <- NULL
-        pred <- try(do.call("fun", args), silent = TRUE)
+        # fixest is super slow when using do call because of some `deparse()` call
+        pred <- try(stats::predict(
+            object = args$object,
+            newdata = args$newdata,
+            type = args$type,
+            interval = args$interval,
+            vcov = args$vcov,
+            ...),
+        silent = TRUE)
     }
 
     if (inherits(pred, "data.frame")) {
         out <- pred
-        out$rowid <- seq_len(nrow(newdata))
+        if (!"rowid" %in% colnames(out)) {
+            if ("rowid" %in% colnames(newdata)) {
+                out$rowid <- newdata$rowid
+            } else {
+                out$rowid <- seq_len(nrow(newdata))
+            }
+        }
         colnames(out)[colnames(out) == "fit"] <- "predicted"
         colnames(out)[colnames(out) == "se.fit"] <- "std.error"
         colnames(out)[colnames(out) == "ci_low"] <- "conf.low"
         colnames(out)[colnames(out) == "ci_high"] <- "conf.high"
-    } else if (isTRUE(checkmate::check_atomic_vector(pred)) &&
-               !inherits(pred, "try-error")) {
-        out <- data.frame(
-            rowid = 1:nrow(newdata),
-            predicted = as.numeric(pred))
+    } else if (isTRUE(checkmate::check_atomic_vector(pred)) && !inherits(pred, "try-error")) {
+        if ("rowid" %in% colnames(newdata)) {
+            out <- data.frame(
+                rowid = newdata$rowid,
+                predicted = as.numeric(pred))
+        } else {
+            out <- data.frame(
+                rowid = 1:nrow(newdata),
+                predicted = as.numeric(pred))
+        }
     } else {
+        if (inherits(pred, "try-error")) {
+            stop(as.character(pred), call. = FALSE)
+        }
         msg <- format_msg(
         "Unable to extract predictions from a model of type `fixest`. Please
         report this problem, along with replicable code, on the `marginaleffects` issue tracker:

@@ -8,6 +8,7 @@ requiet("rstanarm")
 requiet("emmeans")
 requiet("margins")
 requiet("broom")
+if (!require("rstanarm")) exit_file("rstanarm") # after requiet to avoid messages
 
 # interactions
 void <- capture.output(

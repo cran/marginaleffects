@@ -20,13 +20,6 @@ mfx <- marginaleffects(
     newdata = datagridcf(age3 = c("[0,25)","[25,50)","[50,80]")))
 expect_equivalent(nrow(mfx), 9)
 
-# error: bad type
-dat <- read.csv(testing_path("stata/databases/MASS_polr_01.csv"))
-void <- capture.output(
-    mod <- nnet::multinom(factor(y) ~ x1 + x2, data = dat, quiet = true)
-)
-expect_error(marginaleffects(mod), pattern = "must be an element")
-
 
 # multinom basic
 dat <- read.csv(testing_path("stata/databases/MASS_polr_01.csv"))
@@ -139,3 +132,38 @@ void <- capture.output(
 mfx <- marginaleffects(model, type = "probs")
 expect_inherits(mfx, "marginaleffects")
 
+
+# bug: single row newdata produces vector
+mod <- nnet::multinom(factor(gear) ~ mpg, data = mtcars, trace = FALSE)
+p <- predictions(mod, newdata = head(mtcars, 1), type = "latent")
+expect_equivalent(nrow(p), 3)
+
+
+# Issue #476: binary dependent variable
+x <- 1:1000
+n <- length(x)
+y1 <- rbinom(n, 10, prob = plogis(-10 + 0.02 * x))
+y2 <- 10 - y1
+dat <- data.frame(x, y1, y2)
+dat_long <- tidyr::pivot_longer(dat, !x, names_to = "y", values_to = "count")
+dat_long <- transform(dat_long, y = factor(y, levels = c("y2", "y1")))
+fit_multinom <- nnet::multinom(y ~ x, weights = count, data = dat_long, trace = FALSE)
+p <- predictions(fit_multinom,
+    newdata = datagrid(x = dat$x),
+    type = "latent")
+expect_inherits(p, "predictions")
+
+
+# Issue #482: sum of predicted probabilities
+mod <- nnet::multinom(factor(cyl) ~ mpg + am, data = mtcars, trace = FALSE)
+by <- data.frame(
+    by = c("4,6", "4,6", "8"),
+    group = as.character(c(4, 6, 8)))
+p1 <- predictions(mod, newdata = "mean")
+p2 <- predictions(mod, newdata = "mean", byfun = sum, by = by)
+p3 <- predictions(mod, newdata = "mean", byfun = mean, by = by)
+expect_equivalent(nrow(p1), 3)
+expect_equivalent(nrow(p2), 2)
+expect_equivalent(nrow(p3), 2)
+expect_equivalent(sum(p1$predicted[1:2]), p2$predicted[1])
+expect_equivalent(mean(p1$predicted[1:2]), p3$predicted[1])

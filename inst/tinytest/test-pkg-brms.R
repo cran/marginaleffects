@@ -17,28 +17,28 @@ tol_se <- 0.001
 
 
 # download models
-brms_numeric <- download_model("brms_numeric")
-brms_numeric2 <- download_model("brms_numeric2")
-brms_character <- download_model("brms_character")
-brms_factor <- download_model("brms_factor")
-brms_factor_formula <- download_model("brms_factor_formula")
-brms_interaction <- download_model("brms_interaction")
-brms_logical <- download_model("brms_logical")
-brms_epi <- download_model("brms_epi")
-brms_cumulative_random <- download_model("brms_cumulative_random")
-brms_monotonic <- download_model("brms_monotonic")
-brms_monotonic_factor <- download_model("brms_monotonic_factor")
-brms_vdem <- download_model("brms_vdem")
-brms_lognormal_hurdle <- download_model("brms_lognormal_hurdle")
-brms_lognormal_hurdle2 <- download_model("brms_lognormal_hurdle2")
-brms_binomial <- download_model("brms_binomial")
+brms_numeric <- marginaleffects:::modelarchive_model("brms_numeric")
+brms_numeric2 <- marginaleffects:::modelarchive_model("brms_numeric2")
+brms_character <- marginaleffects:::modelarchive_model("brms_character")
+brms_factor <- marginaleffects:::modelarchive_model("brms_factor")
+brms_factor_formula <- marginaleffects:::modelarchive_model("brms_factor_formula")
+brms_interaction <- marginaleffects:::modelarchive_model("brms_interaction")
+brms_logical <- marginaleffects:::modelarchive_model("brms_logical")
+brms_epi <- marginaleffects:::modelarchive_model("brms_epi")
+brms_cumulative_random <- marginaleffects:::modelarchive_model("brms_cumulative_random")
+brms_monotonic <- marginaleffects:::modelarchive_model("brms_monotonic")
+brms_monotonic_factor <- marginaleffects:::modelarchive_model("brms_monotonic_factor")
+brms_vdem <- marginaleffects:::modelarchive_model("brms_vdem")
+brms_lognormal_hurdle <- marginaleffects:::modelarchive_model("brms_lognormal_hurdle")
+brms_lognormal_hurdle2 <- marginaleffects:::modelarchive_model("brms_lognormal_hurdle2")
+brms_binomial <- marginaleffects:::modelarchive_model("brms_binomial")
+brms_mixed_3 <- insight::download_model("brms_mixed_3")
+brms_mv_1 <- marginaleffects:::modelarchive_model("brms_mv_1")
+brms_vdem <- marginaleffects:::modelarchive_model("brms_vdem")
+brms_ordinal_1 <- insight::download_model("brms_ordinal_1")
+brms_categorical_1 <- marginaleffects:::modelarchive_model("brms_categorical_1")
 
 
-
-
-# warning: weights not supported
-cmp <- comparisons(brms_numeric, wts = mtcars$cyl)
-expect_warning(tidy(cmp), pattern = "Weights")
 
 # average marginal effects brmsmargins
 options("marginaleffects_credible_interval" = "eti")
@@ -53,7 +53,7 @@ bm <- data.frame(bm$ContrastSummary)
 mfx <- marginaleffects(brms_numeric)
 mfx <- tidy(mfx)
 
-expect_equivalent(mean(posteriordraws(mfx)$estimate), bm$M, tolerance = tol)
+expect_equivalent(mean(posteriordraws(mfx)$draw), bm$M, tolerance = tol)
 expect_equivalent(mfx$conf.low, bm$LL, tolerance = tol)
 expect_equivalent(mfx$conf.high, bm$UL, tolerance = tol)
 
@@ -93,42 +93,40 @@ expect_equivalent(nrow(mfx), nrow(attr(mfx, "posterior_draws")))
 
 
 # predictions: hypothetical group
-mod <- insight::download_model("brms_mixed_3")
-nd <- suppressWarnings(datagrid(model = mod, grp = 4, subgrp = 12))
+nd <- suppressWarnings(datagrid(model = brms_mixed_3, grp = 4, subgrp = 12))
 nd$Subject <- 1000
 set.seed(1024)
-p1 <- predictions(mod, newdata = nd, allow_new_levels = TRUE)
+p1 <- predictions(brms_mixed_3, newdata = nd, allow_new_levels = TRUE)
 set.seed(1024)
-p2 <- predictions(mod, newdata = nd, allow_new_levels = TRUE, sample_new_levels = "gaussian")
+p2 <- predictions(brms_mixed_3, newdata = nd, allow_new_levels = TRUE, sample_new_levels = "gaussian")
 set.seed(1024)
-p3 <- predictions(mod, newdata = nd, allow_new_levels = TRUE, sample_new_levels = "uncertainty")
+p3 <- predictions(brms_mixed_3, newdata = nd, allow_new_levels = TRUE, sample_new_levels = "uncertainty")
 expect_false(any(p1$predicted == p2$predicted))
 expect_equivalent(p1, p3)
 expect_inherits(posteriordraws(p3), "data.frame")
 
 
 # predictions w/ random effects
-mod <- insight::download_model("brms_mixed_3")
 
 # link
-w <- apply(posterior_linpred(mod), 2, stats::median)
-x <- get_predict(mod, type = "link")
-y <- predictions(mod, type = "link")
+w <- apply(posterior_linpred(brms_mixed_3), 2, stats::median)
+x <- get_predict(brms_mixed_3, type = "link")
+y <- predictions(brms_mixed_3, type = "link")
 expect_equivalent(w, x$predicted)
 expect_equivalent(w, y$predicted)
 
 # response
-w <- apply(posterior_epred(mod), 2, stats::median)
-x <- get_predict(mod, type = "response")
-y <- predictions(mod, type = "response")
+w <- apply(posterior_epred(brms_mixed_3), 2, stats::median)
+x <- get_predict(brms_mixed_3, type = "response")
+y <- predictions(brms_mixed_3, type = "response")
 expect_equivalent(w, x$predicted)
 expect_equivalent(w, y$predicted)
 
 # no random effects
-w1 <- apply(posterior_epred(mod), 2, stats::median)
-w2 <- apply(posterior_epred(mod, re_formula = NA), 2, stats::median)
-x <- get_predict(mod, re_formula = NA, type = "response")
-y <- predictions(mod, re_formula = NA, type = "response")
+w1 <- apply(posterior_epred(brms_mixed_3), 2, stats::median)
+w2 <- apply(posterior_epred(brms_mixed_3, re_formula = NA), 2, stats::median)
+x <- get_predict(brms_mixed_3, re_formula = NA, type = "response")
+y <- predictions(brms_mixed_3, re_formula = NA, type = "response")
 expect_true(all(w1 != w2))
 expect_equivalent(w2, x$predicted)
 expect_equivalent(w2, y$predicted)
@@ -144,8 +142,7 @@ expect_warning(predictions(brms_cumulative_random, include_random = FALSE)) # on
 
 
 # marginaleffects: ordinal no validity
-mod <- insight::download_model("brms_ordinal_1")
-expect_marginaleffects(mod, se = FALSE)
+expect_marginaleffects(brms_ordinal_1, se = FALSE)
 
 
 # predict new unit: no validity
@@ -319,18 +316,16 @@ expect_equivalent(nrow(contr2), 15)
 
 
 # multivariate outcome
-mod <- download_model("brms_mv_1")
-
-beta <- get_coef(mod)
+beta <- get_coef(brms_mv_1)
 expect_equivalent(length(beta), 12)
 
-mfx <- marginaleffects(mod)
+mfx <- marginaleffects(brms_mv_1)
 expect_inherits(mfx, "marginaleffects")
 
-pred <- predictions(mod)
+pred <- predictions(brms_mv_1)
 expect_inherits(pred, "predictions")
 
-comp <- comparisons(mod)
+comp <- comparisons(brms_mv_1)
 expect_inherits(comp, "comparisons")
 
 draws <- posteriordraws(mfx)
@@ -338,15 +333,13 @@ expect_inherits(draws, "data.frame")
 expect_true(all(c("drawid", "draw", "rowid") %in% colnames(draws)))
 
 # categorical outcome
-mod <- download_model("brms_categorical_1")
-
-mfx <- marginaleffects(mod)
+mfx <- marginaleffects(brms_categorical_1)
 expect_inherits(mfx, "marginaleffects")
 
-pred <- predictions(mod)
+pred <- predictions(brms_categorical_1)
 expect_inherits(pred, "predictions")
 
-comp <- comparisons(mod)
+comp <- comparisons(brms_categorical_1)
 expect_inherits(comp, "comparisons")
 
 draws <- posteriordraws(mfx)
@@ -355,20 +348,21 @@ expect_true(all(c("drawid", "draw", "rowid") %in% colnames(draws)))
 
 
 # vignette vdem example
-brms_vdem <- download_model("brms_vdem")
 p_response <- predictions(
-brms_vdem,
-type = "response",
-newdata = datagrid(party_autonomy = c(TRUE, FALSE),
-                   civil_liberties = .5,
-                   region = "Middle East and North Africa"))
+    brms_vdem,
+    type = "response",
+    newdata = datagrid(
+        party_autonomy = c(TRUE, FALSE),
+        civil_liberties = .5,
+        region = "Middle East and North Africa"))
 expect_predictions(p_response, se = FALSE)
 p_prediction <- predictions(
-brms_vdem,
-type = "prediction",
-newdata = datagrid(party_autonomy = c(TRUE, FALSE),
-                   civil_liberties = .5,
-                   region = "Middle East and North Africa"))
+    brms_vdem,
+    type = "prediction",
+    newdata = datagrid(
+        party_autonomy = c(TRUE, FALSE),
+        civil_liberties = .5,
+        region = "Middle East and North Africa"))
 expect_predictions(p_prediction, se = FALSE)
 
 
@@ -456,3 +450,133 @@ expect_equivalent(nrow(pd), 4000)
 ti <- tidy(cmp)
 expect_equivalent(nrow(ti), 1)
 expect_inherits(ti, "data.frame")
+
+
+# hypothesis with bayesian models
+p1 <- predictions(
+    brms_numeric2,
+    hypothesis = c(1, -1),
+    newdata = datagrid(hp = c(100, 110)))
+
+p2 <- predictions(
+    brms_numeric2,
+    hypothesis = "b1 = b2",
+    newdata = datagrid(hp = c(100, 110)))
+
+expect_inherits(p1, "predictions")
+expect_inherits(p2, "predictions")
+expect_equivalent(nrow(p1), 1)
+expect_equivalent(nrow(p2), 1)
+expect_equivalent(p1$predicted, p2$predicted)
+expect_true(all(c("conf.low", "conf.high") %in% colnames(p1)))
+expect_true(all(c("conf.low", "conf.high") %in% colnames(p2)))
+
+lc <- matrix(c(1, -1, -1, 1), ncol = 2)
+colnames(lc) <- c("Contrast A", "Contrast B")
+p3 <- predictions(
+    brms_numeric2,
+    hypothesis = lc,
+    newdata = datagrid(hp = c(100, 110)))
+expect_inherits(p3, "predictions")
+expect_equivalent(nrow(p3), 2)
+expect_equivalent(p3$term, c("Contrast A", "Contrast B"))
+expect_equivalent(p3$predicted[1], -p3$predicted[2])
+
+
+# `by` argument is supported for predictions() because it is a simple average.
+# In comparisons(), some transformations are non-collapsible, so we can't just
+# take the average, and we need to rely on more subtle transformations from
+# `transform_pre_function_dict`.
+p <- predictions(
+    brms_factor,
+    by = "cyl_fac")
+expect_inherits(p, "predictions")
+expect_equal(ncol(attr(p, "posterior_draws")), 2000)
+expect_equal(nrow(p), 3)
+expect_true(all(c("conf.low", "conf.high") %in% colnames(p)))
+
+
+# `by` data frame to collapse response group
+by <- data.frame(
+    group = as.character(1:4),
+    by = rep(c("(1,2)", "(3,4)"), each = 2))
+p <- predictions(
+    brms_cumulative_random,
+    by = by)
+expect_equivalent(nrow(p), 2)
+p <- predictions(
+    brms_cumulative_random,
+    by = by,
+    hypothesis = "reference")
+expect_equivalent(nrow(p), 1)
+
+
+
+# `by` not supported in comparisons() or marginaleffects()
+expect_error(comparisons(brms_factor, by = "cyl_fac"), pattern = "supported")
+expect_error(marginaleffects(brms_factor, by = "cyl_fac"), pattern = "supported")
+
+
+
+
+# interaction is same order of magnitude as frequentist
+# issue reported by Solomon Kurz over Twitter DM
+dat <- mtcars
+dat$cyl <- factor(dat$cyl)
+mod <- lm(mpg ~ am * factor(cyl), data = mtcars)
+void <- capture.output(suppressMessages(
+    mod.b <- brm(
+        mpg ~ am * cyl,
+        data = dat,
+        family = gaussian,
+        seed = 1024)
+))
+
+cmp <- comparisons(mod, variables = c("cyl", "am"))
+cmp.b <- comparisons(mod.b, variables = c("cyl", "am"))
+tid <- tidy(cmp)
+tid.b <- tidy(cmp.b)
+
+
+expect_equivalent(tid$estimate, tid.b$estimate, tolerance = 0.1)
+expect_equivalent(tid$conf.low, tid.b$conf.low, tolerance = 0.2)
+expect_equivalent(tid$conf.high, tid.b$conf.high, tolerance = 0.2)
+
+
+# issue 445 leftover browser()
+p <- predictions(mod, by = "am")
+expect_inherits(p, "predictions")
+expect_equivalent(nrow(p), 2)
+
+
+# transform_post works for comparisons() and predictions()
+void <- capture.output(suppressMessages(
+    mod <- brm(gear ~ mpg + hp, data = mtcars, family = poisson)
+))
+
+p1 <- predictions(mod, type = "link")
+p2 <- predictions(mod, type = "link", transform_post = exp)
+expect_equivalent(exp(p1$predicted), p2$predicted)
+expect_equivalent(exp(p1$conf.low), p2$conf.low)
+expect_equivalent(exp(p1$conf.high), p2$conf.high)
+expect_equivalent(exp(attr(p1, "posterior_draws")), attr(p2, "posterior_draws"))
+
+p1 <- comparisons(mod, type = "link")
+p2 <- comparisons(mod, type = "link", transform_post = exp)
+expect_equivalent(exp(p1$comparison), p2$comparison)
+expect_equivalent(exp(p1$conf.low), p2$conf.low)
+expect_equivalent(exp(p1$conf.high), p2$conf.high)
+expect_equivalent(exp(attr(p1, "posterior_draws")), attr(p2, "posterior_draws"))
+
+
+# byfun
+by <- data.frame(
+    by = c("1,2", "1,2", "3,4", "3,4"),
+    group = 1:4)
+p1 <- predictions(brms_cumulative_random, newdata = "mean")
+p2 <- predictions(brms_cumulative_random, newdata = "mean", by = by)
+p3 <- predictions(brms_cumulative_random, newdata = "mean", by = by, byfun = sum)
+expect_equivalent(mean(p1$predicted[1:2]), p2$predicted[1], tolerance = 0.1)
+expect_equivalent(mean(p1$predicted[3:4]), p2$predicted[2], tolerance = 0.1)
+expect_equivalent(sum(p1$predicted[1:2]), p3$predicted[1], tolerance = 0.1)
+expect_equivalent(sum(p1$predicted[3:4]), p3$predicted[2], tolerance = 0.1)

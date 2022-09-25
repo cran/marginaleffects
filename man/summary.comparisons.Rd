@@ -11,7 +11,7 @@
 
 \item{conf_level}{numeric value between 0 and 1. Confidence level to use to build a confidence interval.}
 
-\item{transform_avg}{(experimental) A function applied to the estimates and confidence intervals \emph{after} the unit-level estimates have been averaged.}
+\item{transform_avg}{A function applied to the estimates and confidence intervals \emph{after} the unit-level estimates have been averaged.}
 
 \item{...}{Additional arguments are passed to the \code{predict()} method
 supplied by the modeling package.These arguments are particularly useful
@@ -36,3 +36,17 @@ con <- comparisons(mod)
 # average marginal effects
 summary(con)
 }
+\seealso{
+Other summary: 
+\code{\link{glance.marginaleffects}()},
+\code{\link{reexports}},
+\code{\link{summary.marginaleffects}()},
+\code{\link{summary.marginalmeans}()},
+\code{\link{summary.predictions}()},
+\code{\link{tidy.comparisons}()},
+\code{\link{tidy.deltamethod}()},
+\code{\link{tidy.marginaleffects}()},
+\code{\link{tidy.marginalmeans}()},
+\code{\link{tidy.predictions}()}
+}
+\concept{summary}

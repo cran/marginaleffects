@@ -27,6 +27,10 @@ sanitize_variables <- function(variables,
     # all variable names
     if (!is.null(model)) {
         predictors_all <- insight::find_variables(model, flatten = TRUE)
+        # unsupported by insight (e.g., numpyro)
+        if (length(predictors_all) == 0) {
+            predictors_all <- colnames(newdata)
+        }
     } else {
         predictors_all <- colnames(newdata)
     }
@@ -119,7 +123,7 @@ sanitize_variables <- function(variables,
 
     # anything left?
     if (length(predictors) == 0) {
-        stop("There is no valid predictor variable. Please change the `variables` argument.", call. = FALSE)
+        stop("There is no valid predictor variable. Please change the `variables` argument or supply a new data frame to the `newdata` argument.", call. = FALSE)
     }
     others <- setdiff(predictors_all, names(predictors))
 
@@ -132,17 +136,26 @@ sanitize_variables <- function(variables,
     # allow multiple function types: marginaleffects() uses both difference and dydx
     # when transform_pre is defined, use that if it works or turn back to defaults
     # predictors list elements: name, value, function, label
+
     if (is.null(transform_pre)) {
         fun_numeric <- fun_categorical <- transform_pre_function_dict[["difference"]]
         lab_numeric <- lab_categorical <- transform_pre_label_dict[["difference"]]
+
     } else if (is.function(transform_pre)) {
         fun_numeric <- fun_categorical <- transform_pre
         lab_numeric <- lab_categorical <- "custom"
+
     } else if (is.character(transform_pre)) {
         # switch to the avg version when there is a `by` function
-        if (!is.null(by) && !isTRUE(grepl("avg$", transform_pre))) {
+        if (isTRUE(checkmate::check_character(by)) && !isTRUE(grepl("avg$", transform_pre))) {
             transform_pre <- paste0(transform_pre, "avg")
         }
+
+        # weights if user requests `avg` or automatically switched
+        if (isTRUE(grepl("avg$", transform_pre)) && "marginaleffects_wts_internal" %in% colnames(newdata)) {
+            transform_pre <- paste0(transform_pre, "wts")
+        }
+
         fun_numeric <- fun_categorical <- transform_pre_function_dict[[transform_pre]]
         lab_numeric <- lab_categorical <- transform_pre_label_dict[[transform_pre]]
         if (isTRUE(grepl("dydxavg|eyexavg|dyexavg|eydxavg", transform_pre))) {
@@ -151,7 +164,7 @@ sanitize_variables <- function(variables,
         } else if (isTRUE(grepl("dydx$|eyex$|dyex$|eydx$", transform_pre))) {
             fun_categorical <- transform_pre_function_dict[["difference"]]
             lab_categorical <- transform_pre_label_dict[["difference"]]
-        } 
+        }
 
     } else {
         github_issue()

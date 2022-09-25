@@ -5,6 +5,16 @@ get_contrast_data_numeric <- function(model,
                                       ...) {
 
 
+    modeldata <- hush(insight::get_data(model))
+    if (is.null(modeldata)) {
+        modeldata <- newdata
+    }
+
+    s <- m <- NA
+    if (is.numeric(modeldata[[variable$name]])) {
+        s <- stats::sd(modeldata[[variable$name]], na.rm = TRUE)
+        m <- mean(modeldata[[variable$name]], na.rm = TRUE)
+    }
     x <- newdata[[variable$name]]
 
     make_label <- function(lab, val) {
@@ -48,13 +58,14 @@ get_contrast_data_numeric <- function(model,
     } else if (isTRUE(checkmate::check_numeric(variable$value, len = 1))) {
         low <- x - variable$value / 2
         high <- x + variable$value / 2
-        lab <- make_label("x + %s", variable$value)
         # wrap in parentheses, unless mean() because there are already parentheses
         # important to display ratios of x+1, etc.
+        # label should not be `(mpg+1) - mpg` because that is misleading for centered contrast
         if (!isTRUE(grepl("mean", variable$label))) {
-            lab <- make_label("(%s)", lab)
+            lab <- sprintf("+%s", variable$value)
+        } else {
+            lab <- sprintf("mean(+%s)", variable$value)
         }
-        lab <- make_label(variable$label, c(lab, "x"))
 
     } else if (isTRUE(checkmate::check_numeric(variable$value, len = 2))) {
         variable$value <- sort(variable$value)
@@ -65,8 +76,6 @@ get_contrast_data_numeric <- function(model,
 
     # character contrasts
     } else if (identical(variable$value, "sd")) {
-        m <- mean(x, na.rm = TRUE)
-        s <- stats::sd(x, na.rm = TRUE)
         low <- m - s / 2
         high <- m + s / 2
         lab <- c("x + sd/2", "x - sd/2")
@@ -76,8 +85,6 @@ get_contrast_data_numeric <- function(model,
         lab <- make_label(variable$label, lab)
 
     } else if (identical(variable$value, "2sd")) {
-        m <- mean(x, na.rm = TRUE)
-        s <- stats::sd(x, na.rm = TRUE)
         low <- m - s
         high <- m + s
         lab <- c("x - sd", "x + sd")

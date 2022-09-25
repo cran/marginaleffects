@@ -26,7 +26,9 @@
 #' transformation to produce adequate confidence intervals on the scale
 #' specified by the `type` argument. When this is not possible, `predictions()`
 #' uses the Delta Method to compute standard errors around adjusted
-#' predictions.
+#' predictions, and builds symmetric confidence intervals. These naive symmetric
+#' intervals may not always be appropriate. For instance, they may stretch beyond
+#' the bounds of a binary response variables.
 #'
 #' @inheritParams marginaleffects
 #' @param model Model object
@@ -47,18 +49,12 @@
 #' + [datagrid()] call to specify a custom grid of regressors. For example:
 #'   - `newdata = datagrid(cyl = c(4, 6))`: `cyl` variable equal to 4 and 6 and other regressors fixed at their means or modes.
 #'   - See the Examples section and the [datagrid()] documentation.
-#' @param newdata A data frame over which to compute quantities of interest.
-#'   + `NULL`: adjusted predictions for each observed value in the original dataset.
-#'   - "mean": Marginal Effects at the Mean. Marginal effects when each predictor is held at its mean or mode.
-#'   - "median": Marginal Effects at the Median. Marginal effects when each predictor is held at its median or mode.
-#'   - "marginalmeans": Marginal Effects at Marginal Means. See Details section below.
-#'   - "tukey": Marginal Effects at Tukey's 5 numbers.
-#'   - "grid": Marginal Effects on a grid of representative numbers (Tukey's 5 numbers and unique values of categorical predictors).
-
-#'   + The [datagrid()] function can be used to specify a custom grid of regressors. For example:
-#'       - `newdata = datagrid()`: contrast at the mean
-#'       - `newdata = datagrid(cyl = c(4, 6))`: `cyl` variable equal to 4 and 6 and other regressors fixed at their means or modes.
-#'       - See the Examples section and the [datagrid()] documentation for more.
+#' @param byfun A function such as `mean()` or `sum()` used to aggregate 
+#' estimates within the subgroups defined by the `by` argument. `NULL` uses the
+#' `mean()` function. Must accept a numeric vector and return a single numeric
+#' value. This is sometimes used to take the sum or mean of predicted
+#' probabilities across outcome or predictor
+#' levels. See examples section.
 #' @param transform_post (experimental) A function applied to unit-level adjusted predictions and confidence intervals just before the function returns results. For bayesian models, this function is applied to individual draws from the posterior distribution, before computing summaries.
 #'
 #' @template model_specific_arguments
@@ -84,12 +80,10 @@
 #' library(dplyr)
 #' mod <- lm(mpg ~ hp * am * vs, mtcars)
 #'
-#' pred <- predictions(mod, newdata = datagrid(am = 0, grid_type = "counterfactual")) %>%
-#'     summarize(across(c(predicted, std.error), mean))
-#'
-#' predictions(mod, newdata = datagrid(am = 0:1, grid_type = "counterfactual")) %>% 
-#'     group_by(am) %>%
-#'     summarize(across(c(predicted, std.error), mean))
+#' pred <- predictions(mod)
+#' summary(pred)
+#' 
+#' predictions(mod, by = "am")
 #'
 #' # Conditional Adjusted Predictions
 #' plot_cap(mod, condition = "hp")
@@ -138,14 +132,42 @@
 #'     newdata = datagrid(wt = 2:3),
 #'     hypothesis = lc)
 #' 
+#' 
+#' # `by` argument
+#' mod <- lm(mpg ~ hp * am * vs, data = mtcars)
+#' predictions(mod, by = c("am", "vs")) 
+#' 
+#' library(nnet)
+#' nom <- multinom(factor(gear) ~ mpg + am * vs, data = mtcars, trace = FALSE)
+#' 
+#' # first 5 raw predictions
+#' predictions(nom, type = "probs") |> head()
+#' 
+#' # average predictions
+#' predictions(nom, type = "probs", by = "group") |> summary()
+#' 
+#' by <- data.frame(
+#'     group = c("3", "4", "5"),
+#'     by = c("3,4", "3,4", "5"))
+#' 
+#' predictions(nom, type = "probs", by = by)
+#' 
+#' # sum of predicted probabilities for combined response levels
+#' mod <- multinom(factor(cyl) ~ mpg + am, data = mtcars, trace = FALSE)
+#' by <- data.frame(
+#'     by = c("4,6", "4,6", "8"),
+#'     group = as.character(c(4, 6, 8)))
+#' predictions(mod, newdata = "mean", byfun = sum, by = by)
+#' 
 #' @export
 predictions <- function(model,
                         newdata = NULL,
                         variables = NULL,
                         vcov = TRUE,
                         conf_level = 0.95,
-                        type = "response",
+                        type = NULL,
                         by = NULL,
+                        byfun = NULL,
                         wts = NULL,
                         transform_post = NULL,
                         hypothesis = NULL,
@@ -171,6 +193,15 @@ predictions <- function(model,
         }
     }
 
+
+    # extracting modeldata repeatedly is slow. this allows marginalmeans to pass modeldata to predictions.
+    dots <- list(...)
+    if ("modeldata" %in% names(dots)) {
+        modeldata <- dots[["modeldata"]]
+    } else {
+        modeldata <- hush(insight::get_data(model))
+    }
+
     # do not check the model because `insight` supports more models than `marginaleffects`
     # model <- sanitize_model(model)
 
@@ -185,9 +216,12 @@ predictions <- function(model,
     hypothesis <- sanitize_hypothesis(hypothesis, ...)
     conf_level <- sanitize_conf_level(conf_level, ...)
     type <- sanitize_type(model = model, type = type, calling_function = "predictions")
-    newdata <- sanitize_newdata(model = model, newdata = newdata)
+    newdata <- sanitize_newdata(model = model, newdata = newdata, modeldata = modeldata, by = by)
 
-    # `variables` si character vector: Tukey's 5 or uniques
+    # after sanitize_newdata
+    sanity_by(by, newdata)
+
+    # `variables` is character vector: Tukey's 5 or uniques
     checkmate::assert_list(variables, names = "unique", null.ok = TRUE)
 
     # analogous to comparisons(variables=list(...))
@@ -218,6 +252,7 @@ predictions <- function(model,
         newdata[["marginaleffects_wts_internal"]] <- wts
     }
 
+
     # trust newdata$rowid
     if (!"rowid" %in% colnames(newdata)) {
         newdata[["rowid"]] <- seq_len(nrow(newdata))
@@ -243,7 +278,6 @@ predictions <- function(model,
         }
     }
 
-
     if (is.null(by)) {
         vcov_tmp <- vcov
     } else {
@@ -252,7 +286,7 @@ predictions <- function(model,
 
     J <- NULL
 
-    tmp <- myTryCatch(get_predictions(
+    tmp <- get_predictions(
         model,
         newdata = newdata,
         vcov = vcov_tmp,
@@ -260,44 +294,8 @@ predictions <- function(model,
         type = type,
         hypothesis = hypothesis,
         by = by,
-        ...))
-
-    if (isTRUE(grepl("type.*models", tmp[["error"]]))) {
-        stop(tmp$error$message, call. = FALSE)
-
-    } else if (!inherits(tmp[["value"]], "data.frame")) {
-        if (isTRUE(grepl("row indices", tmp$error$message))) stop(tmp$error$message, call. = FALSE)
-        if (!is.null(tmp$warning)) warning(tmp$warning$message, call. = FALSE)
-        if (!is.null(tmp$error)) warning(tmp$error$message, call. = FALSE)
-        msg <- format_msg(
-            "Unable to compute adjusted predictions for model of class `%s`. You can try to
-            specify a different value for the `newdata` argument. If this does not work and
-            you believe that this model class should be supported by `marginaleffects`,
-            please file a feature request on the Github issue tracker:
-
-            https://github.com/vincentarelbundock/marginaleffects/issues")
-        msg <- sprintf(msg, class(model)[1])
-        stop(msg, call. = FALSE)
-
-    } else if (inherits(tmp[["warning"]], "warning") &&
-               isTRUE(grepl("vcov.*supported", tmp)) &&
-               !is.null(vcov) &&
-               !isFALSE(vcov)) {
-        msg <- format_msg(
-            "The object passed to the `vcov` argument is of class `%s`, which is not
-            supported for models of class `%s`. Please set `vcov` to `TRUE`, `FALSE`,
-            `NULL`, or supply a variance-covariance `matrix` object.")
-        msg <- sprintf(msg, class(model)[1])
-        stop(msg, call. = FALSE)
-
-    } else if (inherits(tmp[["warning"]], "warning")) {
-        msg <- tmp$warning$message
-        warning(msg, call. = FALSE)
-        tmp <- tmp[["value"]]
-
-    } else {
-        tmp <- tmp[["value"]]
-    }
+        byfun = byfun,
+        ...)
 
 
     # two cases when tmp is a data.frame
@@ -343,24 +341,22 @@ predictions <- function(model,
     draws <- attr(tmp, "posterior_draws")
 
     # bayesian: unpad draws (done in get_predictions for frequentist)
-    if (!is.null(draws) && "rowid" %in% colnames(newdata)) {
-        draws <- draws[newdata$rowid > 0, , drop = FALSE]
-    }
-
-    if (!is.null(transform_post)) {
-        draws <- transform_post(draws)
+    if (!is.null(draws) && "rowid" %in% colnames(tmp)) {
+        draws <- draws[tmp$rowid > 0, , drop = FALSE]
     }
 
     V <- NULL
     if (!isFALSE(vcov)) {
 
-        V <- get_vcov(model, vcov = vcov)
+        V <- get_vcov(model, vcov = vcov, ...)
 
         # Delta method
         if (!"std.error" %in% colnames(tmp) && is.null(draws)) {
             if (isTRUE(checkmate::check_matrix(V))) {
                 # vcov = FALSE to speed things up
-                fun <- function(...) get_predictions(..., vcov = FALSE)$predicted
+                fun <- function(...) {
+                    get_predictions(..., verbose = FALSE, vcov = FALSE)$predicted
+                }
                 se <- get_se_delta(
                     model,
                     newdata = newdata,
@@ -371,6 +367,7 @@ predictions <- function(model,
                     eps = 1e-4, # avoid pushing through ...
                     hypothesis = hypothesis,
                     by = by,
+                    byfun = byfun,
                     conf_level = conf_level,
                     ...)
                 if (is.numeric(se) && length(se) == nrow(tmp)) {
@@ -379,25 +376,121 @@ predictions <- function(model,
             }
         }
 
-        # Manual confidence intervals only in linear or Bayesian models
-        # others rely on `insight::get_predicted()`
-        linpred <- tryCatch(
-            insight::model_info(model)$is_linear || type == "link",
-            error = function(e) FALSE)
-        if (!is.null(draws) || isTRUE(linpred)) {
-            tmp <- get_ci(
-                tmp,
-                conf_level = conf_level,
-                # sometimes insight::get_predicted fails on SE but succeeds on CI (e.g., betareg)
-                vcov = vcov,
-                overwrite = FALSE,
-                draws = draws,
-                estimate = "predicted")
-        }
+        tmp <- get_ci(
+            tmp,
+            conf_level = conf_level,
+            # sometimes insight::get_predicted fails on SE but succeeds on CI (e.g., betareg)
+            vcov = vcov,
+            overwrite = FALSE,
+            draws = draws,
+            estimate = "predicted")
     }
 
     out <- data.table(tmp)
 
+    setDF(out)
+
+    # save weights as attribute and not column
+    marginaleffects_wts_internal <- out[["marginaleffects_wts_internal"]]
+    out[["marginaleffects_wts_internal"]] <- NULL
+
+    # clean columns
+    if (isTRUE(checkmate::check_data_frame(by))) {
+        bycols <- setdiff(colnames(by), "by")
+    } else {
+        bycols <- by
+    }
+
+    stubcols <- c( 
+        "rowid", "rowidcf", "type", "term", "group", "hypothesis",
+        bycols,
+        "predicted", "std.error", "statistic", "p.value", "conf.low",
+        "conf.high", "marginaleffects_wts",
+        sort(grep("^predicted", colnames(newdata), value = TRUE)))
+    cols <- intersect(stubcols, colnames(out))
+    cols <- unique(c(cols, colnames(out)))
+    out <- out[, cols, drop = FALSE]
+
+    attr(out, "posterior_draws") <- draws
+
+    # after rename to estimate / after assign draws
+    if (is.function(transform_post)) {
+        out <- backtransform(out, transform_post = transform_post)
+    }
+
+    class(out) <- c("predictions", class(out))
+    out <- set_attributes(
+        out,
+        get_attributes(newdata, include_regex = "^newdata"))
+    attr(out, "model") <- model
+    attr(out, "type") <- type
+    attr(out, "model_type") <- class(model)[1]
+    attr(out, "vcov.type") <- get_vcov_label(vcov)
+    attr(out, "jacobian") <- J
+    attr(out, "vcov") <- V
+    attr(out, "newdata") <- newdata
+    attr(out, "weights") <- marginaleffects_wts_internal
+    attr(out, "by") <- by
+
+    if ("group" %in% names(out) && all(out$group == "main_marginaleffect")) {
+        out$group <- NULL
+    }
+
+    return(out)
+}
+
+
+# wrapper used only for standard_error_delta
+get_predictions <- function(model,
+                            newdata,
+                            vcov,
+                            conf_level,
+                            type,
+                            by = NULL,
+                            byfun = byfun,
+                            hypothesis = NULL,
+                            verbose = TRUE,
+                            ...) {
+
+
+    out <- myTryCatch(get_predict(
+        model,
+        newdata = newdata,
+        vcov = vcov,
+        conf_level = conf_level,
+        type = type,
+        ...))
+
+    if (inherits(out$value, "data.frame")) {
+        out <- out$value
+    } else {
+        msg <- "Unable to compute predicted values with this model. You can try to supply a different dataset to the `newdata` argument. If this does not work, you can file a report on the Github Issue Tracker: https://github.com/vincentarelbundock/marginaleffects/issues"
+        if (!is.null(out$error)) {
+            msg <- c(msg, paste("This error was also raised:", out$error$message))
+        }
+        stop(insight::format_message(msg), call. = FALSE)
+    }
+
+    if (!"rowid" %in% colnames(out) && "rowid" %in% colnames(newdata) && nrow(out) == nrow(newdata)) {
+        out$rowid <- newdata$rowid
+    }
+
+    # extract attributes before setDT
+    draws <- attr(out, "posterior_draws")
+
+    setDT(out)
+
+    # unpad factors before averaging
+    # trust `newdata` rowid more than `out` because sometimes `get_predict()` will add a positive index even on padded data
+    # HACK: the padding indexing rowid code is still a mess
+    if ("rowid" %in% colnames(newdata) && nrow(newdata) == nrow(out)) {
+        out$rowid <- newdata$rowid
+    }
+    if ("rowid" %in% colnames(out)) {
+        idx <- out$rowid > 0
+        out <- out[idx, drop = FALSE]
+        draws <- draws[idx, , drop = FALSE]
+    }
 
     # return data
     # very import to avoid sorting, otherwise bayesian draws won't fit predictions
@@ -414,101 +507,23 @@ predictions <- function(model,
             error = function(e) out)
     }
 
-
-    setDF(out)
-
-    # save as attribute and not column
-    marginaleffects_wts_internal <- out[["marginaleffects_wts_internal"]]
-    out[["marginaleffects_wts_internal"]] <- NULL
-
-    # transform already applied to bayesian draws before computing confidence interval
-    if (is.null(draws) && !is.null(transform_post)) {
-        out <- backtransform(out, transform_post = transform_post)
-    }
-
-    # clean columns
-    stubcols <- c( 
-        "rowid", "rowidcf", "type", "term", "group", "hypothesis",
-        by,
-        "predicted", "std.error", "statistic", "p.value", "conf.low",
-        "conf.high", "marginaleffects_wts",
-        sort(grep("^predicted", colnames(newdata), value = TRUE)))
-    cols <- intersect(stubcols, colnames(out))
-    cols <- unique(c(cols, colnames(out)))
-    out <- out[, cols, drop = FALSE]
-
-    class(out) <- c("predictions", class(out))
-    out <- set_attributes(
-        out,
-        get_attributes(newdata, include_regex = "^newdata"))
-    attr(out, "model") <- model
-    attr(out, "type") <- type
-    attr(out, "model_type") <- class(model)[1]
-    attr(out, "vcov.type") <- get_vcov_label(vcov)
-    attr(out, "jacobian") <- J
-    attr(out, "vcov") <- V
-    attr(out, "posterior_draws") <- draws
-    attr(out, "newdata") <- newdata
-    attr(out, "weights") <- marginaleffects_wts_internal
-    attr(out, "by") <- by
-
-    if ("group" %in% names(out) && all(out$group == "main_marginaleffect")) {
-        out$group <- NULL
-    }
-
-    return(out)
-}
-
- 
-# wrapper used only for standard_error_delta
-get_predictions <- function(model,
-                            newdata,
-                            vcov,
-                            conf_level,
-                            type,
-                            by = NULL,
-                            hypothesis = NULL,
-                            ...) {
-
-
-    out <- get_predict(
-        model,
-        newdata = newdata,
-        vcov = vcov,
-        conf_level = conf_level,
-        type = type,
-        ...)
-    setDT(out)
-
-    # unpad factors before averaging
-    if ("rowid" %in% colnames(out)) {
-        out <- out[rowid > 0, drop = FALSE]
-    }
-
     # averaging by groups
-    if (!is.null(by)) {
-        tmp <- intersect(
-            c("rowid", "marginaleffects_wts_internal", by),
-            colnames(newdata))
-        tmp <- data.frame(newdata)[, tmp]
-        out <- merge(out, tmp, by = "rowid")
-        if ("marginaleffects_wts_internal" %in% colnames(newdata)) {
-            out <- out[,
-            .(predicted = stats::weighted.mean(
-                predicted,
-                marginaleffects_wts_internal,
-                na.rm = TRUE)),
-            by = by]
-        } else {
-            out <- out[,
-            .(predicted = mean(predicted)),
-            by = by]
-        }
-    }
+    out <- get_by(
+        out,
+        draws = draws,
+        newdata = newdata,
+        by = by,
+        byfun = byfun,
+        column = "predicted",
+        verbose = verbose,
+        ...)
 
-    if (!is.null(hypothesis)) {
-        out <- get_hypothesis(out, hypothesis, column = "predicted")
-    }
+    # after get_by
+    draws <- attr(out, "posterior_draws")
+
+    # hypothesis tests using the delta method
+    out <- get_hypothesis(out, hypothesis, column = "predicted", by = by)
 
     return(out)
 }
+

@@ -11,6 +11,7 @@
 #'
 #' # average marginal effects
 #' summary(mfx)
+#' @family summary
 #' @export
 summary.marginaleffects <- function(object,
                                     conf_level = 0.95,
@@ -113,9 +114,15 @@ print.marginaleffects.summary <- function(x,
 #' @inheritParams tidy.marginalmeans
 #' @return Data frame of summary statistics for an object produced by the
 #' `marginalmeans` function
+#' @family summary
 #' @export
-summary.marginalmeans <- function(object, conf_level = 0.95, ...) {
-    out <- tidy(object, conf_level = conf_level, ...)
+summary.marginalmeans <- function(
+    object,
+    transform_avg = NULL,
+    conf_level = 0.95,
+    ...) {
+
+    out <- tidy(object, conf_level = conf_level, transform_avg = transform_avg, ...)
     class(out) <- c("marginalmeans.summary", class(out))
     attr(out, "type") <- attr(object, "type")
     attr(out, "model_type") <- attr(object, "model_type")
@@ -206,9 +213,15 @@ print.marginalmeans.summary <- function(x,
 #' @inheritParams tidy.predictions
 #' @return Data frame of summary statistics for an object produced by the
 #' `predictions` function
+#' @family summary
 #' @export
-summary.predictions <- function(object, ...) {
-    out <- tidy(object, ...)
+summary.predictions <- function(
+    object, 
+    conf_level = 0.95,
+    transform_avg = NULL,
+    ...) {
+
+    out <- tidy(object, conf_level = conf_level, transform_avg = transform_avg, ...)
     class(out) <- c("predictions.summary", class(out))
     attr(out, "type") <- attr(object, "type")
     attr(out, "model_type") <- attr(object, "model_type")
@@ -309,8 +322,7 @@ print.predictions.summary <- function(x,
 #'
 #' # average marginal effects
 #' summary(con)
-#' @export
-
+#' @family summary
 #' @export
 summary.comparisons <- function(object,
                                 conf_level = 0.95,

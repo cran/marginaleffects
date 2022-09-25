@@ -21,10 +21,10 @@ expect_warning(
     pattern = "lincom")
 
 tmp <- lm(mpg ~ wt + drat, data = mtcars)
-expect_warning(predictions(
+expect_error(predictions(
     tmp,
-    newdata = datagrid(wt = 2:3),
-    hypothesis = "wt = drat"),
+    hypothesis = "wt = drat",
+    newdata = datagrid(wt = 2:3)),
     pattern = "unique row")
 
 
@@ -76,7 +76,7 @@ cmp2 <- comparisons(
     mod,
     variables = "cyl",
     newdata = "mean",
-    hypothesis = "pairwise")
+    hypothesis = "revpairwise")
 expect_equivalent(diff(cmp1$comparison), cmp2$comparison)
 
 
@@ -109,7 +109,16 @@ p3 <- predictions(
     datagrid(cyl = c(4, 6)),
     hypothesis = lc)
 expect_inherits(p3, "predictions")
+expect_true(all(p3$term == "custom"))
 
+# hypothesis matrix colnames become labels
+colnames(lc) <- c("Contrast A", "Contrast B")
+p3 <- predictions(
+    mod,
+    datagrid(cyl = c(4, 6)),
+    hypothesis = lc)
+expect_inherits(p3, "predictions")
+expect_equivalent(p3$term, c("Contrast A", "Contrast B"))
 
 # marginalmeans: hypothesis complex
 lc <- c(-2, 1, 1, 0, -1, 1)
@@ -123,6 +132,10 @@ expect_equivalent(mm$std.error, em$SE)
 # marginalmeans: hypothesis shortcut
 mm <- marginalmeans(mod, variables = "carb", hypothesis = "reference")
 expect_equivalent(nrow(mm), 5)
+mm <- marginalmeans(mod, variables = "carb", hypothesis = "sequential")
+expect_equivalent(nrow(mm), 5)
+mm <- marginalmeans(mod, variables = "carb", hypothesis = "pairwise")
+expect_equivalent(nrow(mm), 15)
 
 # marginalmeans: hypothesis complex matrix
 lc <- matrix(c(

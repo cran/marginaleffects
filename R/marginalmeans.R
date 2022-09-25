@@ -17,16 +17,15 @@
 #' categorical predictors. This grid can be very large when there are many
 #' variables and many response levels, so it is advisable to select a limited
 #' number of variables in the `variables` and `variables_grid` arguments.
+#' @param wts character value. Weights to use in the averaging.
+#' + "equal": each combination of variables in `variables_grid` gets an equal weight.
+#' + "cells": each combination of values for the variables in the `variables_grid` gets a weight proportional to its frequency in the original data.
+#' + "proportional": each combination of values for the variables in the `variables_grid` -- except for those in the `variables` argument -- gets a weight proportional to its frequency in the original data.
 #' @param interaction TRUE, FALSE, or NULL
 #' * `FALSE`: Marginal means are computed for each predictor individually.
 #' * `TRUE`: Marginal means are computed for each combination of predictors specified in the `variables` argument.
 #' * `NULL` (default): Behaves like `TRUE` when the `variables` argument is specified and the model formula includes interactions. Behaves like `FALSE` otherwise.
-#' @param by character vector of categorical variables included in the
-#' `variables_grid`. Marginal means are computed within each subgroup
-#' corresponding to combinations of values in the `by` variables. Note that the
-#' `by` argument works differently for other functions in the package
-#' (`predictions()`, `marginaleffects()`, `comparisons()`), where `by` is used
-#' for post-processing in the `tidy()` or `summary()` functions.
+#' @param by Collapse marginal means into categories. Data frame with a `by` column of group labels, and merging columns shared by `newdata` or the data frame produced by calling the same function without the `by` argument.
 #' @inheritParams marginaleffects
 #' @inheritParams predictions
 #' @inheritParams comparisons
@@ -63,23 +62,55 @@
 #' @examples
 #' library(marginaleffects)
 #'
-#' # Convert numeric variables to categorical before fitting the model
-#' dat <- mtcars
-#' dat$cyl <- as.factor(dat$cyl)
-#' dat$am <- as.logical(dat$am)
-#' mod <- lm(mpg ~ hp + cyl + am, data = dat)
-#'
-#' # Compute and summarize marginal means
-#' mm <- marginalmeans(mod)
-#' summary(mm)
-#' 
-#' # Marginal means by subgroup
+#' # simple marginal means for each level of `cyl`
 #' dat <- mtcars
 #' dat$carb <- factor(dat$carb)
 #' dat$cyl <- factor(dat$cyl)
 #' dat$am <- as.logical(dat$am)
 #' mod <- lm(mpg ~ carb + cyl + am, dat)
-#' marginalmeans(mod, variables = "cyl", by = "am")
+#' 
+#' marginalmeans(
+#'   mod,
+#'   variables = "cyl")
+#' 
+#' # collapse levels of cyl by averaging
+#' by <- data.frame(
+#'   cyl = c(4, 6, 8),
+#'   by = c("4 & 6", "4 & 6", "8"))
+#' marginalmeans(mod,
+#'   variables = "cyl",
+#'   by = by)
+#' 
+#' # pairwise differences between collapsed levels
+#' marginalmeans(mod,
+#'   variables = "cyl",
+#'   by = by,
+#'   hypothesis = "pairwise")
+#' 
+#' # interaction
+#' marginalmeans(mod,
+#'   variables = c("cyl", "carb"),
+#'   interaction = TRUE)
+#' 
+#' # collapsed interaction
+#' by <- expand.grid(
+#'   cyl = unique(mtcars$cyl),
+#'   carb = unique(mtcars$carb))
+#' by$by <- ifelse(
+#'   by$cyl == 4,
+#'   paste("Control:", by$carb),
+#'   paste("Treatment:", by$carb))
+#' 
+#' 
+#' # Convert numeric variables to categorical before fitting the model
+#' dat <- mtcars
+#' dat$am <- as.logical(dat$am)
+#' dat$carb <- as.factor(dat$carb)
+#' mod <- lm(mpg ~ hp + am + carb, data = dat)
+#'
+#' # Compute and summarize marginal means
+#' mm <- marginalmeans(mod)
+#' summary(mm)
 #'
 #' # Contrast between marginal means (carb2 - carb1), or "is the 1st marginal means equal to the 2nd?"
 #' # see the vignette on "Hypothesis Tests and Custom Contrasts" on the `marginaleffects` website.
@@ -92,7 +123,9 @@
 #' lc <- matrix(c(
 #'     -2, 1, 1, 0, -1, 1,
 #'     -1, 1, 0, 0, 0, 0
-#'     ), ncol = 2)
+#'     ),
+#'   ncol = 2,
+#'   dimnames = list(NULL, c("A", "B")))
 #' marginalmeans(mod, variables = "carb", hypothesis = lc)
 #' 
 marginalmeans <- function(model,
@@ -100,18 +133,20 @@ marginalmeans <- function(model,
                           variables_grid = NULL,
                           vcov = TRUE,
                           conf_level = 0.95,
-                          type = "response",
+                          type = NULL,
                           transform_post = NULL,
                           interaction = NULL,
                           hypothesis = NULL,
+                          wts = "equal",
                           by = NULL,
                           ...) {
 
     # backtransform if possible
+    type <- sanitize_type(model = model, type = type, calling_function = "marginalmeans")
     linv <- tryCatch(
         insight::link_inverse(model),
         error = function(e) NULL)
-    if (identical(type, "response") &&
+    if (type == "response" &&
         is.null(transform_post) &&
         class(model)[1] %in% type_dictionary$class &&
         isTRUE("link" %in% subset(type_dictionary, class == class(model)[1])$base) &&
@@ -120,16 +155,22 @@ marginalmeans <- function(model,
         transform_post <- linv
     }
 
-    newdata <- hush(insight::get_data(model))
+    modeldata <- newdata <- hush(insight::get_data(model))
 
-    checkmate::assert_character(by, null.ok = TRUE)
     checkmate::assert_function(transform_post, null.ok = TRUE)
     interaction <- sanitize_interaction(interaction, variables, model)
     conf_level <- sanitize_conf_level(conf_level, ...)
     hypothesis <- sanitize_hypothesis(hypothesis, ...)
+    model <- sanitize_model(model, vcov = vcov, calling_function = "marginalmeans")
+    checkmate::assert_choice(wts, choices = c("equal", "cells", "proportional"))
+
+    # by: usual tests + only data frames
+    checkmate::assert_data_frame(by, null.ok = TRUE)
+    sanity_by(by, newdata)
 
     # fancy vcov processing to allow strings like "HC3"
-    vcov <- get_vcov(model, vcov = vcov)
+    vcov_false <- isTRUE(vcov == FALSE)
+    vcov <- get_vcov(model, vcov = vcov, ...)
 
     # sanity
     sanity_dots(model = model, ...)
@@ -169,8 +210,8 @@ marginalmeans <- function(model,
         }
     }
 
+
     # categorical variables, excluding response
-    column_labels <- colnames(newdata)
     variables_categorical <- find_categorical(newdata = newdata, model = model)
     variables_categorical <- unique(variables_categorical)
     idx <- !grepl("as\\.logical", variables_categorical)
@@ -199,6 +240,7 @@ marginalmeans <- function(model,
     } else {
         variables_grid <- intersect(variables_grid, variables_categorical)
     }
+
     variables_grid <- unique(c(variables, variables_grid))
 
     if (!is.null(by)) {
@@ -210,10 +252,55 @@ marginalmeans <- function(model,
         variables <- setdiff(variables, by)
     }
 
+    # marginal means grid
     args <- lapply(variables_grid, function(x) unique(newdata[[x]]))
     args <- stats::setNames(args, variables_grid)
     args[["newdata"]] <- newdata
     newgrid <- do.call("datagrid", args)
+
+    # weights
+    wtsgrid <- copy(data.table(newdata)[, ..variables_grid])
+    if (identical(wts, "equal")) {
+        newgrid[["wts"]] <- 1
+
+    } else if (identical(wts, "cells")) {
+        idx <- variables_grid
+        wtsgrid[, N := .N]
+        wtsgrid[, "wts" := .N / N, by = idx]
+        # sometimes datagrid() converts to factors when there is a transformation
+        # in the model formula, so we need to standardize the data
+        for (v in colnames(newgrid)) {
+            if (v %in% colnames(wtsgrid) && is.factor(newgrid[[v]])) {
+                wtsgrid[[v]] <- factor(wtsgrid[[v]], levels = levels(newgrid[[v]]))
+            }
+        }
+        wtsgrid <- unique(wtsgrid)
+        newgrid <- merge(newgrid, wtsgrid, all.x = TRUE)
+        newgrid[["wts"]][is.na(newgrid[["wts"]])] <- 0
+
+    } else if (identical(wts, "proportional")) {
+    # https://stackoverflow.com/questions/66748520/what-is-the-difference-between-weights-cell-and-weights-proportional-in-r-pa
+        idx <- setdiff(variables_grid, variables)
+        if (length(idx) == 0) {
+            newgrid[["wts"]] <- 1
+            return(newgrid)
+        } else {
+            wtsgrid <- data.table(newdata)[
+                , .(wts = .N), by = idx][
+                , wts := wts / sum(wts)]
+            # sometimes datagrid() converts to factors when there is a transformation
+            # in the model formula, so we need to standardize the data
+            for (v in colnames(newgrid)) {
+                if (v %in% colnames(wtsgrid) && is.factor(newgrid[[v]])) {
+                    wtsgrid[[v]] <- factor(wtsgrid[[v]], levels = levels(newgrid[[v]]))
+                }
+            }
+            wtsgrid <- unique(wtsgrid)
+            newgrid <- merge(newgrid, wtsgrid, all.x = TRUE)
+            newgrid[["wts"]][is.na(newgrid[["wts"]])] <- 0
+
+        }
+    }
 
     mm <- get_marginalmeans(model = model,
                             newdata = newgrid,
@@ -222,6 +309,7 @@ marginalmeans <- function(model,
                             interaction = interaction,
                             hypothesis = hypothesis,
                             by = by,
+                            modeldata = modeldata,
                             ...)
 
     # we want consistent output, regardless of whether `data.table` is installed/used or not
@@ -229,7 +317,7 @@ marginalmeans <- function(model,
 
     # standard errors via delta method
     J <- NULL
-    if (!isFALSE(vcov)) {
+    if (!vcov_false) {
         se <- get_se_delta(
             model,
             vcov = vcov,
@@ -239,7 +327,10 @@ marginalmeans <- function(model,
             variables = variables,
             newdata = newgrid,
             interaction = interaction,
-            hypothesis = hypothesis)
+            modeldata = modeldata,
+            hypothesis = hypothesis,
+            by = by,
+            ...)
         # get rid of attributes in column
         out[["std.error"]] <- as.numeric(se)
         J <- attr(se, "jacobian")
@@ -256,12 +347,13 @@ marginalmeans <- function(model,
             estimate = "marginalmean")
     }
 
+    # after assign draws
     if (!is.null(transform_post)) {
         out <- backtransform(out, transform_post)
     }
 
     # column order
-    cols <- c("type", "group", by, "term", "hypothesis", "value", variables, "marginalmean",
+    cols <- c("type", "group", colnames(by), "term", "hypothesis", "value", variables, "marginalmean",
               "std.error", "conf.low", "conf.high", sort(colnames(out)))
     cols <- unique(cols)
     cols <- intersect(cols, colnames(out))
@@ -296,6 +388,7 @@ get_marginalmeans <- function(model,
                               type,
                               variables,
                               interaction,
+                              modeldata,
                               hypothesis = NULL,
                               by = NULL,
                               ...) {
@@ -307,14 +400,22 @@ get_marginalmeans <- function(model,
         newdata = newdata,
         type = type,
         vcov = FALSE,
+        modeldata = modeldata,
         ...)
+
+    if (isTRUE(checkmate::check_data_frame(by))) {
+        # warnings for factor vs numeric vs character. merge.data.table usually still works.
+        pred <- suppressWarnings(merge(pred, by))
+    }
 
     # marginal means
     if (!isTRUE(interaction)) {
         mm <- list()
         for (v in variables) {
-            idx <- intersect(colnames(pred), c("term", "group", v, by))
-            tmp <- data.table(pred)[, .(marginalmean = mean(predicted, na.rm = TRUE)), by = idx]
+            idx <- intersect(colnames(pred), c("term", "group", "by", v))
+            tmp <- data.table(pred)[
+                , .(marginalmean = stats::weighted.mean(predicted, w = wts, na.rm = TRUE)),
+                by = idx]
             tmp[, "term" := v]
             setnames(tmp, old = v, new = "value")
             mm[[v]] <- tmp
@@ -330,14 +431,20 @@ get_marginalmeans <- function(model,
         out <- rbindlist(mm)
         setorder(out, "term", "value")
     } else {
-        idx <- intersect(colnames(pred), c("term", "group", variables))
-        out <- data.table(pred)[, .(marginalmean = mean(predicted, na.rm = TRUE)), by = idx]
+        idx <- intersect(colnames(pred), c("term", "group", "by", variables))
+
+        out <- data.table(pred)[
+            , .(marginalmean = stats::weighted.mean(predicted, w = wts, na.rm = TRUE)),
+            by = idx]
+    }
+
+    if (isTRUE(checkmate::check_data_frame(by))) {
+        out <- out[, .(marginalmean = mean(marginalmean)), by = "by"]
     }
 
     if (!is.null(hypothesis)) {
-        out <- get_hypothesis(out, hypothesis, "marginalmean")
+        out <- get_hypothesis(out, hypothesis, column = "marginalmean", by = by)
     }
 
     return(out)
 }
-
