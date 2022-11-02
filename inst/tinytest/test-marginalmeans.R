@@ -8,7 +8,7 @@ requiet("insight")
 # Issue #438: backtransforms allows us to match `emmeans` exactly
 mod <- glm(vs ~ mpg + factor(cyl), data = mtcars, family = binomial)
 em <- emmeans(mod, ~cyl, type = "response")
-mm <- marginalmeans(mod, type = "response")
+mm <- marginalmeans(mod)
 expect_equal(data.frame(em)$prob, mm$marginalmean)
 expect_equal(data.frame(em)$asymp.LCL, mm$conf.low)
 expect_equal(data.frame(em)$asymp.UCL, mm$conf.high)
@@ -66,7 +66,7 @@ em <- tidy(emmeans(mod, specs = "cyl"))
 expect_equivalent(mm$estimate, em$estimate)
 expect_equivalent(mm$std.error, em$std.error)
 # response
-mm <- tidy(marginalmeans(mod, variables = "cyl", type = "response"))
+mm <- tidy(marginalmeans(mod, variables = "cyl"))
 em <- tidy(emmeans(mod, specs = "cyl", type = "response"))
 expect_equivalent(mm$estimate, em$rate)
 expect_equivalent(mm$p.value, em$p.value)
@@ -130,3 +130,19 @@ mm <- marginalmeans(mod2, variables = "am", wts = "proportional")
 expect_equivalent(mm$marginalmean, em$prob)
 expect_equivalent(mm$conf.low, em$asymp.LCL)
 expect_equivalent(mm$conf.high, em$asymp.UCL)
+
+
+# Issue #508
+df <- data.frame(id = rep(1:5, each = 2e2))
+df$city = ifelse(df$id <= 3, "Denver", "Paris")
+df$y <- rbinom(1e3, 1, prob = plogis(-3 + 1/2 * df$id))
+df$id <- factor(df$id)
+ma <- aggregate(y ~ city, FUN = mean, data = df)
+
+m <- glm(y ~ id, data = df, family = binomial)
+by <- data.frame(
+  id = 1:5,
+  by = ifelse(1:5 <= 3, "Denver", "Paris"))
+mm <- marginalmeans(m, by = by, type = "response")
+
+expect_equivalent(mm$marginalmean, ma$y)

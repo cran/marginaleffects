@@ -9,7 +9,7 @@
 #' @param variables character vector Categorical predictors over which to
 #' compute marginal means. `NULL` calculates marginal means for all logical,
 #' character, or factor variables in the dataset used to fit `model`. Set
-#' `interaction=TRUE` to compute marginal means at combinations of the
+#' `cross=TRUE` to compute marginal means at combinations of the
 #' predictors specified in the `variables` argument.
 #' @param variables_grid character vector Categorical predictors used to
 #' construct the prediction grid over which adjusted predictions are averaged
@@ -17,14 +17,22 @@
 #' categorical predictors. This grid can be very large when there are many
 #' variables and many response levels, so it is advisable to select a limited
 #' number of variables in the `variables` and `variables_grid` arguments.
+#' @param type string indicates the type (scale) of the predictions used to
+#' compute marginal effects or contrasts. This can differ based on the model
+#' type, but will typically be a string such as: "response", "link", "probs",
+#' or "zero". When an unsupported string is entered, the model-specific list of
+#' acceptable values is returned in an error message. When `type` is `NULL`, the
+#' default value is used. This default is the first model-related row in
+#' the `marginaleffects:::type_dictionary` dataframe. If `type` is `NULL` and
+#' the default value is "response", the function tries to compute marginal means
+#' on the link scale before backtransforming them using the inverse link function.
 #' @param wts character value. Weights to use in the averaging.
 #' + "equal": each combination of variables in `variables_grid` gets an equal weight.
 #' + "cells": each combination of values for the variables in the `variables_grid` gets a weight proportional to its frequency in the original data.
 #' + "proportional": each combination of values for the variables in the `variables_grid` -- except for those in the `variables` argument -- gets a weight proportional to its frequency in the original data.
-#' @param interaction TRUE, FALSE, or NULL
-#' * `FALSE`: Marginal means are computed for each predictor individually.
+#' @param cross TRUE or FALSE
+#' * `FALSE` (default): Marginal means are computed for each predictor individually.
 #' * `TRUE`: Marginal means are computed for each combination of predictors specified in the `variables` argument.
-#' * `NULL` (default): Behaves like `TRUE` when the `variables` argument is specified and the model formula includes interactions. Behaves like `FALSE` otherwise.
 #' @param by Collapse marginal means into categories. Data frame with a `by` column of group labels, and merging columns shared by `newdata` or the data frame produced by calling the same function without the `by` argument.
 #' @inheritParams marginaleffects
 #' @inheritParams predictions
@@ -87,12 +95,12 @@
 #'   by = by,
 #'   hypothesis = "pairwise")
 #' 
-#' # interaction
+#' # cross
 #' marginalmeans(mod,
 #'   variables = c("cyl", "carb"),
-#'   interaction = TRUE)
+#'   cross = TRUE)
 #' 
-#' # collapsed interaction
+#' # collapsed cross
 #' by <- expand.grid(
 #'   cyl = unique(mtcars$cyl),
 #'   carb = unique(mtcars$carb))
@@ -135,30 +143,34 @@ marginalmeans <- function(model,
                           conf_level = 0.95,
                           type = NULL,
                           transform_post = NULL,
-                          interaction = NULL,
+                          cross = FALSE,
                           hypothesis = NULL,
                           wts = "equal",
                           by = NULL,
                           ...) {
 
-    # backtransform if possible
-    type <- sanitize_type(model = model, type = type, calling_function = "marginalmeans")
-    linv <- tryCatch(
-        insight::link_inverse(model),
-        error = function(e) NULL)
-    if (type == "response" &&
-        is.null(transform_post) &&
-        class(model)[1] %in% type_dictionary$class &&
-        isTRUE("link" %in% subset(type_dictionary, class == class(model)[1])$base) &&
-        is.function(linv)) {
-        type <- "link"
-        transform_post <- linv
+    # if type is NULL, we backtransform if relevant
+    if (is.null(type)) {
+        type <- sanitize_type(model = model, type = type, calling_function = "marginalmeans")
+        linv <- tryCatch(
+            insight::link_inverse(model),
+            error = function(e) NULL)
+        if (type == "response" &&
+            is.null(transform_post) &&
+            class(model)[1] %in% type_dictionary$class &&
+            isTRUE("link" %in% subset(type_dictionary, class == class(model)[1])$base) &&
+            is.function(linv)) {
+            type <- "link"
+            transform_post <- linv
+        }
+    } else {
+        type <- sanitize_type(model = model, type = type, calling_function = "marginalmeans")
     }
 
     modeldata <- newdata <- hush(insight::get_data(model))
 
     checkmate::assert_function(transform_post, null.ok = TRUE)
-    interaction <- sanitize_interaction(interaction, variables, model)
+    cross <- sanitize_cross(cross, variables, model)
     conf_level <- sanitize_conf_level(conf_level, ...)
     hypothesis <- sanitize_hypothesis(hypothesis, ...)
     model <- sanitize_model(model, vcov = vcov, calling_function = "marginalmeans")
@@ -306,7 +318,7 @@ marginalmeans <- function(model,
                             newdata = newgrid,
                             type = type,
                             variables = variables,
-                            interaction = interaction,
+                            cross = cross,
                             hypothesis = hypothesis,
                             by = by,
                             modeldata = modeldata,
@@ -326,7 +338,7 @@ marginalmeans <- function(model,
             index = NULL,
             variables = variables,
             newdata = newgrid,
-            interaction = interaction,
+            cross = cross,
             modeldata = modeldata,
             hypothesis = hypothesis,
             by = by,
@@ -366,7 +378,7 @@ marginalmeans <- function(model,
     attr(out, "type") <- type
     attr(out, "model_type") <- class(model)[1]
     attr(out, "variables") <- variables
-    if (isTRUE(interaction)) {
+    if (isTRUE(cross)) {
         attr(out, "variables_grid") <- setdiff(variables_grid, variables)
     } else {
         attr(out, "variables_grid") <- unique(c(variables_grid, variables))
@@ -387,7 +399,7 @@ get_marginalmeans <- function(model,
                               newdata,
                               type,
                               variables,
-                              interaction,
+                              cross,
                               modeldata,
                               hypothesis = NULL,
                               by = NULL,
@@ -409,7 +421,7 @@ get_marginalmeans <- function(model,
     }
 
     # marginal means
-    if (!isTRUE(interaction)) {
+    if (!isTRUE(cross)) {
         mm <- list()
         for (v in variables) {
             idx <- intersect(colnames(pred), c("term", "group", "by", v))

@@ -32,12 +32,19 @@
 #'
 #' @inheritParams marginaleffects
 #' @param model Model object
-#' @param variables Named list of variables with values to create a
-#' counterfactual grid of predictions. The entire dataset replicated
-#' for each unique combination of the variables in this list. See the Examples
-#' section below. Warning: This can use a lot of memory if there are many
-#' variables and values, and when the dataset is large.
-#' @param newdata `NULL`, data frame, string, or `datagrid()` call. Determines the grid of predictors on which we make predictions.
+#' @param variables `NULL`, character vector, or named list. The subset of variables to use for creating a counterfactual grid of predictions. The entire dataset replicated for each unique combination of the variables in this list. See the Examples section below.
+#' * Warning: This can use a lot of memory if there are many variables and values, and when the dataset is large.
+#' * `NULL`: computes one prediction per row of `newdata`
+#' * Named list: names identify the subset of variables of interest and their values. For numeric variables, the `variables` argument supports functions and string shortcuts:
+#'   - A function which returns a numeric value
+#'   - Numeric vector: Contrast between the 2nd element and the 1st element of the `x` vector.
+#'   - "iqr": Contrast across the interquartile range of the regressor.
+#'   - "sd": Contrast across one standard deviation around the regressor mean.
+#'   - "2sd": Contrast across two standard deviations around the regressor mean.
+#'   - "minmax": Contrast between the maximum and the minimum values of the regressor.
+#'   - "threenum": mean and 1 standard deviation on both sides
+#'   - "fivenum": Tukey's five numbers
+#' #' @param newdata `NULL`, data frame, string, or `datagrid()` call. Determines the grid of predictors on which we make predictions.
 #' + `NULL` (default): Predictions for each observed value in the original dataset.
 #' + data frame: Predictions for each row of the `newdata` data frame.
 #' + string:
@@ -212,17 +219,19 @@ predictions <- function(model,
         model = model,
         newdata = newdata,
         vcov = vcov,
-        calling_function = "predictions", ...)
+        calling_function = "predictions",
+        ...)
     hypothesis <- sanitize_hypothesis(hypothesis, ...)
     conf_level <- sanitize_conf_level(conf_level, ...)
     type <- sanitize_type(model = model, type = type, calling_function = "predictions")
-    newdata <- sanitize_newdata(model = model, newdata = newdata, modeldata = modeldata, by = by)
+    newdata <- sanitize_newdata(
+        model = model,
+        newdata = newdata,
+        modeldata = modeldata,
+        by = by)
 
     # after sanitize_newdata
     sanity_by(by, newdata)
-
-    # `variables` is character vector: Tukey's 5 or uniques
-    checkmate::assert_list(variables, names = "unique", null.ok = TRUE)
 
     # analogous to comparisons(variables=list(...))
     if (!is.null(variables)) {
@@ -233,7 +242,9 @@ predictions <- function(model,
         tmp <- sanitize_variables(
             variables = variables,
             model = model,
-            newdata = newdata)$conditional
+            newdata = newdata,
+            calling_function = "predictions"
+            )$conditional
         for (v in tmp) {
             args[[v$name]] <- v$value
         }
@@ -329,7 +340,8 @@ predictions <- function(model,
     # degrees of freedom
     if (isTRUE(vcov == "satterthwaite") || isTRUE(vcov == "kenward-roger")) {
         df <- tryCatch(
-            insight::get_df(model, data = newdata, type = vcov),
+            # df_per_observation is an undocumented argument introduced in 0.18.4.7 to preserve backward incompatibility
+            insight::get_df(model, data = newdata, type = vcov, df_per_observation = TRUE),
             error = function(e) NULL)
         if (isTRUE(length(df) == nrow(tmp))) {
             tmp$df <- df
@@ -430,6 +442,7 @@ predictions <- function(model,
     attr(out, "vcov") <- V
     attr(out, "newdata") <- newdata
     attr(out, "weights") <- marginaleffects_wts_internal
+    attr(out, "conf_level") <- conf_level
     attr(out, "by") <- by
 
     if ("group" %in% names(out) && all(out$group == "main_marginaleffect")) {

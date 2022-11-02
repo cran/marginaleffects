@@ -13,6 +13,7 @@ datagrid(
   FUN_factor = Mode,
   FUN_logical = Mode,
   FUN_numeric = function(x) mean(x, na.rm = TRUE),
+  FUN_integer = function(x) round(mean(x, na.rm = TRUE)),
   FUN_other = function(x) mean(x, na.rm = TRUE)
 )
 }
@@ -41,6 +42,8 @@ datagrid(
 \item{FUN_logical}{the function to be applied to factor variables.}
 
 \item{FUN_numeric}{the function to be applied to numeric variables.}
+
+\item{FUN_integer}{the function to be applied to integer variables.}
 
 \item{FUN_other}{the function to be applied to other variable types.}
 }

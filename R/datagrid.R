@@ -12,6 +12,7 @@
 #' @param FUN_character the function to be applied to character variables.
 #' @param FUN_factor the function to be applied to factor variables.
 #' @param FUN_logical the function to be applied to factor variables.
+#' @param FUN_integer the function to be applied to integer variables.
 #' @param FUN_numeric the function to be applied to numeric variables.
 #' @param FUN_other the function to be applied to other variable types.
 #' @details
@@ -69,6 +70,7 @@ datagrid <- function(
     FUN_factor = Mode,
     FUN_logical = Mode,
     FUN_numeric = function(x) mean(x, na.rm = TRUE),
+    FUN_integer = function(x) round(mean(x, na.rm = TRUE)),
     FUN_other = function(x) mean(x, na.rm = TRUE)) {
 
 
@@ -99,6 +101,7 @@ datagrid <- function(
             FUN_factor = FUN_factor,
             FUN_logical = FUN_logical,
             FUN_numeric = FUN_numeric,
+            FUN_integer = FUN_integer,
             FUN_other = FUN_other)
         args <- c(dots, args)
         out <- do.call("typical", args)
@@ -149,8 +152,24 @@ datagrid <- function(
 datagridcf <- function(
     ...,
     model = NULL,
-    newdata = NULL) {
-    datagrid(..., model = model, newdata = newdata, grid_type = "counterfactual")
+    newdata = NULL,
+    FUN_character = Mode,
+    FUN_factor = Mode,
+    FUN_logical = Mode,
+    FUN_numeric = function(x) mean(x, na.rm = TRUE),
+    FUN_integer = function(x) round(mean(x, na.rm = TRUE)),
+    FUN_other = function(x) mean(x, na.rm = TRUE)) {
+
+    datagrid(...,
+        model = model,
+        newdata = newdata,
+        FUN_character = FUN_character,
+        FUN_factor = FUN_factor,
+        FUN_logical = FUN_logical,
+        FUN_numeric = FUN_numeric,
+        FUN_integer = FUN_integer,
+        FUN_other = FUN_other,
+        grid_type = "counterfactual")
 }
 
 
@@ -201,6 +220,7 @@ typical <- function(
     FUN_factor = Mode,
     FUN_logical = Mode,
     FUN_numeric = function(x) mean(x, na.rm = TRUE),
+    FUN_integer = function(x) round(mean(x, na.rm = TRUE)),
     FUN_other = function(x) mean(x, na.rm = TRUE)) {
 
     tmp <- prep_datagrid(..., model = model, newdata = newdata)
@@ -211,9 +231,12 @@ typical <- function(
     variables_manual <- names(at)
     variables_automatic <- tmp$automatic
 
-    if (!is.null(model)) {
-        variables_automatic <- setdiff(variables_automatic, insight::find_response(model))
-    }
+    # commented out because we want to keep the response in
+    # sometimes there are two responses and we need one of them:
+    # brms::brm(y | trials(n) ~ x + w + z)
+    # if (!is.null(model)) {
+    #     variables_automatic <- setdiff(variables_automatic, insight::find_response(model))
+    # }
 
 
     if (length(variables_automatic) > 0) {
@@ -229,10 +252,14 @@ typical <- function(
                 out[[n]] <- FUN_factor(dat_automatic[[n]])
             } else if (variable_class == "logical") {
                 out[[n]] <- FUN_logical(dat_automatic[[n]])
-            } else if (variable_class == "character")  {
+            } else if (variable_class == "character") {
                 out[[n]] <- FUN_character(dat_automatic[[n]])
             } else if (variable_class == "numeric") {
-                out[[n]] <- FUN_numeric(dat_automatic[[n]]) 
+                if (is.integer(dat_automatic[[n]])) {
+                    out[[n]] <- FUN_integer(dat_automatic[[n]])
+                } else {
+                    out[[n]] <- FUN_numeric(dat_automatic[[n]])
+                }
             } else if (variable_class == "other") {
                 out[[n]] <- FUN_other(dat_automatic[[n]])
             }

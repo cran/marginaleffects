@@ -9,9 +9,11 @@ get_contrasts <- function(model,
                           marginalmeans,
                           by = NULL,
                           hypothesis = NULL,
-                          interaction = FALSE,
+                          cross = FALSE,
                           verbose = TRUE,
                           ...) {
+
+    settings_init()
 
     # some predict() methods need data frames and will convert data.tables
     # internally, which can be very expensive if done many times. we do it once
@@ -20,19 +22,38 @@ get_contrasts <- function(model,
     setDF(hi)
     setDF(original)
 
-    pred_lo <- myTryCatch(get_predict(
-        model,
-        type = type,
-        vcov = FALSE,
-        newdata = lo,
-        ...))[["value"]]
+    # brms models need to be combined to use a single seed when sample_new_levels="gaussian"
+    if (inherits(model, "brmsfit")) {
+        both <- rbindlist(list(lo, hi))
+        both$rowid <- seq_len(nrow(both))
+        pred_both <- myTryCatch(get_predict(
+            model,
+            type = type,
+            vcov = FALSE,
+            newdata = both,
+            ...))[["value"]]
+        idx_lo <- pred_both$rowid %in% 1:(nrow(both) / 2)
+        idx_hi <- pred_both$rowid %in% (nrow(both) / 2 + 1):nrow(both)
+        pred_lo <- pred_both[idx_lo, , drop = FALSE]
+        pred_hi <- pred_both[idx_hi, , drop = FALSE]
+        pred_hi$rowid <- pred_lo$rowid
+        attr(pred_lo, "posterior_draws") <- attr(pred_both, "posterior_draws")[idx_lo, , drop = FALSE]
+        attr(pred_hi, "posterior_draws") <- attr(pred_both, "posterior_draws")[idx_hi, , drop = FALSE]
+    } else {
+        pred_lo <- myTryCatch(get_predict(
+            model,
+            type = type,
+            vcov = FALSE,
+            newdata = lo,
+            ...))[["value"]]
 
-    pred_hi <- myTryCatch(get_predict(
-        model,
-        type = type,
-        vcov = FALSE,
-        newdata = hi,
-        ...))[["value"]]
+        pred_hi <- myTryCatch(get_predict(
+            model,
+            type = type,
+            vcov = FALSE,
+            newdata = hi,
+            ...))[["value"]]
+    }
 
     pred_or <- myTryCatch(get_predict(
         model,
@@ -73,7 +94,7 @@ get_contrasts <- function(model,
 
     # cross-contrasts or weird cases
     } else {
-        out <- merge(out, newdata, by = "rowid")
+        out <- merge(out, newdata, by = "rowid", all.x = TRUE)
         if (isTRUE(nrow(out) == nrow(lo))) {
             tmp <- data.table(lo)[, .SD, .SDcols = patterns("^contrast|marginaleffects_eps|marginaleffects_wts_internal")]
             out <- cbind(out, tmp)
@@ -84,7 +105,7 @@ get_contrasts <- function(model,
     }
 
     if (!"term" %in% colnames(out)) {
-        out[, "term" := "interaction"]
+        out[, "term" := "cross"]
     }
 
     # by
@@ -105,9 +126,9 @@ get_contrasts <- function(model,
     }
 
     # transform_pre function could be different for different terms
-    # sanitize_variables() ensures all functions are identical when there are interactions
+    # sanitize_variables() ensures all functions are identical when there are cross
     fun_list <- sapply(names(variables), function(x) variables[[x]][["function"]])
-    fun_list[["interaction"]] <- fun_list[[1]]
+    fun_list[["cross"]] <- fun_list[[1]]
 
     # elasticity requires the original (properly aligned) predictor values
     # this will discard factor variables which are duplicated, so in principle
@@ -131,7 +152,7 @@ get_contrasts <- function(model,
             idx2 <- intersect(idx2, colnames(out))
             # discard other terms to get right length vector
             idx2 <- out[term == v, ..idx2]
-            # original is NULL when interaction=TRUE
+            # original is NULL when cross=TRUE
             if (!is.null(original)) {
                 idx1 <- c(v, "rowid", "rowidcf", "term", "type", "group", grep("^contrast", colnames(original), value = TRUE))
                 idx1 <- intersect(idx1, colnames(original))
@@ -195,9 +216,9 @@ get_contrasts <- function(model,
     # unknown arguments
     # singleton vs vector
     # different terms use different functions
-    safefun <- function(hi, lo, y, n, term, interaction, eps, wts) {
-        # when interaction=TRUE, sanitize_transform_pre enforces a single function
-        if (isTRUE(interaction)) {
+    safefun <- function(hi, lo, y, n, term, cross, eps, wts) {
+        # when cross=TRUE, sanitize_transform_pre enforces a single function
+        if (isTRUE(cross)) {
             fun <- fun_list[[1]]
         } else {
             fun <- fun_list[[term[1]]]
@@ -212,11 +233,12 @@ get_contrasts <- function(model,
         args <- args[names(args) %in% names(formals(fun))]
         con <- try(do.call("fun", args), silent = TRUE)
         if (!isTRUE(checkmate::check_numeric(con, len = n)) && !isTRUE(checkmate::check_numeric(con, len = 1))) {
-            msg <- insight::format_message("The function supplied to the `transform_pre` argument must accept two numeric vectors of predicted probabilities of length %s, and return a single numeric value or a numeric vector of length %s, with no missing value.") #nolintr
-            stop(sprintf(msg, n, n), call. = FALSE)
+            msg <- sprintf("The function supplied to the `transform_pre` argument must accept two numeric vectors of predicted probabilities of length %s, and return a single numeric value or a numeric vector of length %s, with no missing value.", n, n) #nolint
+            insight::format_error(msg)
         }
         if (length(con) == 1) {
             con <- c(con, rep(NA_real_, length(hi) - 1))
+            settings_set("marginaleffects_safefun_return1", TRUE)
         }
         return(con)
     }
@@ -234,7 +256,7 @@ get_contrasts <- function(model,
                     y = draws_or[idx, i],
                     n = sum(idx),
                     term = out$term[idx],
-                    interaction = interaction,
+                    cross = cross,
                     wts = out$marginaleffects_wts_internal[idx],
                     eps = out$marginaleffects_eps[idx])
             }
@@ -247,7 +269,9 @@ get_contrasts <- function(model,
         # also means we don't want `rowid` otherwise we will merge and have
         # useless duplicates.
         if (any(!idx)) {
-            out[, "rowid" := NULL]
+            if (settings_equal("marginaleffects_safefun_return1", TRUE)) {
+                out[, "rowid" := NULL]
+            }
             out <- out[idx, , drop = FALSE]
         }
 
@@ -263,7 +287,7 @@ get_contrasts <- function(model,
             y = predicted,
             n = .N,
             term = term,
-            interaction = interaction,
+            cross = cross,
             wts = marginaleffects_wts_internal,
             eps = marginaleffects_eps),
         by = idx]
@@ -272,10 +296,13 @@ get_contrasts <- function(model,
         # also means we don't want `rowid` otherwise we will merge and have
         # useless duplicates.
         if (any(is.na(out$comparison))) {
-            out[, "rowid" := NULL]
+            if (settings_equal("marginaleffects_safefun_return1", TRUE)) {
+                out[, "rowid" := NULL]
+            }
         }
         out <- out[!is.na(comparison)]
     }
+
 
     # averaging by groups
     # if `by` is a vector, we have done the work already above
@@ -294,6 +321,9 @@ get_contrasts <- function(model,
 
     # hypothesis tests using the delta method
     out <- get_hypothesis(out, hypothesis, column = "comparison", by = by)
+
+    # reset settings
+    settings_rm("marginaleffects_safefun_return1")
 
     # output
     attr(out, "posterior_draws") <- draws

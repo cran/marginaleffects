@@ -37,6 +37,7 @@ brms_mv_1 <- marginaleffects:::modelarchive_model("brms_mv_1")
 brms_vdem <- marginaleffects:::modelarchive_model("brms_vdem")
 brms_ordinal_1 <- insight::download_model("brms_ordinal_1")
 brms_categorical_1 <- marginaleffects:::modelarchive_model("brms_categorical_1")
+brms_logit_re <- marginaleffects:::modelarchive_model("brms_logit_re")
 
 
 
@@ -532,8 +533,8 @@ void <- capture.output(suppressMessages(
         seed = 1024)
 ))
 
-cmp <- comparisons(mod, variables = c("cyl", "am"))
-cmp.b <- comparisons(mod.b, variables = c("cyl", "am"))
+cmp <- comparisons(mod, variables = c("cyl", "am"), cross = TRUE)
+cmp.b <- comparisons(mod.b, variables = c("cyl", "am"), cross = TRUE)
 tid <- tidy(cmp)
 tid.b <- tidy(cmp.b)
 
@@ -580,3 +581,49 @@ expect_equivalent(mean(p1$predicted[1:2]), p2$predicted[1], tolerance = 0.1)
 expect_equivalent(mean(p1$predicted[3:4]), p2$predicted[2], tolerance = 0.1)
 expect_equivalent(sum(p1$predicted[1:2]), p3$predicted[1], tolerance = 0.1)
 expect_equivalent(sum(p1$predicted[3:4]), p3$predicted[2], tolerance = 0.1)
+
+
+
+# Issue #500
+N <- 1250
+n <- sample(10:100, size = N, replace = T)
+x <- rbinom(N, 1, 0.5)
+w <- rbinom(N, 1, 0.5)
+z <- rbinom(N, 1, 0.5)
+y <- rbinom(N, n, 0.25 + .25 * x + .125 * w + 0.05 * z)
+d <- data.frame(x, w, z, y, n)
+void <- capture.output(suppressMessages(
+    fit <- brm(
+        y | trials(n) ~ .,
+        data = d,
+        family = binomial(),
+        chains = 1,
+        verbose = FALSE)
+))
+p <- plot_cap(fit, condition = "z")
+expect_inherits(p, "gg")
+
+
+# Issue #504: integrate out random effects
+set.seed(1024)
+
+K <- 100
+
+cmp <- comparisons(
+    brms_logit_re,
+    newdata = datagrid(firm = sample(1e5:2e6, K)),
+    allow_new_levels = TRUE,
+    sample_new_levels = "gaussian") |>
+    tidy()
+
+bm <- brmsmargins(
+  k = K,
+  object = brms_logit_re,
+  at = data.frame(x = c(0, 1)),
+  CI = .95, CIType = "ETI",
+  contrasts = cbind("AME x" = c(-1, 1)),
+  effects = "integrateoutRE")$ContrastSummary
+
+expect_equivalent(cmp$estimate, bm$Mdn, tolerance = .05)
+expect_equivalent(cmp$conf.low, bm$LL, tolerance = .05)
+expect_equivalent(cmp$conf.high, bm$UL, tolerance = .05)

@@ -12,7 +12,7 @@ status](https://www.r-pkg.org/badges/version/marginaleffects)](https://CRAN.R-pr
 <!-- badges: end -->
 
 Compute and plot adjusted predictions, contrasts, marginal effects, and
-marginal means for 69 classes of statistical models in `R`. Conduct
+marginal means for 71 classes of statistical models in `R`. Conduct
 linear and non-linear hypothesis tests using the delta method.
 
 ## Table of contents
@@ -21,6 +21,7 @@ Introduction:
 
   - [Definitions](https://vincentarelbundock.github.io/marginaleffects/#definitions)
   - [Motivation](https://vincentarelbundock.github.io/marginaleffects/#motivation)
+  - [Installation](https://vincentarelbundock.github.io/marginaleffects/#installation)
   - [Getting
     started](https://vincentarelbundock.github.io/marginaleffects/#getting-started)
 
@@ -43,6 +44,7 @@ Case studies:
   - [Causal Inference with the
     g-Formula](https://vincentarelbundock.github.io/marginaleffects/articles/gformula.html)
   - [Elasticity](https://vincentarelbundock.github.io/marginaleffects/articles/elasticity.html)
+  - [Experiments](https://vincentarelbundock.github.io/marginaleffects/articles/experiments.html)
   - [Generalized Additive
     Models](https://vincentarelbundock.github.io/marginaleffects/articles/gam.html)
   - [Mixed effects
@@ -51,6 +53,8 @@ Case studies:
     Models](https://vincentarelbundock.github.io/marginaleffects/articles/mlogit.html)
   - [Multiple
     Imputation](https://vincentarelbundock.github.io/marginaleffects/articles/multiple_imputation.html)
+  - [Plots: interactions, predictions, contrasts, and
+    slopes](https://vincentarelbundock.github.io/marginaleffects/articles/plot.html)
   - [Python NumPyro models in
     `marginaleffects`](https://vincentarelbundock.github.io/marginaleffects/articles/python.html)
   - [Unit-level contrasts in logistic
@@ -58,10 +62,12 @@ Case studies:
 
 Tips and technical notes:
 
-  - [69 Supported Classes of
+  - [71 Supported Classes of
     Models](https://vincentarelbundock.github.io/marginaleffects/articles/supported_models.html)
   - [Index of Functions and
     Documentation](https://vincentarelbundock.github.io/marginaleffects/reference/index.html)
+  - [Extending `marginaleffects`: add new models or modify existing
+    ones](https://vincentarelbundock.github.io/marginaleffects/articles/extensions.html)
   - [Standard Errors and Confidence
     Intervals](https://vincentarelbundock.github.io/marginaleffects/articles/sandwich.html)
   - [Tables and
@@ -92,7 +98,7 @@ External links:
 ## Definitions
 
 The `marginaleffects` package allows `R` users to compute and plot four
-principal quantities of interest for [69 different classes of
+principal quantities of interest for [71 different classes of
 models:](https://vincentarelbundock.github.io/marginaleffects/articles/supported_models.html)
 
   - [*Adjusted
@@ -185,7 +191,7 @@ additional features from `emmeans`.
 
 So why did I write a clone?
 
-  - *Powerful:* Marginal effects and contrasts can be computed for 69
+  - *Powerful:* Marginal effects and contrasts can be computed for 71
     different classes of models. Adjusted predictions and marginal means
     can be computed for about 100 model types.
   - *Extensible:* Adding support for new models is very easy, often
@@ -215,10 +221,9 @@ Downsides of `marginaleffects` include:
 
   - No multiplicity adjustments. (Use `p.adjust()` instead.)
   - Marginal means are often slower to compute than with `emmeans`.
+  - No omnibus test
 
-## Getting started
-
-#### Installation
+## Installation
 
 You can install the released version of `marginaleffects` from CRAN:
 
@@ -226,14 +231,24 @@ You can install the released version of `marginaleffects` from CRAN:
 install.packages("marginaleffects")
 ```
 
-You can install the development version of `marginaleffects` from
-Github:
+You can install the development version of `marginaleffects` (and its
+dependency `insight`) from R-Universe:
 
 ``` r
-remotes::install_github("vincentarelbundock/marginaleffects")
+install.packages(
+    c("marginaleffects", "insight"),
+    repos = c(
+        "https://vincentarelbundock.r-universe.dev",
+        "https://easystats.r-universe.dev"))
 ```
 
-First, we estimate a linear regression model with multiplicative
+**Restart `R` completely before moving on.**
+
+## Getting started
+
+#### Adjusted predictions
+
+To begin, we estimate a linear regression model with multiplicative
 interactions:
 
 ``` r
@@ -241,8 +256,6 @@ library(marginaleffects)
 
 mod <- lm(mpg ~ hp * wt * am, data = mtcars)
 ```
-
-#### Adjusted predictions
 
 An “adjusted prediction” is the outcome predicted by a model for some
 combination of the regressors’ values, such as their observed values,
@@ -269,13 +282,13 @@ their mean or mode:
 
 ``` r
 predictions(mod, newdata = datagrid(am = 0, wt = seq(2, 3, .2)))
-#>   rowid     type predicted std.error statistic       p.value conf.low conf.high       hp am  wt mpg
-#> 1     1 response  21.95621 2.0386301  10.77008  4.765935e-27 17.74868  26.16373 146.6875  0 2.0  21
-#> 2     2 response  21.42097 1.7699036  12.10290  1.019401e-33 17.76807  25.07388 146.6875  0 2.2  21
-#> 3     3 response  20.88574 1.5067373  13.86157  1.082834e-43 17.77599  23.99549 146.6875  0 2.4  21
-#> 4     4 response  20.35051 1.2526403  16.24609  2.380723e-59 17.76518  22.93583 146.6875  0 2.6  21
-#> 5     5 response  19.81527 1.0144509  19.53301  5.755097e-85 17.72155  21.90900 146.6875  0 2.8  21
-#> 6     6 response  19.28004 0.8063905  23.90906 2.465206e-126 17.61573  20.94435 146.6875  0 3.0  21
+#>   rowid     type predicted std.error statistic       p.value conf.low conf.high      mpg       hp am  wt
+#> 1     1 response  21.95621 2.0386301  10.77008  4.765935e-27 17.74868  26.16373 20.09062 146.6875  0 2.0
+#> 2     2 response  21.42097 1.7699036  12.10290  1.019401e-33 17.76807  25.07388 20.09062 146.6875  0 2.2
+#> 3     3 response  20.88574 1.5067373  13.86157  1.082834e-43 17.77599  23.99549 20.09062 146.6875  0 2.4
+#> 4     4 response  20.35051 1.2526403  16.24609  2.380723e-59 17.76518  22.93583 20.09062 146.6875  0 2.6
+#> 5     5 response  19.81527 1.0144509  19.53301  5.755097e-85 17.72155  21.90900 20.09062 146.6875  0 2.8
+#> 6     6 response  19.28004 0.8063905  23.90906 2.465206e-126 17.61573  20.94435 20.09062 146.6875  0 3.0
 ```
 
 We can plot how predictions change for different values of one or more

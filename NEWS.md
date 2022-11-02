@@ -1,10 +1,47 @@
+# marginaleffects 0.8.0
+
+Breaking change:
+
+* The `interaction` argument is deprecated and replaced by the `cross` argument. This is to reduce ambiguity with respect to the `interaction` argument in `emmeans`, which does something completely different, akin to the difference-in-differences illustrated in the Interactions vignette.
+
+71 classes of models supported, including the new:
+
+* `rms::ols`
+* `rms::lrm`
+* `rms::orm`
+
+New features:
+
+* Plots: `plot_cme()`, `plot_cap()`, and `plot_cco()` are now much more flexible in specifying the comparisons to display. The `condition` argument accepts lists, functions, and shortcuts for common reference values, such as "minmax", "threenum", etc.
+* `variables` argument of the `comparisons()` function is more flexible:
+  - Accepts functions to specify custom differences in numeric variables (e.g., forward and backward differencing).
+  - Can specify pairs of factors to compare in the `variables` argument of the `comparisons` function.
+* `variables` argument of the `predictions()` function is more flexible:
+  - Accepts shortcut strings, functions, and vectors of arbitrary length.
+* Integrate out random effects in bayesian `brms` models (see Bayesian analysis vignette)
+
+New vignettes:
+
+* Experiments
+* Extending marginal effects
+* Integrating out random effects in bayesian models
+
+Bug fixes and minor improvements:
+
+* The default value of `conf_level` in `summary()` and `tidy()` is now `NULL`, which inherits the `conf_level` value in the original `comparisons`/`marginaleffects`/`predictions` calls.
+* Fix typo in function names for missing "lnratioavgwts"
+* Interactions with `fixest::i()` are parsed properly as categorical variables
+* For `betareg` objects, inference can now be done on all coefficients using `deltamethod()`. previously only the location coefficients were available.
+* For objects from `crch` package, a number of bugs have been fixed; standard errors should now be correct for `deltamethod()`, `marginaleffects()`, etc.
+* Fixed a bug in the `tidy()` function for `glmmTMB` models without random effects, which caused all t statistics to be identical.
+
 # marginaleffects 0.7.1
 
 * New supported model class: `gamlss`. Thanks to Marcio Augusto Diniz.
 * `marginalmeans()` accepts a `wts` argument with values: "equal", "proportional", "cells".
 * `by` argument 
   - accepts data frames for complex groupings.
-  - `in `marginalmeans` only accepts data frames.
+  - in `marginalmeans` only accepts data frames.
   - accepts "group" to group by response level.
   - works with bayesian models.
 * `byfun` argument for the `predictions()` function to aggregate using different functions.
@@ -16,8 +53,8 @@
 * `tidy.predictions()` and `tidy.marginalmeans()` get a new `transform_avg` argument.
 * New vignettes: 
   - Unit-level contrasts in logistic regressions. Thanks to @arthur-albuquerque.
-  - New vignette: Python Numpy models in `marginaleffects`. Thanks to @timpipeseek.
-  - New vignette: Bootstrap example in standard errors vignette.
+  - Python Numpy models in `marginaleffects`. Thanks to @timpipeseek.
+  - Bootstrap example in standard errors vignette.
 
 # marginaleffects 0.7.0
 

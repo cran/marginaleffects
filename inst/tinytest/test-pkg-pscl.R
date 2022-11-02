@@ -32,10 +32,10 @@ expect_inherits(mfx1, "data.frame")
 expect_inherits(mfx2, "data.frame")
 
 # emtrends
-em <- emtrends(model, ~phd, "phd", at = list(fem = "Men", phd = 2))
+em <- emtrends(model, ~phd, "phd", at = list(fem = "Men", phd = 2), df = Inf)
 em <- tidy(em)
 mfx <- marginaleffects(model, newdata = datagrid(fem = "Men", phd = 2), variables = "phd")
-expect_equivalent(mfx$dydx, em$phd.trend, tolerance = .001)
+expect_equivalent(mfx$dydx, em$phd.trend, tolerance = .01)
 # standard errors do not match
 # expect_equivalent(mfx$std.error, em$std.error)
 
@@ -68,7 +68,7 @@ model <- zeroinfl(art ~ kid5 + phd | ment,
 stata <- readRDS(testing_path("stata/stata.rds"))$pscl_zeroinfl_01
 mfx <- merge(tidy(marginaleffects(model)), stata)
 expect_marginaleffects(model)
-expect_equivalent(mfx$estimate, mfx$dydxstata, tolerance = tol)
+expect_equivalent(mfx$estimate, mfx$dydxstata, tolerance = 1e-3)
 expect_equivalent(mfx$std.error, mfx$std.errorstata, tolerance = tol_se)
 
 # emtrends
@@ -80,9 +80,8 @@ expect_equivalent(mfx$std.error, em$std.error, tolerance = .01)
 
 # margins: does not support standard errors (all zeros)
 mar <- margins(model, data = head(bioChemists), unit_ses = TRUE)
-mfx <- marginaleffects(model, newdata = head(bioChemists))
-expect_true(expect_margins(mfx, mar, se = FALSE, verbose = TRUE, tolerance = 0.001))
-
+mfx <- marginaleffects(model, variables = c("kid5", "phd", "ment"), newdata = head(bioChemists))
+expect_equivalent(sort(summary(mar)$AME), sort(summary(mfx)$estimate), tolerance = 1e-3)
 
 
 ### predictions
@@ -108,8 +107,8 @@ model <- zeroinfl(art ~ kid5 + phd + mar | ment,
 mm <- marginalmeans(model)
 expect_marginalmeans(mm)
 # response
-mm <- tidy(marginalmeans(model, type = "response"))
-em <- tidy(emmeans(model, specs = "mar"))
-expect_equivalent(mm$estimate, em$estimate)
-expect_equivalent(mm$std.error, em$std.error, tolerance = .001)
+mm <- tidy(marginalmeans(model))
+em <- tidy(emmeans(model, specs = "mar", df = Inf))
+expect_equivalent(mm$estimate, em$estimate, tol = 0.01)
+expect_equivalent(mm$std.error, em$std.error, tolerance = .01)
 

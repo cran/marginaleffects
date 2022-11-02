@@ -9,6 +9,7 @@ ARD
 args
 Augusto
 Avina
+backtransforming
 bayesian
 Boca
 brms
@@ -18,11 +19,13 @@ CMD
 cme
 Codecov
 confounders
+cran
 CRC
 datagrid
 demeaned
 differenceavg
 differenceavgwts
+differencing
 Dowd
 dX
 dY
@@ -31,6 +34,7 @@ dydxavg
 dydxavgwts
 dyex
 dyexavg
+dyexavglnratioavgwts
 dyexavgwts
 elasticities
 elasticities
@@ -51,6 +55,7 @@ eydxavgwts
 eyex
 eyexavg
 eyexavgwts
+fivenum
 frac
 Gam
 Gentoos
@@ -91,6 +96,7 @@ lnoravg
 lnoravgwts
 lnratio
 lnratioavg
+lnratioavgwts
 Lüdecke
 Marcio
 marginalmeans
@@ -101,17 +107,21 @@ minmax
 modelbased
 Nafa
 nd
+newdata
 NHEFS
 numDeriv
 Numpy
 NumPyro
 ORs
 pairwise
+param
 plasminogen
 poisson
 pre
 probs
+quartile
 ratioavg
+ratioavgwts
 Raton
 RCTs
 Rdatasets
@@ -136,6 +146,7 @@ Stata's
 Stata’s
 StataCorp
 streptokinase
+threenum
 tidiers
 TLDR
 tPA

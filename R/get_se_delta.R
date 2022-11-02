@@ -3,14 +3,14 @@ get_se_delta_marginalmeans <- function(model,
                                        newdata,
                                        type,
                                        eps = 1e-4, # avoid pushing through ...
-                                       interaction = FALSE,
+                                       cross = FALSE,
                                        ...) {
     get_marginalmeans(
         model = model,
         variables = variables,
         newdata = newdata,
         type = type,
-        interaction = interaction,
+        cross = cross,
         ...
     )$marginalmean
 }
@@ -27,7 +27,7 @@ get_se_delta_contrasts <- function(model,
                                    lo,
                                    hi,
                                    original,
-                                   interaction,
+                                   cross,
                                    ...) {
     get_contrasts(model,
         newdata = newdata,
@@ -38,7 +38,7 @@ get_se_delta_contrasts <- function(model,
         lo = lo,
         hi = hi,
         original = original,
-        interaction = interaction,
+        cross = cross,
         verbose = FALSE,
         ...
     )$comparison
@@ -74,8 +74,9 @@ get_se_delta <- function(model,
     coefs <- get_coef(model, ...)
 
     # TODO: this is a terrible sanity check
-    # some vcov methods return an unnamed matrix
-    if (!is.null(dimnames(vcov)) && all(names(coefs) %in% colnames(vcov))) {
+    # some vcov methods return an unnamed matrix, some have duplicate names
+    if (!is.null(dimnames(vcov)) && anyDuplicated(colnames(vcov)) == 0 &&
+        all(names(coefs) %in% colnames(vcov))) {
         vcov <- vcov[names(coefs), names(coefs), drop = FALSE]
     }
 

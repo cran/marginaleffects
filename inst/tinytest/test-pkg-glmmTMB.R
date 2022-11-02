@@ -4,7 +4,7 @@ if (ON_CRAN) exit_file("on cran")
 if (ON_CI) exit_file("on ci") # install and test fails on Github
 requiet("glmmTMB")
 requiet("emmeans")
-
+requiet("broom")
 
 data("Owls", package = "glmmTMB")
 
@@ -31,16 +31,14 @@ m4 <- glmmTMB(cbind(incidence, size - incidence) ~ period + (1 | herd),
 family = binomial, data = cbpp)
 expect_marginaleffects(m4)
 
-
-
 # comparisons vs. emmeans
-requiet("emmeans")
-requiet("broom")
+
 # Zero-inflated negative binomial model
 m2 <- glmmTMB(count ~ spp + mined + (1 | site),
   zi = ~spp + mined,
   family = nbinom2,
   data = Salamanders)
+
 co <- comparisons(m2,
               type = "link",
               variables = "mined",
@@ -51,6 +49,40 @@ em <- tidy(pairs(emmeans(m2, "mined", at = list(spp = "GP", site = "VF-1"))))
 expect_marginaleffects(m2)
 expect_equivalent(co$comparison, -1 * em$estimate)
 expect_equivalent(co$std.error, em$std.error)
+
+
+# Issue reported by email by Olivier Baumais
+bug <- glmmTMB(count ~ spp + mined,
+  ziformula = ~spp + mined,
+  family = "nbinom2",
+  data = Salamanders)
+mfx <- marginaleffects(bug)
+tid1 <- comparisons(bug, transform_pre = "dydxavg")
+tid2 <- tidy(marginaleffects(bug))
+
+expect_equivalent(tid1$comparison, tid2$estimate)
+expect_equivalent(tid1$std.error, tid2$std.error)
+expect_equivalent(tid1$statistic, tid2$statistic)
+expect_equivalent(tid1$p.value, tid2$p.value)
+expect_equivalent(length(unique(abs(tid1$statistic))), 7)
+
+bed <- marginaleffects:::modelarchive_data("new_bedford")
+mzip_3 <- glmmTMB(
+  x ~ cfp + c1 + pfp,
+  ziformula = ~ res + inc + age,
+  family = "nbinom2",
+  data = bed)
+mfx <- marginaleffects(mzip_3, type = "response")
+tid <- tidy(mfx)
+
+# checked against Stata
+b <- c(-0.703975123794645, 0.116113581361008, 1.80590209245287,
+       0.318406280886303, -0.322385169497627, -0.0357107397802961)
+se <- c(0.333707103664564, 0.335617116291664, 1.58873581973933, 2.1641601963981, 
+        0.0899355987140499, 0.0137118286682651)
+expect_equivalent(tid$estimate, b)
+expect_equivalent(tid$std.error, se)
+
 
 # Hurdle Poisson model
 m3 <- glmmTMB(count ~ spp + mined + (1 | site),
@@ -111,10 +143,10 @@ mod <- glmmTMB(
     Survived ~ Sex + z + (1 + Age | PClass),
     family = binomial,
     data = dat)
-mm1 <- marginalmeans(mod, type = "response", variables = c("Sex", "PClass"))
+mm1 <- marginalmeans(mod, variables = c("Sex", "PClass"))
 mm2 <- marginalmeans(mod, type = "link", variables = c("Sex", "PClass"))
-mm3 <- marginalmeans(mod, type = "response", variables = c("Sex", "PClass"), interaction = TRUE)
-mm4 <- marginalmeans(mod, type = "link", variables = c("Sex", "PClass"), interaction = TRUE)
+mm3 <- marginalmeans(mod, variables = c("Sex", "PClass"), cross = TRUE)
+mm4 <- marginalmeans(mod, type = "link", variables = c("Sex", "PClass"), cross = TRUE)
 expect_true(all(mm1$marginalmean != mm2$marginalmean))
 expect_true(all(mm1$std.error != mm2$std.error))
 expect_true(all(mm3$marginalmean != mm4$marginalmean))
@@ -157,7 +189,7 @@ model <- glmmTMB(
   REML = FALSE,
   data = dat)
 em <- data.frame(emmeans(model, ~trial + groupid, df = Inf))
-mm <- marginalmeans(model, variables = c("trial", "groupid"), interaction = TRUE, re.form = NA)
+mm <- marginalmeans(model, variables = c("trial", "groupid"), cross = TRUE, re.form = NA)
 mm <- mm[order(mm$groupid, mm$trial),]
 expect_equivalent(mm$marginalmean, em$emmean)
 expect_equivalent(mm$conf.high, em$asymp.UCL)
@@ -169,7 +201,8 @@ model_REML <- glmmTMB(
 
 expect_error(marginaleffects(model_REML), pattern = "REML")
 expect_error(comparisons(model_REML), pattern = "REML")
+expect_error(predictions(model_REML), pattern = "REML")
 expect_error(marginalmeans(model_REML), pattern = "REML")
 expect_inherits(marginaleffects(model_REML, vcov = FALSE), "marginaleffects")
-expect_inherits(predictions(model_REML, re.form = NA), "predictions")
+expect_inherits(predictions(model_REML, re.form = NA, vcov = FALSE), "predictions")
 expect_inherits(predictions(model_REML, vcov = FALSE, re.form = NA), "predictions")

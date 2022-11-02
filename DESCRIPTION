@@ -1,6 +1,6 @@
 Package: marginaleffects
 Title: Marginal Effects, Marginal Means, Predictions, and Contrasts
-Version: 0.7.1
+Version: 0.8.0
 Authors@R: 
     c(person(given = "Vincent",
              family = "Arel-Bundock",
@@ -11,8 +11,13 @@ Authors@R:
              family = "Diniz",
              role = "ctb",
              email = "marcio.diniz@cshs.org",
-             comment = c(ORCID = "0000-0002-2427-7843")))
-Description: Compute and plot adjusted predictions, contrasts, marginal effects, and marginal means for over 65 classes of statistical models in R. Conduct linear and non-linear hypothesis tests using the delta method.
+             comment = c(ORCID = "0000-0002-2427-7843")),
+      person(given = "Noah",
+             family = "Greifer",
+             role = "ctb",
+             email = "noah.greifer@gmail.com",
+             comment = c(ORCID = "0000-0003-3067-7154")))
+Description: Compute and plot adjusted predictions, contrasts, marginal effects, and marginal means for over 70 classes of statistical models in R. Conduct linear and non-linear hypothesis tests using the delta method.
 License: GPL (>= 3)
 Copyright: inst/COPYRIGHTS
 Encoding: UTF-8
@@ -21,7 +26,7 @@ BugReports: https://github.com/vincentarelbundock/marginaleffects/issues
 RoxygenNote: 7.2.1
 VignetteBuilder: knitr
 Depends: R (>= 3.5.0)
-Imports: checkmate, data.table, generics, insight (>= 0.18.4), methods
+Imports: checkmate, data.table, generics, insight (>= 0.18.5), methods
 Suggests: AER, afex, aod, bench, betareg, BH, bife, biglm, brglm2,
         brms, brmsmargins, broom, collapse, conflicted, covr, crch,
         datawizard, dplyr, emmeans, estimatr, fixest (>= 0.10.1),
@@ -31,10 +36,11 @@ Suggests: AER, afex, aod, bench, betareg, BH, bife, biglm, brglm2,
         magrittr, margins, MASS, MatchIt, mclogit, mgcv, mhurdle, mice,
         mlogit, modelbased, modelsummary, nlme, nnet, ordinal,
         patchwork, pkgdown, plm, prediction, pscl, quantreg, RcppEigen,
-        rlang, rmarkdown, rms, robust, robustbase, robustlmm, rstanarm,
-        rstantools, sampleSelection, sandwich, scam, speedglm,
-        spelling, survey, survival, systemfonts, tidymodels, tidyr,
-        tidyverse, tinytest, titanic, truncreg, tsModel, vdiffr, withr
+        remotes, rlang, rmarkdown, rms, robust, robustbase, robustlmm,
+        rstanarm, rstantools, sampleSelection, sandwich, scam,
+        speedglm, spelling, survey, survival, systemfonts, tidymodels,
+        tidyr, tidyverse, tinytest, titanic, truncreg, tsModel, vdiffr,
+        withr
 Collate: 'align_J_V.R' 'arg_name_change.R' 'attributes.R'
         'backtransform.R' 'by.R' 'comparisons.R' 'complete_levels.R'
         'datagrid.R' 'deltamethod.R' 'deprecate_arg.R'
@@ -54,7 +60,7 @@ Collate: 'align_J_V.R' 'arg_name_change.R' 'attributes.R'
         'methods_lme4.R' 'methods_mclogit.R' 'methods_mgcv.R'
         'methods_mhurdle.R' 'methods_mlogit.R' 'methods_ordinal.R'
         'methods_plm.R' 'methods_pscl.R' 'methods_quantreg.R'
-        'methods_robustlmm.R' 'methods_rstanarm.R'
+        'methods_rms.R' 'methods_robustlmm.R' 'methods_rstanarm.R'
         'methods_sampleSelection.R' 'methods_scam.R' 'methods_stats.R'
         'methods_survival.R' 'methods_tobit1.R' 'modelarchive.R'
         'myTryCatch.R' 'package.R' 'plot.R' 'plot_cap.R' 'plot_cco.R'
@@ -63,15 +69,16 @@ Collate: 'align_J_V.R' 'arg_name_change.R' 'attributes.R'
         'sanitize_interaction.R' 'sanitize_newdata.R'
         'sanitize_transform_pre.R' 'sanitize_type.R'
         'sanitize_variables.R' 'sanity.R' 'sanity_by.R' 'sanity_dots.R'
-        'summary.R' 'tidy.R' 'tidy.comparisons.R' 'tidy.predictions.R'
-        'type_dictionary.R' 'unpack_matrix_cols.R' 'utils_cjdt.R'
-        'warn_once.R'
+        'settings.R' 'summary.R' 'tidy.R' 'tidy.comparisons.R'
+        'tidy.predictions.R' 'type_dictionary.R' 'unpack_matrix_cols.R'
+        'utils_cjdt.R' 'warn_once.R'
 Language: en-US
 NeedsCompilation: no
-Packaged: 2022-09-25 10:53:29 UTC; vincent
+Packaged: 2022-11-02 15:21:08 UTC; vincent
 Author: Vincent Arel-Bundock [aut, cre, cph]
     (<https://orcid.org/0000-0003-2042-7063>),
-  Marcio Augusto Diniz [ctb] (<https://orcid.org/0000-0002-2427-7843>)
+  Marcio Augusto Diniz [ctb] (<https://orcid.org/0000-0002-2427-7843>),
+  Noah Greifer [ctb] (<https://orcid.org/0000-0003-3067-7154>)
 Maintainer: Vincent Arel-Bundock <vincent.arel-bundock@umontreal.ca>
 Repository: CRAN
-Date/Publication: 2022-09-25 11:20:02 UTC
+Date/Publication: 2022-11-02 16:07:38 UTC
