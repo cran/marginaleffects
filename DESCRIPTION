@@ -1,6 +1,6 @@
 Package: marginaleffects
 Title: Marginal Effects, Marginal Means, Predictions, and Contrasts
-Version: 0.8.0
+Version: 0.8.1
 Authors@R: 
     c(person(given = "Vincent",
              family = "Arel-Bundock",
@@ -35,12 +35,12 @@ Suggests: AER, afex, aod, bench, betareg, BH, bife, biglm, brglm2,
         haven, here, itsadug, ivreg, kableExtra, knitr, lme4, lmerTest,
         magrittr, margins, MASS, MatchIt, mclogit, mgcv, mhurdle, mice,
         mlogit, modelbased, modelsummary, nlme, nnet, ordinal,
-        patchwork, pkgdown, plm, prediction, pscl, quantreg, RcppEigen,
-        remotes, rlang, rmarkdown, rms, robust, robustbase, robustlmm,
-        rstanarm, rstantools, sampleSelection, sandwich, scam,
-        speedglm, spelling, survey, survival, systemfonts, tidymodels,
-        tidyr, tidyverse, tinytest, titanic, truncreg, tsModel, vdiffr,
-        withr
+        patchwork, pkgdown, plm, polspline, posterior, prediction,
+        pscl, quantreg, RcppEigen, remotes, rlang, rmarkdown, rms,
+        robust, robustbase, robustlmm, rstanarm, rstantools,
+        sampleSelection, sandwich, scam, speedglm, spelling, survey,
+        survival, systemfonts, tidymodels, tidyr, tidyverse, tinytest,
+        titanic, truncreg, tsModel, vdiffr, withr
 Collate: 'align_J_V.R' 'arg_name_change.R' 'attributes.R'
         'backtransform.R' 'by.R' 'comparisons.R' 'complete_levels.R'
         'datagrid.R' 'deltamethod.R' 'deprecate_arg.R'
@@ -58,27 +58,27 @@ Collate: 'align_J_V.R' 'arg_name_change.R' 'attributes.R'
         'methods_brms.R' 'methods_crch.R' 'methods_fixest.R'
         'methods_gamlss.R' 'methods_glmmTMB.R' 'methods_glmx.R'
         'methods_lme4.R' 'methods_mclogit.R' 'methods_mgcv.R'
-        'methods_mhurdle.R' 'methods_mlogit.R' 'methods_ordinal.R'
-        'methods_plm.R' 'methods_pscl.R' 'methods_quantreg.R'
-        'methods_rms.R' 'methods_robustlmm.R' 'methods_rstanarm.R'
-        'methods_sampleSelection.R' 'methods_scam.R' 'methods_stats.R'
-        'methods_survival.R' 'methods_tobit1.R' 'modelarchive.R'
-        'myTryCatch.R' 'package.R' 'plot.R' 'plot_cap.R' 'plot_cco.R'
-        'plot_cme.R' 'posteriordraws.R' 'predictions.R'
-        'sanitize_conf_level.R' 'sanitize_hypothesis.R'
-        'sanitize_interaction.R' 'sanitize_newdata.R'
-        'sanitize_transform_pre.R' 'sanitize_type.R'
-        'sanitize_variables.R' 'sanity.R' 'sanity_by.R' 'sanity_dots.R'
-        'settings.R' 'summary.R' 'tidy.R' 'tidy.comparisons.R'
-        'tidy.predictions.R' 'type_dictionary.R' 'unpack_matrix_cols.R'
-        'utils_cjdt.R' 'warn_once.R'
+        'methods_mhurdle.R' 'methods_mlm.R' 'methods_mlogit.R'
+        'methods_ordinal.R' 'methods_plm.R' 'methods_pscl.R'
+        'methods_quantreg.R' 'methods_rms.R' 'methods_robustlmm.R'
+        'methods_rstanarm.R' 'methods_sampleSelection.R'
+        'methods_scam.R' 'methods_stats.R' 'methods_survival.R'
+        'methods_tobit1.R' 'modelarchive.R' 'myTryCatch.R' 'package.R'
+        'plot.R' 'plot_cap.R' 'plot_cco.R' 'plot_cme.R'
+        'posteriordraws.R' 'predictions.R' 'sanitize_conf_level.R'
+        'sanitize_hypothesis.R' 'sanitize_interaction.R'
+        'sanitize_newdata.R' 'sanitize_transform_pre.R'
+        'sanitize_type.R' 'sanitize_variables.R' 'sanity.R'
+        'sanity_by.R' 'sanity_dots.R' 'settings.R' 'summary.R' 'tidy.R'
+        'tidy.comparisons.R' 'tidy.predictions.R' 'type_dictionary.R'
+        'unpack_matrix_cols.R' 'utils.R' 'utils_cjdt.R' 'warn_once.R'
 Language: en-US
 NeedsCompilation: no
-Packaged: 2022-11-02 15:21:08 UTC; vincent
+Packaged: 2022-11-23 22:00:23 UTC; vincent
 Author: Vincent Arel-Bundock [aut, cre, cph]
     (<https://orcid.org/0000-0003-2042-7063>),
   Marcio Augusto Diniz [ctb] (<https://orcid.org/0000-0002-2427-7843>),
   Noah Greifer [ctb] (<https://orcid.org/0000-0003-3067-7154>)
 Maintainer: Vincent Arel-Bundock <vincent.arel-bundock@umontreal.ca>
 Repository: CRAN
-Date/Publication: 2022-11-02 16:07:38 UTC
+Date/Publication: 2022-11-23 22:20:06 UTC

@@ -1,9 +1,8 @@
 #' Get predicted values from a model object (internal function)
 #'
-#' @return A vector of predicted values of length equal to the number of rows
-#' in `newdata`. For models with multi-level outcomes (e.g., multinomial
-#' logit), this function returns a matrix of predicted values with column names
-#' equal to each of the levels/groups.
+#' @return A data.frame of predicted values with a number of rows equal to the
+#' number of rows in `newdata` and columns "rowid" and "predicted". A "group"
+#' column is added for multivariate models or models with categorical outcomes. 
 #' @rdname get_predict
 #' @inheritParams marginaleffects
 #' @keywords internal
@@ -104,6 +103,7 @@ get_predict.default <- function(model,
                 out$rowid <- newdata$rowid
             }
 
+            out <- sort_columns(out, first = c("rowid", "group", "predicted"))
             return(out)
         }
     }
@@ -163,6 +163,8 @@ get_predict.default <- function(model,
     }
 
     setDF(out)
+
+    out <- sort_columns(out, first = c("rowid", "group", "predicted"))
 
     return(out)
 }

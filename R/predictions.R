@@ -83,6 +83,9 @@
 #' # Adjusted Predictions at User-Specified Values of the Regressors
 #' predictions(mod, newdata = datagrid(hp = c(100, 120), cyl = 4))
 #'
+#' m <- lm(mpg ~ hp + drat + factor(cyl) + factor(am), data = mtcars)
+#' predictions(m, newdata = datagrid(FUN_factor = unique, FUN_numeric = median))
+#' 
 #' # Average Adjusted Predictions (AAP)
 #' library(dplyr)
 #' mod <- lm(mpg ~ hp * am * vs, mtcars)
@@ -213,7 +216,7 @@ predictions <- function(model,
     # model <- sanitize_model(model)
 
     # input sanity checks
-    checkmate::assert_function(transform_post, null.ok = TRUE)
+    transform_post <- sanitize_transform_post(transform_post)
     sanity_dots(model = model, ...)
     sanity_model_specific(
         model = model,
@@ -395,7 +398,8 @@ predictions <- function(model,
             vcov = vcov,
             overwrite = FALSE,
             draws = draws,
-            estimate = "predicted")
+            estimate = "predicted",
+            ...)
     }
 
     out <- data.table(tmp)
@@ -426,9 +430,7 @@ predictions <- function(model,
     attr(out, "posterior_draws") <- draws
 
     # after rename to estimate / after assign draws
-    if (is.function(transform_post)) {
-        out <- backtransform(out, transform_post = transform_post)
-    }
+    out <- backtransform(out, transform_post = transform_post)
 
     class(out) <- c("predictions", class(out))
     out <- set_attributes(
@@ -444,6 +446,19 @@ predictions <- function(model,
     attr(out, "weights") <- marginaleffects_wts_internal
     attr(out, "conf_level") <- conf_level
     attr(out, "by") <- by
+    attr(out, "call") <- match.call()
+    attr(out, "transform_post_label") <- names(transform_post)[1]
+    attr(out, "transform_post") <- transform_post[[1]]
+
+    if (inherits(model, "brmsfit")) {
+        insight::check_if_installed("brms")
+        attr(out, "nchains") <- brms::nchains(model)
+    }
+
+    if (inherits(model, "brmsfit")) {
+        insight::check_if_installed("brms")
+        attr(out, "nchains") <- brms::nchains(model)
+    }
 
     if ("group" %in% names(out) && all(out$group == "main_marginaleffect")) {
         out$group <- NULL

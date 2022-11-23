@@ -1,0 +1,491 @@
+<!DOCTYPE html>
+
+<html>
+
+<head>
+
+<meta charset="utf-8" />
+<meta name="generator" content="pandoc" />
+<meta http-equiv="X-UA-Compatible" content="IE=EDGE" />
+
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+
+
+
+<title>Generalized Additive Models</title>
+
+<script>// Pandoc 2.9 adds attributes on both header and div. We remove the former (to
+// be compatible with the behavior of Pandoc < 2.8).
+document.addEventListener('DOMContentLoaded', function(e) {
+  var hs = document.querySelectorAll("div.section[class*='level'] > :first-child");
+  var i, h, a;
+  for (i = 0; i < hs.length; i++) {
+    h = hs[i];
+    if (!/^h[1-6]$/i.test(h.tagName)) continue;  // it should be a header h1-h6
+    a = h.attributes;
+    while (a.length > 0) h.removeAttribute(a[0].name);
+  }
+});
+</script>
+<script>// Hide empty <a> tag within highlighted CodeBlock for screen reader accessibility (see https://github.com/jgm/pandoc/issues/6352#issuecomment-626106786) -->
+// v0.0.1
+// Written by JooYoung Seo (jooyoung@psu.edu) and Atsushi Yasumoto on June 1st, 2020.
+
+document.addEventListener('DOMContentLoaded', function() {
+  const codeList = document.getElementsByClassName("sourceCode");
+  for (var i = 0; i < codeList.length; i++) {
+    var linkList = codeList[i].getElementsByTagName('a');
+    for (var j = 0; j < linkList.length; j++) {
+      if (linkList[j].innerHTML === "") {
+        linkList[j].setAttribute('aria-hidden', 'true');
+      }
+    }
+  }
+});
+</script>
+
+<style type="text/css">
+  code{white-space: pre-wrap;}
+  span.smallcaps{font-variant: small-caps;}
+  span.underline{text-decoration: underline;}
+  div.column{display: inline-block; vertical-align: top; width: 50%;}
+  div.hanging-indent{margin-left: 1.5em; text-indent: -1.5em;}
+  ul.task-list{list-style: none;}
+    </style>
+
+
+
+<style type="text/css">
+  code {
+    white-space: pre;
+  }
+  .sourceCode {
+    overflow: visible;
+  }
+</style>
+<style type="text/css" data-origin="pandoc">
+pre > code.sourceCode { white-space: pre; position: relative; }
+pre > code.sourceCode > span { display: inline-block; line-height: 1.25; }
+pre > code.sourceCode > span:empty { height: 1.2em; }
+code.sourceCode > span { color: inherit; text-decoration: inherit; }
+div.sourceCode { margin: 1em 0; }
+pre.sourceCode { margin: 0; }
+@media screen {
+div.sourceCode { overflow: auto; }
+}
+@media print {
+pre > code.sourceCode { white-space: pre-wrap; }
+pre > code.sourceCode > span { text-indent: -5em; padding-left: 5em; }
+}
+pre.numberSource code
+  { counter-reset: source-line 0; }
+pre.numberSource code > span
+  { position: relative; left: -4em; counter-increment: source-line; }
+pre.numberSource code > span > a:first-child::before
+  { content: counter(source-line);
+    position: relative; left: -1em; text-align: right; vertical-align: baseline;
+    border: none; display: inline-block;
+    -webkit-touch-callout: none; -webkit-user-select: none;
+    -khtml-user-select: none; -moz-user-select: none;
+    -ms-user-select: none; user-select: none;
+    padding: 0 4px; width: 4em;
+    color: #aaaaaa;
+  }
+pre.numberSource { margin-left: 3em; border-left: 1px solid #aaaaaa;  padding-left: 4px; }
+div.sourceCode
+  {   }
+@media screen {
+pre > code.sourceCode > span > a:first-child::before { text-decoration: underline; }
+}
+code span.al { color: #ff0000; font-weight: bold; } /* Alert */
+code span.an { color: #60a0b0; font-weight: bold; font-style: italic; } /* Annotation */
+code span.at { color: #7d9029; } /* Attribute */
+code span.bn { color: #40a070; } /* BaseN */
+code span.bu { } /* BuiltIn */
+code span.cf { color: #007020; font-weight: bold; } /* ControlFlow */
+code span.ch { color: #4070a0; } /* Char */
+code span.cn { color: #880000; } /* Constant */
+code span.co { color: #60a0b0; font-style: italic; } /* Comment */
+code span.cv { color: #60a0b0; font-weight: bold; font-style: italic; } /* CommentVar */
+code span.do { color: #ba2121; font-style: italic; } /* Documentation */
+code span.dt { color: #902000; } /* DataType */
+code span.dv { color: #40a070; } /* DecVal */
+code span.er { color: #ff0000; font-weight: bold; } /* Error */
+code span.ex { } /* Extension */
+code span.fl { color: #40a070; } /* Float */
+code span.fu { color: #06287e; } /* Function */
+code span.im { } /* Import */
+code span.in { color: #60a0b0; font-weight: bold; font-style: italic; } /* Information */
+code span.kw { color: #007020; font-weight: bold; } /* Keyword */
+code span.op { color: #666666; } /* Operator */
+code span.ot { color: #007020; } /* Other */
+code span.pp { color: #bc7a00; } /* Preprocessor */
+code span.sc { color: #4070a0; } /* SpecialChar */
+code span.ss { color: #bb6688; } /* SpecialString */
+code span.st { color: #4070a0; } /* String */
+code span.va { color: #19177c; } /* Variable */
+code span.vs { color: #4070a0; } /* VerbatimString */
+code span.wa { color: #60a0b0; font-weight: bold; font-style: italic; } /* Warning */
+
+</style>
+<script>
+// apply pandoc div.sourceCode style to pre.sourceCode instead
+(function() {
+  var sheets = document.styleSheets;
+  for (var i = 0; i < sheets.length; i++) {
+    if (sheets[i].ownerNode.dataset["origin"] !== "pandoc") continue;
+    try { var rules = sheets[i].cssRules; } catch (e) { continue; }
+    var j = 0;
+    while (j < rules.length) {
+      var rule = rules[j];
+      // check if there is a div.sourceCode rule
+      if (rule.type !== rule.STYLE_RULE || rule.selectorText !== "div.sourceCode") {
+        j++;
+        continue;
+      }
+      var style = rule.style.cssText;
+      // check if color or background-color is set
+      if (rule.style.color === '' && rule.style.backgroundColor === '') {
+        j++;
+        continue;
+      }
+      // replace div.sourceCode by a pre.sourceCode rule
+      sheets[i].deleteRule(j);
+      sheets[i].insertRule('pre.sourceCode{' + style + '}', j);
+    }
+  }
+})();
+</script>
+
+
+
+
+<style type="text/css">body {
+background-color: #fff;
+margin: 1em auto;
+max-width: 700px;
+overflow: visible;
+padding-left: 2em;
+padding-right: 2em;
+font-family: "Open Sans", "Helvetica Neue", Helvetica, Arial, sans-serif;
+font-size: 14px;
+line-height: 1.35;
+}
+#TOC {
+clear: both;
+margin: 0 0 10px 10px;
+padding: 4px;
+width: 400px;
+border: 1px solid #CCCCCC;
+border-radius: 5px;
+background-color: #f6f6f6;
+font-size: 13px;
+line-height: 1.3;
+}
+#TOC .toctitle {
+font-weight: bold;
+font-size: 15px;
+margin-left: 5px;
+}
+#TOC ul {
+padding-left: 40px;
+margin-left: -1.5em;
+margin-top: 5px;
+margin-bottom: 5px;
+}
+#TOC ul ul {
+margin-left: -2em;
+}
+#TOC li {
+line-height: 16px;
+}
+table {
+margin: 1em auto;
+border-width: 1px;
+border-color: #DDDDDD;
+border-style: outset;
+border-collapse: collapse;
+}
+table th {
+border-width: 2px;
+padding: 5px;
+border-style: inset;
+}
+table td {
+border-width: 1px;
+border-style: inset;
+line-height: 18px;
+padding: 5px 5px;
+}
+table, table th, table td {
+border-left-style: none;
+border-right-style: none;
+}
+table thead, table tr.even {
+background-color: #f7f7f7;
+}
+p {
+margin: 0.5em 0;
+}
+blockquote {
+background-color: #f6f6f6;
+padding: 0.25em 0.75em;
+}
+hr {
+border-style: solid;
+border: none;
+border-top: 1px solid #777;
+margin: 28px 0;
+}
+dl {
+margin-left: 0;
+}
+dl dd {
+margin-bottom: 13px;
+margin-left: 13px;
+}
+dl dt {
+font-weight: bold;
+}
+ul {
+margin-top: 0;
+}
+ul li {
+list-style: circle outside;
+}
+ul ul {
+margin-bottom: 0;
+}
+pre, code {
+background-color: #f7f7f7;
+border-radius: 3px;
+color: #333;
+white-space: pre-wrap; 
+}
+pre {
+border-radius: 3px;
+margin: 5px 0px 10px 0px;
+padding: 10px;
+}
+pre:not([class]) {
+background-color: #f7f7f7;
+}
+code {
+font-family: Consolas, Monaco, 'Courier New', monospace;
+font-size: 85%;
+}
+p > code, li > code {
+padding: 2px 0px;
+}
+div.figure {
+text-align: center;
+}
+img {
+background-color: #FFFFFF;
+padding: 2px;
+border: 1px solid #DDDDDD;
+border-radius: 3px;
+border: 1px solid #CCCCCC;
+margin: 0 5px;
+}
+h1 {
+margin-top: 0;
+font-size: 35px;
+line-height: 40px;
+}
+h2 {
+border-bottom: 4px solid #f7f7f7;
+padding-top: 10px;
+padding-bottom: 2px;
+font-size: 145%;
+}
+h3 {
+border-bottom: 2px solid #f7f7f7;
+padding-top: 10px;
+font-size: 120%;
+}
+h4 {
+border-bottom: 1px solid #f7f7f7;
+margin-left: 8px;
+font-size: 105%;
+}
+h5, h6 {
+border-bottom: 1px solid #ccc;
+font-size: 105%;
+}
+a {
+color: #0033dd;
+text-decoration: none;
+}
+a:hover {
+color: #6666ff; }
+a:visited {
+color: #800080; }
+a:visited:hover {
+color: #BB00BB; }
+a[href^="http:"] {
+text-decoration: underline; }
+a[href^="https:"] {
+text-decoration: underline; }
+
+code > span.kw { color: #555; font-weight: bold; } 
+code > span.dt { color: #902000; } 
+code > span.dv { color: #40a070; } 
+code > span.bn { color: #d14; } 
+code > span.fl { color: #d14; } 
+code > span.ch { color: #d14; } 
+code > span.st { color: #d14; } 
+code > span.co { color: #888888; font-style: italic; } 
+code > span.ot { color: #007020; } 
+code > span.al { color: #ff0000; font-weight: bold; } 
+code > span.fu { color: #900; font-weight: bold; } 
+code > span.er { color: #a61717; background-color: #e3d2d2; } 
+</style>
+
+
+
+
+</head>
+
+<body>
+
+
+
+
+<h1 class="title toc-ignore">Generalized Additive Models</h1>
+
+
+
+<div id="estimate-a-gam-model" class="section level1">
+<h1>Estimate a GAM model</h1>
+<p>We will estimate a GAM model using the <code>mgcv</code> package and the <code>simdat</code> dataset distributed with the <code>itsadug</code> package:</p>
+<div class="sourceCode" id="cb1"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true"></a><span class="kw">library</span>(marginaleffects)</span>
+<span id="cb1-2"><a href="#cb1-2" aria-hidden="true"></a><span class="kw">library</span>(itsadug)</span>
+<span id="cb1-3"><a href="#cb1-3" aria-hidden="true"></a><span class="kw">library</span>(mgcv)</span>
+<span id="cb1-4"><a href="#cb1-4" aria-hidden="true"></a></span>
+<span id="cb1-5"><a href="#cb1-5" aria-hidden="true"></a>simdat<span class="op">$</span>Subject &lt;-<span class="st"> </span><span class="kw">as.factor</span>(simdat<span class="op">$</span>Subject)</span>
+<span id="cb1-6"><a href="#cb1-6" aria-hidden="true"></a></span>
+<span id="cb1-7"><a href="#cb1-7" aria-hidden="true"></a><span class="kw">dim</span>(simdat)</span>
+<span id="cb1-8"><a href="#cb1-8" aria-hidden="true"></a><span class="co">#&gt; [1] 75600     6</span></span>
+<span id="cb1-9"><a href="#cb1-9" aria-hidden="true"></a><span class="kw">head</span>(simdat)</span>
+<span id="cb1-10"><a href="#cb1-10" aria-hidden="true"></a><span class="co">#&gt;    Group      Time Trial Condition Subject         Y</span></span>
+<span id="cb1-11"><a href="#cb1-11" aria-hidden="true"></a><span class="co">#&gt; 1 Adults   0.00000   -10        -1     a01 0.7554469</span></span>
+<span id="cb1-12"><a href="#cb1-12" aria-hidden="true"></a><span class="co">#&gt; 2 Adults  20.20202   -10        -1     a01 2.7834759</span></span>
+<span id="cb1-13"><a href="#cb1-13" aria-hidden="true"></a><span class="co">#&gt; 3 Adults  40.40404   -10        -1     a01 1.9696963</span></span>
+<span id="cb1-14"><a href="#cb1-14" aria-hidden="true"></a><span class="co">#&gt; 4 Adults  60.60606   -10        -1     a01 0.6814298</span></span>
+<span id="cb1-15"><a href="#cb1-15" aria-hidden="true"></a><span class="co">#&gt; 5 Adults  80.80808   -10        -1     a01 1.6939195</span></span>
+<span id="cb1-16"><a href="#cb1-16" aria-hidden="true"></a><span class="co">#&gt; 6 Adults 101.01010   -10        -1     a01 2.3651969</span></span></code></pre></div>
+<p>Fit a model with a random effect and group-time smooths:</p>
+<div class="sourceCode" id="cb2"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb2-1"><a href="#cb2-1" aria-hidden="true"></a>model &lt;-<span class="st"> </span><span class="kw">bam</span>(Y <span class="op">~</span><span class="st"> </span>Group <span class="op">+</span><span class="st"> </span><span class="kw">s</span>(Time, <span class="dt">by =</span> Group) <span class="op">+</span><span class="st"> </span><span class="kw">s</span>(Subject, <span class="dt">bs =</span> <span class="st">&quot;re&quot;</span>),</span>
+<span id="cb2-2"><a href="#cb2-2" aria-hidden="true"></a>             <span class="dt">data =</span> simdat)</span>
+<span id="cb2-3"><a href="#cb2-3" aria-hidden="true"></a></span>
+<span id="cb2-4"><a href="#cb2-4" aria-hidden="true"></a><span class="kw">summary</span>(model)</span>
+<span id="cb2-5"><a href="#cb2-5" aria-hidden="true"></a><span class="co">#&gt; </span></span>
+<span id="cb2-6"><a href="#cb2-6" aria-hidden="true"></a><span class="co">#&gt; Family: gaussian </span></span>
+<span id="cb2-7"><a href="#cb2-7" aria-hidden="true"></a><span class="co">#&gt; Link function: identity </span></span>
+<span id="cb2-8"><a href="#cb2-8" aria-hidden="true"></a><span class="co">#&gt; </span></span>
+<span id="cb2-9"><a href="#cb2-9" aria-hidden="true"></a><span class="co">#&gt; Formula:</span></span>
+<span id="cb2-10"><a href="#cb2-10" aria-hidden="true"></a><span class="co">#&gt; Y ~ Group + s(Time, by = Group) + s(Subject, bs = &quot;re&quot;)</span></span>
+<span id="cb2-11"><a href="#cb2-11" aria-hidden="true"></a><span class="co">#&gt; </span></span>
+<span id="cb2-12"><a href="#cb2-12" aria-hidden="true"></a><span class="co">#&gt; Parametric coefficients:</span></span>
+<span id="cb2-13"><a href="#cb2-13" aria-hidden="true"></a><span class="co">#&gt;             Estimate Std. Error t value Pr(&gt;|t|)   </span></span>
+<span id="cb2-14"><a href="#cb2-14" aria-hidden="true"></a><span class="co">#&gt; (Intercept)   2.0574     0.6903   2.980  0.00288 **</span></span>
+<span id="cb2-15"><a href="#cb2-15" aria-hidden="true"></a><span class="co">#&gt; GroupAdults   3.1265     0.9763   3.202  0.00136 **</span></span>
+<span id="cb2-16"><a href="#cb2-16" aria-hidden="true"></a><span class="co">#&gt; ---</span></span>
+<span id="cb2-17"><a href="#cb2-17" aria-hidden="true"></a><span class="co">#&gt; Signif. codes:  0 &#39;***&#39; 0.001 &#39;**&#39; 0.01 &#39;*&#39; 0.05 &#39;.&#39; 0.1 &#39; &#39; 1</span></span>
+<span id="cb2-18"><a href="#cb2-18" aria-hidden="true"></a><span class="co">#&gt; </span></span>
+<span id="cb2-19"><a href="#cb2-19" aria-hidden="true"></a><span class="co">#&gt; Approximate significance of smooth terms:</span></span>
+<span id="cb2-20"><a href="#cb2-20" aria-hidden="true"></a><span class="co">#&gt;                         edf Ref.df    F p-value    </span></span>
+<span id="cb2-21"><a href="#cb2-21" aria-hidden="true"></a><span class="co">#&gt; s(Time):GroupChildren  8.26  8.850 3649  &lt;2e-16 ***</span></span>
+<span id="cb2-22"><a href="#cb2-22" aria-hidden="true"></a><span class="co">#&gt; s(Time):GroupAdults    8.66  8.966 6730  &lt;2e-16 ***</span></span>
+<span id="cb2-23"><a href="#cb2-23" aria-hidden="true"></a><span class="co">#&gt; s(Subject)            33.94 34.000  569  &lt;2e-16 ***</span></span>
+<span id="cb2-24"><a href="#cb2-24" aria-hidden="true"></a><span class="co">#&gt; ---</span></span>
+<span id="cb2-25"><a href="#cb2-25" aria-hidden="true"></a><span class="co">#&gt; Signif. codes:  0 &#39;***&#39; 0.001 &#39;**&#39; 0.01 &#39;*&#39; 0.05 &#39;.&#39; 0.1 &#39; &#39; 1</span></span>
+<span id="cb2-26"><a href="#cb2-26" aria-hidden="true"></a><span class="co">#&gt; </span></span>
+<span id="cb2-27"><a href="#cb2-27" aria-hidden="true"></a><span class="co">#&gt; R-sq.(adj) =  0.609   Deviance explained =   61%</span></span>
+<span id="cb2-28"><a href="#cb2-28" aria-hidden="true"></a><span class="co">#&gt; fREML = 2.3795e+05  Scale est. = 31.601    n = 75600</span></span></code></pre></div>
+</div>
+<div id="adjusted-predictions-predictions-and-plot_cap" class="section level1">
+<h1>Adjusted Predictions: <code>predictions()</code> and <code>plot_cap()</code></h1>
+<p>Compute adjusted predictions for each observed combination of regressor in the dataset used to fit the model. This gives us a dataset with the same number of rows as the original data, but new columns with predicted values and uncertainty estimates:</p>
+<div class="sourceCode" id="cb3"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb3-1"><a href="#cb3-1" aria-hidden="true"></a>pred &lt;-<span class="st"> </span><span class="kw">predictions</span>(model)</span>
+<span id="cb3-2"><a href="#cb3-2" aria-hidden="true"></a><span class="kw">dim</span>(pred)</span>
+<span id="cb3-3"><a href="#cb3-3" aria-hidden="true"></a><span class="co">#&gt; [1] 75600    12</span></span>
+<span id="cb3-4"><a href="#cb3-4" aria-hidden="true"></a><span class="kw">head</span>(pred)</span>
+<span id="cb3-5"><a href="#cb3-5" aria-hidden="true"></a><span class="co">#&gt;   rowid     type  predicted std.error statistic      p.value    conf.low</span></span>
+<span id="cb3-6"><a href="#cb3-6" aria-hidden="true"></a><span class="co">#&gt; 1     1 response -1.8738546 0.1992173 -9.406085 5.149621e-21 -2.26431957</span></span>
+<span id="cb3-7"><a href="#cb3-7" aria-hidden="true"></a><span class="co">#&gt; 2     2 response -1.3462927 0.1817494 -7.407413 1.287873e-13 -1.70252064</span></span>
+<span id="cb3-8"><a href="#cb3-8" aria-hidden="true"></a><span class="co">#&gt; 3     3 response -0.8191262 0.1671242 -4.901304 9.520267e-07 -1.14668881</span></span>
+<span id="cb3-9"><a href="#cb3-9" aria-hidden="true"></a><span class="co">#&gt; 4     4 response -0.2929805 0.1560516 -1.877459 6.045522e-02 -0.59884099</span></span>
+<span id="cb3-10"><a href="#cb3-10" aria-hidden="true"></a><span class="co">#&gt; 5     5 response  0.2312910 0.1489156  1.553168 1.203830e-01 -0.06058298</span></span>
+<span id="cb3-11"><a href="#cb3-11" aria-hidden="true"></a><span class="co">#&gt; 6     6 response  0.7526640 0.1455161  5.172377 2.311341e-07  0.46745317</span></span>
+<span id="cb3-12"><a href="#cb3-12" aria-hidden="true"></a><span class="co">#&gt;     conf.high         Y  Group      Time Subject</span></span>
+<span id="cb3-13"><a href="#cb3-13" aria-hidden="true"></a><span class="co">#&gt; 1 -1.48338968 0.7554469 Adults   0.00000     a01</span></span>
+<span id="cb3-14"><a href="#cb3-14" aria-hidden="true"></a><span class="co">#&gt; 2 -0.99006473 2.7834759 Adults  20.20202     a01</span></span>
+<span id="cb3-15"><a href="#cb3-15" aria-hidden="true"></a><span class="co">#&gt; 3 -0.49156368 1.9696963 Adults  40.40404     a01</span></span>
+<span id="cb3-16"><a href="#cb3-16" aria-hidden="true"></a><span class="co">#&gt; 4  0.01287995 0.6814298 Adults  60.60606     a01</span></span>
+<span id="cb3-17"><a href="#cb3-17" aria-hidden="true"></a><span class="co">#&gt; 5  0.52316491 1.6939195 Adults  80.80808     a01</span></span>
+<span id="cb3-18"><a href="#cb3-18" aria-hidden="true"></a><span class="co">#&gt; 6  1.03787477 2.3651969 Adults 101.01010     a01</span></span></code></pre></div>
+<p>We can easily plot adjusted predictions for different values of a regressor using the <code>plot_cap()</code> function:</p>
+<div class="sourceCode" id="cb4"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb4-1"><a href="#cb4-1" aria-hidden="true"></a><span class="kw">plot_cap</span>(model, <span class="dt">condition =</span> <span class="st">&quot;Time&quot;</span>)</span></code></pre></div>
+<p><img src="data:image/png;base64,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" width="100%" /></p>
+</div>
+<div id="marginal-effects-marginaleffects-and-plot_cme" class="section level1">
+<h1>Marginal Effects: <code>marginaleffects()</code> and <code>plot_cme()</code></h1>
+<p>Marginal effects are slopes of the prediction equation. They are an observation-level quantity. The <code>marginaleffects()</code> function produces a dataset with the same number of rows as the original data, but with new columns for the slop and uncertainty estimates:</p>
+<div class="sourceCode" id="cb5"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb5-1"><a href="#cb5-1" aria-hidden="true"></a>mfx &lt;-<span class="st"> </span><span class="kw">marginaleffects</span>(model, <span class="dt">variables =</span> <span class="st">&quot;Time&quot;</span>)</span>
+<span id="cb5-2"><a href="#cb5-2" aria-hidden="true"></a><span class="kw">head</span>(mfx)</span>
+<span id="cb5-3"><a href="#cb5-3" aria-hidden="true"></a><span class="co">#&gt;   rowid     type term       dydx   std.error statistic       p.value   conf.low</span></span>
+<span id="cb5-4"><a href="#cb5-4" aria-hidden="true"></a><span class="co">#&gt; 1     1 response Time 0.02611718 0.001367279  19.10158  2.449658e-81 0.02343737</span></span>
+<span id="cb5-5"><a href="#cb5-5" aria-hidden="true"></a><span class="co">#&gt; 2     2 response Time 0.02610850 0.001360254  19.19384  4.167026e-82 0.02344245</span></span>
+<span id="cb5-6"><a href="#cb5-6" aria-hidden="true"></a><span class="co">#&gt; 3     3 response Time 0.02607541 0.001334433  19.54044  4.975241e-85 0.02345997</span></span>
+<span id="cb5-7"><a href="#cb5-7" aria-hidden="true"></a><span class="co">#&gt; 4     4 response Time 0.02600520 0.001282381  20.27884  1.977388e-91 0.02349178</span></span>
+<span id="cb5-8"><a href="#cb5-8" aria-hidden="true"></a><span class="co">#&gt; 5     5 response Time 0.02588800 0.001201131  21.55302 4.960033e-103 0.02353382</span></span>
+<span id="cb5-9"><a href="#cb5-9" aria-hidden="true"></a><span class="co">#&gt; 6     6 response Time 0.02571676 0.001092275  23.54421 1.438981e-122 0.02357594</span></span>
+<span id="cb5-10"><a href="#cb5-10" aria-hidden="true"></a><span class="co">#&gt;    conf.high  predicted predicted_hi predicted_lo         Y  Group      Time</span></span>
+<span id="cb5-11"><a href="#cb5-11" aria-hidden="true"></a><span class="co">#&gt; 1 0.02879700 -1.8738546   -1.8686312   -1.8738546 0.7554469 Adults   0.00000</span></span>
+<span id="cb5-12"><a href="#cb5-12" aria-hidden="true"></a><span class="co">#&gt; 2 0.02877454 -1.3462927   -1.3410710   -1.3462927 2.7834759 Adults  20.20202</span></span>
+<span id="cb5-13"><a href="#cb5-13" aria-hidden="true"></a><span class="co">#&gt; 3 0.02869086 -0.8191262   -0.8139112   -0.8191262 1.9696963 Adults  40.40404</span></span>
+<span id="cb5-14"><a href="#cb5-14" aria-hidden="true"></a><span class="co">#&gt; 4 0.02851862 -0.2929805   -0.2877795   -0.2929805 0.6814298 Adults  60.60606</span></span>
+<span id="cb5-15"><a href="#cb5-15" aria-hidden="true"></a><span class="co">#&gt; 5 0.02824217  0.2312910    0.2364686    0.2312910 1.6939195 Adults  80.80808</span></span>
+<span id="cb5-16"><a href="#cb5-16" aria-hidden="true"></a><span class="co">#&gt; 6 0.02785758  0.7526640    0.7578073    0.7526640 2.3651969 Adults 101.01010</span></span>
+<span id="cb5-17"><a href="#cb5-17" aria-hidden="true"></a><span class="co">#&gt;   Subject eps</span></span>
+<span id="cb5-18"><a href="#cb5-18" aria-hidden="true"></a><span class="co">#&gt; 1     a01 0.2</span></span>
+<span id="cb5-19"><a href="#cb5-19" aria-hidden="true"></a><span class="co">#&gt; 2     a01 0.2</span></span>
+<span id="cb5-20"><a href="#cb5-20" aria-hidden="true"></a><span class="co">#&gt; 3     a01 0.2</span></span>
+<span id="cb5-21"><a href="#cb5-21" aria-hidden="true"></a><span class="co">#&gt; 4     a01 0.2</span></span>
+<span id="cb5-22"><a href="#cb5-22" aria-hidden="true"></a><span class="co">#&gt; 5     a01 0.2</span></span>
+<span id="cb5-23"><a href="#cb5-23" aria-hidden="true"></a><span class="co">#&gt; 6     a01 0.2</span></span></code></pre></div>
+<p>We can plot marginal effects for different values of a regressor using the <code>plot_cme()</code> function. This next plot shows the slope of the prediction equation, that is, the slope of the previous plot, at every value of the <code>Time</code> variable.</p>
+<div class="sourceCode" id="cb6"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb6-1"><a href="#cb6-1" aria-hidden="true"></a><span class="kw">plot_cme</span>(model, <span class="dt">effect =</span> <span class="st">&quot;Time&quot;</span>, <span class="dt">condition =</span> <span class="st">&quot;Time&quot;</span>)</span></code></pre></div>
+<p><img src="data:image/png;base64,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" width="100%" /></p>
+<p>The marginal effects in this plot can be interpreted as measuring the change in <code>Y</code> that is associated with a small increase in <code>Time</code>, for different baseline values of <code>Time</code>.</p>
+</div>
+<div id="excluding-terms" class="section level1">
+<h1>Excluding terms</h1>
+<p>The <code>predict()</code> method of the <code>mgcv</code> package allows users to “exclude” some smoothing terms, using the <code>exclude</code> argument. You can pass the same argument to any function in the <code>marginaleffects</code> package:</p>
+<div class="sourceCode" id="cb7"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb7-1"><a href="#cb7-1" aria-hidden="true"></a><span class="kw">predictions</span>(model, <span class="dt">newdata =</span> <span class="st">&quot;mean&quot;</span>, <span class="dt">exclude =</span> <span class="st">&quot;s(Subject)&quot;</span>)</span>
+<span id="cb7-2"><a href="#cb7-2" aria-hidden="true"></a><span class="co">#&gt;   rowid     type predicted std.error statistic      p.value conf.low conf.high</span></span>
+<span id="cb7-3"><a href="#cb7-3" aria-hidden="true"></a><span class="co">#&gt; 1     1 response  11.74971 0.6946584  16.91438 3.525235e-64 10.38819  13.11124</span></span>
+<span id="cb7-4"><a href="#cb7-4" aria-hidden="true"></a><span class="co">#&gt;         Y  Group Time Subject</span></span>
+<span id="cb7-5"><a href="#cb7-5" aria-hidden="true"></a><span class="co">#&gt; 1 3.63899 Adults 1000     a01</span></span></code></pre></div>
+<p>See the documentation in <code>?mgcv:::predict.bam</code> for details.</p>
+</div>
+
+
+
+<!-- code folding -->
+
+
+<!-- dynamically load mathjax for compatibility with self-contained -->
+<script>
+  (function () {
+    var script = document.createElement("script");
+    script.type = "text/javascript";
+    script.src  = "https://mathjax.rstudio.com/latest/MathJax.js?config=TeX-AMS-MML_HTMLorMML";
+    document.getElementsByTagName("head")[0].appendChild(script);
+  })();
+</script>
+
+</body>
+</html>

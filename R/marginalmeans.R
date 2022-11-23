@@ -149,6 +149,7 @@ marginalmeans <- function(model,
                           by = NULL,
                           ...) {
 
+
     # if type is NULL, we backtransform if relevant
     if (is.null(type)) {
         type <- sanitize_type(model = model, type = type, calling_function = "marginalmeans")
@@ -169,7 +170,7 @@ marginalmeans <- function(model,
 
     modeldata <- newdata <- hush(insight::get_data(model))
 
-    checkmate::assert_function(transform_post, null.ok = TRUE)
+    transform_post <- sanitize_transform_post(transform_post)
     cross <- sanitize_cross(cross, variables, model)
     conf_level <- sanitize_conf_level(conf_level, ...)
     hypothesis <- sanitize_hypothesis(hypothesis, ...)
@@ -353,16 +354,14 @@ marginalmeans <- function(model,
         out <- get_ci(
             out,
             conf_level = conf_level,
-            df = NULL,
             vcov = vcov,
             overwrite = FALSE,
-            estimate = "marginalmean")
+            estimate = "marginalmean",
+            ...)
     }
 
     # after assign draws
-    if (!is.null(transform_post)) {
-        out <- backtransform(out, transform_post)
-    }
+    out <- backtransform(out, transform_post)
 
     # column order
     cols <- c("type", "group", colnames(by), "term", "hypothesis", "value", variables, "marginalmean",
@@ -378,10 +377,18 @@ marginalmeans <- function(model,
     attr(out, "type") <- type
     attr(out, "model_type") <- class(model)[1]
     attr(out, "variables") <- variables
+    attr(out, "call") <- match.call()
+    attr(out, "transform_post_label") <- names(transform_post)[1]
+
     if (isTRUE(cross)) {
         attr(out, "variables_grid") <- setdiff(variables_grid, variables)
     } else {
         attr(out, "variables_grid") <- unique(c(variables_grid, variables))
+    }
+
+    if (inherits(model, "brmsfit")) {
+        insight::check_if_installed("brms")
+        attr(out, "nchains") <- brms::nchains(model)
     }
 
     return(out)
