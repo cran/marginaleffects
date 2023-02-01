@@ -1,19 +1,20 @@
-source("helpers.R", local = TRUE)
-if (ON_CRAN) exit_file("on cran")
-if (!requiet("polspline")) exit_file("polspline")
-requiet("rms")
-requiet("emmeans")
-requiet("broom")
+source("helpers.R")
+using("marginaleffects")
+
+exit_if_not(requiet("polspline"))
+exit_if_not(requiet("rms"))
+exit_if_not(requiet("emmeans"))
+exit_if_not(requiet("broom"))
 
 # lmr: marginaleffects vs emtrends
 model <- rms::lrm(am ~ mpg, mtcars)
 void <- capture.output({
-    expect_marginaleffects(model, type = "lp", n_unique = 1)
+    expect_slopes(model, type = "lp", n_unique = 1)
 })
-mfx <- marginaleffects(model, newdata = data.frame(mpg = 30), type = "lp")
+mfx <- slopes(model, newdata = data.frame(mpg = 30), type = "lp")
 em <- emtrends(model, ~mpg, "mpg", at = list(mpg = 30))
 em <- tidy(em)
-expect_equivalent(mfx$dydx, em$mpg.trend)
+expect_equivalent(mfx$estimate, em$mpg.trend)
 expect_equivalent(mfx$std.error, em$std.error, tolerance = .0001)
 
 

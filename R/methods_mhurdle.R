@@ -9,14 +9,17 @@ get_predict.mhurdle <- function(model,
                                 ...) {
 
     out <- stats::predict(model, what = type, newdata = newdata)
-    out <- data.frame(rowid = seq_len(length(out)), predicted = out)
+    out <- data.frame(rowid = seq_len(length(out)), estimate = out)
     return(out)
 }
 
 
 #' @rdname get_vcov
 #' @export
-get_vcov.mhurdle <- function(model, ...) {
+get_vcov.mhurdle <- function(model, vcov = NULL, ...) {
+    if (!is.null(vcov) && !is.logical(vcov)) {
+        insight::format_error("The `vcov` for this class of models must be TRUE or FALSE.")
+    }
     out <- try(stats::vcov(model), silent = TRUE)
     if (inherits(out, "try-error")) {
         out <- tryCatch(model[["vcov"]], error = function(e) NULL)

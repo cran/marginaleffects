@@ -3,11 +3,14 @@ get_contrast_data <- function(model,
                               variables,
                               cross,
                               eps,
+                              modeldata = NULL,
                               ...) {
 
     lo <- hi <- ter <- lab <- original <- rowid <- list()
 
-    modeldata <- attr(newdata, "newdata_modeldata")
+    if (is.null(modeldata)) {
+        modeldata <- attr(newdata, "newdata_modeldata")
+    }
     variable_classes <- attr(newdata, "newdata_variable_class")
 
     if (any(c("factor", "character") %in% variable_classes)) {
@@ -15,6 +18,10 @@ get_contrast_data <- function(model,
     } else {
         first_cross <- NULL
     }
+                                    
+    # must use `as.data.table()` because `setDT()` does not handle columns with
+    # more dimensions (e.g., "idx" in {mlogit})
+    newdata <- as.data.table(newdata)
 
     for (v in variables) {
         args <- list(
@@ -22,25 +29,31 @@ get_contrast_data <- function(model,
             newdata = newdata,
             variable = v,
             cross = cross,
-            first_cross = identical(v$name, first_cross))
+            first_cross = identical(v$name, first_cross),
+            modeldata = modeldata)
         args <- append(args, list(...))
-        if (is.null(eps) && variable_classes[[v$name]] == "numeric") {
-            args[["eps"]] <- 1e-4 * diff(range(modeldata[[v$name]], na.rm = TRUE))
+        if (is.null(eps) && isTRUE(variable_classes[[v$name]] == "numeric")) {
+            args[["eps"]] <- 1e-4 * diff(range(modeldata[[v$name]], na.rm = TRUE, finite = TRUE))
         } else {
             args[["eps"]] <- eps
         }
 
-        # logical and character before factor because they get picked up by find_variable_class()
-        if (identical(variable_classes[[v$name]], "logical")) {
+        # protec: when newdata is 1-row and the original is not available
+        if (isTRUE(args[["eps"]] <= 0) || !"eps" %in% names(args)) {
+            args[["eps"]] <- NULL
+        }
+
+        # logical and character before factor used to be important; but I don't think so anymore
+        if (get_variable_class(modeldata, v$name, "logical")) {
             fun <- get_contrast_data_logical
-        } else if (identical(variable_classes[[v$name]], "character")) {
+        } else if (get_variable_class(modeldata, v$name, "character")) {
             fun <- get_contrast_data_character
-        } else if (identical(variable_classes[[v$name]], "factor")) {
+        } else if (get_variable_class(modeldata, v$name, "categorical")) {
             fun <- get_contrast_data_factor
-        } else if (identical(variable_classes[[v$name]], "numeric")) {
+        } else if (get_variable_class(modeldata, v$name, "numeric")) {
             fun <- get_contrast_data_numeric
         } else {
-            msg <- sprintf("Class of the `%s` variable is class is not supported.", v)
+            msg <- sprintf("Class of the `%s` variable is class is not supported.", v$name)
             stop(msg, call. = FALSE)
         }
 
@@ -57,10 +70,16 @@ get_contrast_data <- function(model,
         rowid[[v$name]] <- tmp$rowid
     }
 
-    # clean before merge: tobit1 introduces AsIs columns
     clean <- function(x) {
         for (col in colnames(x)) {
+            # tobit1 introduces AsIs columns
             if (inherits(x[[col]], "AsIs")) {
+                x[[col]] <- as.numeric(x[[col]])
+            }
+
+            # plm creates c("pseries", "numeric"), but when get_contrast_data
+            # assigns +1 numeric, we lose the inheritance
+            if (inherits(x[[col]], "pseries")) {
                 x[[col]] <- as.numeric(x[[col]])
             }
 

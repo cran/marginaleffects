@@ -3,25 +3,31 @@ get_contrast_data_factor <- function(model,
                                      variable,
                                      cross,
                                      first_cross,
+                                     modeldata = NULL,
                                      ...) {
 
-    data.table::setDT(newdata)
+
+    if (is.null(modeldata)) {
+        modeldata <- get_modeldata(model)
+    }
+    if (is.null(modeldata)) {
+        modeldata <- newdata
+    }
 
     if (is.factor(newdata[[variable$name]])) {
         levs <- levels(newdata[[variable$name]])
         convert_to_factor <- TRUE
 
-    } else {
+    } else if (!get_variable_class(newdata, variable$name, "binary")) {
 
-        msg <- "The `%s` variable is treated as a categorical (factor) variable, but the original data is of class %s. It is safer and faster to convert such variables to factor before fitting the model and calling `marginaleffects` functions." 
+        msg <- "The `%s` variable is treated as a categorical (factor) variable, but the original data is of class %s. It is safer and faster to convert such variables to factor before fitting the model and calling `slopes` functions." 
         msg <- sprintf(msg, variable$name, class(newdata[[variable$name]])[1])
         warn_once(msg, "marginaleffects_warning_factor_on_the_fly_conversion")
-        original_data <- hush(insight::get_data(model))
-        if (is.factor(original_data[[variable$name]])) {
-            levs <- levels(original_data[[variable$name]])
+        if (is.factor(modeldata[[variable$name]])) {
+            levs <- levels(modeldata[[variable$name]])
             convert_to_factor <- TRUE
         } else {
-            levs <- sort(unique(original_data[[variable$name]]))
+            levs <- sort(unique(modeldata[[variable$name]]))
             convert_to_factor <- FALSE
         }
     }
@@ -51,7 +57,7 @@ get_contrast_data_factor <- function(model,
 
     } else if (length(variable$value) == 2) {
         if (is.character(variable$value)) {
-            tmp <- newdata[[variable$name]]
+            tmp <- modeldata[[variable$name]]
             if (any(!variable$value %in% as.character(tmp))) {
                 msg <- "Some of the values supplied to the `variables` argument were not found in the dataset."
                 insight::format_error(msg)

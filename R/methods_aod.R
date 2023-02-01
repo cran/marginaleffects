@@ -7,14 +7,15 @@ get_predict.glimML <- function(model,
                                type = "response",
                                ...) {
 
-    assert_dependency("aod") # need access to the predict method
+    insight::check_if_installed("aod")
+
     out <- aod::predict(model,
                         newdata = newdata,
                         type = type,
                         ...)
     out <- data.frame(
         rowid = 1:nrow(newdata),
-        predicted = out)
+        estimate = out)
 
     return(out)
 }
@@ -37,4 +38,14 @@ get_vcov.glimML <- function(model, vcov = NULL, ...) {
         stop("The `vcov` argument is not supported for this kind of model.")
     }
     aod::vcov(model)
+}
+
+
+#' @rdname sanitize_model_specific
+sanitize_model_specific.glimML <- function(model, ...) {
+    mdat <- get_modeldata(model)
+    if (isTRUE("character" %in% attr(mdat, "marginaleffects_variable_class"))) {
+        insight::format_error("This function does not support character predictors. Please convert them to factors before fitting the model.")
+    }
+    return(model)
 }

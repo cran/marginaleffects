@@ -1,6 +1,7 @@
-source("helpers.R", local = TRUE)
-if (ON_CRAN) exit_file("on cran")
-requiet("mhurdle")
+source("helpers.R")
+using("marginaleffects")
+
+exit_if_not(requiet("mhurdle"))
 
 tol <- 0.001
 tol_se <- 0.001
@@ -13,19 +14,19 @@ h2 = FALSE, method = "bhhh", corr = TRUE, finalHessian = TRUE)
 # marginaleffects vs. margins (unit-level SEs)
 set.seed(1024)
 nd <- Interview[sample(seq_len(nrow(Interview)), 10),]
-mfx <- marginaleffects(m2, newdata = nd, type = "E")
+mfx <- slopes(m2, newdata = nd, type = "E")
 mar <- margins(m2, type = "response", data = nd, unit_ses = TRUE)
 
-expect_equivalent(mfx[mfx$term == "linc", "dydx"], as.numeric(mar$dydx_linc), tolerance = tol)
-expect_equivalent(mfx[mfx$term == "educ", "dydx"], as.numeric(mar$dydx_educ), tolerance = tol)
-expect_equivalent(mfx[mfx$term == "age", "dydx"], as.numeric(mar$dydx_age), tolerance = tol)
+expect_equivalent(mfx[mfx$term == "linc", "estimate"], as.numeric(mar$dydx_linc), tolerance = tol)
+expect_equivalent(mfx[mfx$term == "educ", "estimate"], as.numeric(mar$dydx_educ), tolerance = tol)
+expect_equivalent(mfx[mfx$term == "age", "estimate"], as.numeric(mar$dydx_age), tolerance = tol)
 
 expect_equivalent(mfx[mfx$term == "linc", "std.error"], mar$SE_dydx_linc, tolerance = tol_se)
 expect_equivalent(mfx[mfx$term == "educ", "std.error"], mar$SE_dydx_educ, tolerance = tol_se)
 expect_equivalent(mfx[mfx$term == "age", "std.error"], mar$SE_dydx_age, tolerance = tol_se)
 
 # marginaleffects vs. margins: AME 
-mfx <- marginaleffects(m2, type = "E")
+mfx <- slopes(m2, type = "E")
 mfx <- tidy(mfx)
 mfx <- mfx[match(c("age", "educ", "linc", "size", "smsa"), mfx$term),]
 mar <- margins(m2)

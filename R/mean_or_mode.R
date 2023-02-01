@@ -1,7 +1,7 @@
 #' find mode, preserve type, and pick an arbitrary value when multi-modal
 #' https://stackoverflow.com/a/8189441/342331
 #' @noRd
-Mode <- function(x) {
+get_mode <- function(x) {
   ux <- unique(x)
   ux[which.max(tabulate(match(x, ux)))]
 }
@@ -14,49 +14,38 @@ Mode <- function(x) {
 
 #' Compute the mode or mean of `x`
 #' @param x extract the mean or the mode of vector or data.frame x depending on its type
-#' @rdname mean_or_mode
 #' @keywords internal
-#' @export
+#' @noRd
 #' @return numeric vector
-mean_or_mode <- function(x) {
-    UseMethod("mean_or_mode")
+get_mean_or_mode <- function(x) {
+    UseMethod("get_mean_or_mode")
 }
 
-#' @rdname mean_or_mode
-#' @export
-mean_or_mode.default <- function(x) {
+get_mean_or_mode.default <- function(x) {
     mean(x)
 }
 
-#' @rdname mean_or_mode
-#' @export
-mean_or_mode.character <- function(x) {
-    Mode(x)
+get_mean_or_mode.character <- function(x) {
+    get_mode(x)
 }
 
-#' @rdname mean_or_mode
-#' @export
-mean_or_mode.factor <- function(x) {
-    Mode(x)
+get_mean_or_mode.factor <- function(x) {
+    get_mode(x)
 }
 
-#' @rdname mean_or_mode
-#' @export
-mean_or_mode.logical <- function(x) {
-    Mode(x)
+get_mean_or_mode.logical <- function(x) {
+    get_mode(x)
 }
 
-#' @rdname mean_or_mode
-#' @export
-mean_or_mode.data.frame <- function(x) {
+get_mean_or_mode.data.frame <- function(x) {
     out <- list()
     for (n in names(x)) {
         # variables transformed to factor in formula are assigned a "factor"
         # TRUE attribute by insight::get_data
-        if (isTRUE(attributes(x[[n]])$factor)) {
-            out[[n]] <- mean_or_mode.factor(x[[n]])
+        if (isTRUE(attributes(x)$marginaleffects_variable_class[[n]] == "factor")) {
+            out[[n]] <- get_mean_or_mode.factor(x[[n]])
         } else {
-            out[[n]] <- mean_or_mode(x[[n]])
+            out[[n]] <- get_mean_or_mode(x[[n]])
         }
     }
     return(out)

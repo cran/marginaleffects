@@ -1,18 +1,17 @@
-#' Adjusted Predictions
+#' Predictions
 #'
-#' Outcome predicted by a fitted model on a specified scale for a given
-#' combination of values of the predictor variables, such as their observed
-#' values, their means, or factor levels (a.k.a. "reference grid"). The
-#' `tidy()` and `summary()` functions can be used to aggregate the output of
-#' `predictions()`. To learn more, read the predictions vignette, visit the
-#' package website, or scroll down this page for a full list of vignettes:
+#' @description
+#' Outcome predicted by a fitted model on a specified scale for a given combination of values of the predictor variables, such as their observed values, their means, or factor levels (a.k.a. "reference grid").
+#'
+#' * `predictions()`: unit-level (conditional) estimates.
+#' * `avg_predictions()`: average (marginal) estimates.
+#'
+#' The `newdata` argument and the `datagrid()` function can be used to control where statistics are evaluated in the predictor space: "at observed values", "at the mean", "at representative values", etc.
+#'
+#' See the predictions vignette and package website for worked examples and case studies:
+
 #' * <https://vincentarelbundock.github.io/marginaleffects/articles/predictions.html>
 #' * <https://vincentarelbundock.github.io/marginaleffects/>
-#'
-#' @section Vignettes and documentation:
-#'
-#' ```{r child = "vignettes/toc.Rmd"}
-#' ```
 #'
 #' @details
 #' The `newdata` argument, the `tidy()` function, and `datagrid()` function can be used to control the kind of predictions to report:
@@ -29,8 +28,7 @@
 #' predictions, and builds symmetric confidence intervals. These naive symmetric
 #' intervals may not always be appropriate. For instance, they may stretch beyond
 #' the bounds of a binary response variables.
-#'
-#' @inheritParams marginaleffects
+#' @inheritParams slopes
 #' @param model Model object
 #' @param variables `NULL`, character vector, or named list. The subset of variables to use for creating a counterfactual grid of predictions. The entire dataset replicated for each unique combination of the variables in this list. See the Examples section below.
 #' * Warning: This can use a lot of memory if there are many variables and values, and when the dataset is large.
@@ -64,13 +62,15 @@
 #' levels. See examples section.
 #' @param transform_post (experimental) A function applied to unit-level adjusted predictions and confidence intervals just before the function returns results. For bayesian models, this function is applied to individual draws from the posterior distribution, before computing summaries.
 #'
+#' @inheritParams comparisons
 #' @template model_specific_arguments
+#' @template bayesian
 #'
 #' @return A `data.frame` with one row per observation and several columns:
 #' * `rowid`: row number of the `newdata` data frame
 #' * `type`: prediction type, as defined by the `type` argument
 #' * `group`: (optional) value of the grouped outcome (e.g., categorical outcome models)
-#' * `predicted`: predicted outcome
+#' * `estimate`: predicted outcome
 #' * `std.error`: standard errors computed by the `insight::get_predicted` function or, if unavailable, via `marginaleffects` delta method functionality.
 #' * `conf.low`: lower bound of the confidence interval (or equal-tailed interval for bayesian models)
 #' * `conf.high`: upper bound of the confidence interval (or equal-tailed interval for bayesian models)
@@ -90,13 +90,12 @@
 #' library(dplyr)
 #' mod <- lm(mpg ~ hp * am * vs, mtcars)
 #'
-#' pred <- predictions(mod)
-#' summary(pred)
+#' avg_predictions(mod)
 #' 
 #' predictions(mod, by = "am")
 #'
 #' # Conditional Adjusted Predictions
-#' plot_cap(mod, condition = "hp")
+#' plot_predictions(mod, condition = "hp")
 #'
 #' # Counterfactual predictions with the `variables` argument
 #' # the `mtcars` dataset has 32 rows
@@ -154,7 +153,7 @@
 #' predictions(nom, type = "probs") |> head()
 #' 
 #' # average predictions
-#' predictions(nom, type = "probs", by = "group") |> summary()
+#' avg_predictions(nom, type = "probs", by = "group")
 #' 
 #' by <- data.frame(
 #'     group = c("3", "4", "5"),
@@ -176,11 +175,12 @@ predictions <- function(model,
                         vcov = TRUE,
                         conf_level = 0.95,
                         type = NULL,
-                        by = NULL,
+                        by = FALSE,
                         byfun = NULL,
                         wts = NULL,
                         transform_post = NULL,
                         hypothesis = NULL,
+                        df = Inf,
                         ...) {
 
 
@@ -197,7 +197,7 @@ predictions <- function(model,
             }
         } else if (fun_name == "visualisation_matrix") {
             if (!"x" %in% names(lcall)) {
-                lcall <- c(lcall, list("x" = hush(insight::get_data(model))))
+                lcall <- c(lcall, list("x" = get_modeldata))
                 newdata <- eval.parent(as.call(lcall))
             }
         }
@@ -209,22 +209,39 @@ predictions <- function(model,
     if ("modeldata" %in% names(dots)) {
         modeldata <- dots[["modeldata"]]
     } else {
-        modeldata <- hush(insight::get_data(model))
+        modeldata <- get_modeldata(model)
     }
 
     # do not check the model because `insight` supports more models than `marginaleffects`
     # model <- sanitize_model(model)
 
     # input sanity checks
+    checkmate::assert_number(df, lower = 1)
+    if (is.infinite(df)) {
+        ci_method <- "normal"
+    } else {
+        ci_method <- "wald"
+        df_auto <- insight::get_df(model, type = "wald")
+        if (!all(df == df_auto)) {
+            msg <- 'The `df` argument does not match the output of `insight::get_df(model, type = "wald")`. The p values and confidence intervals may not use the same degrees of freedom.'
+            insight::format_warning(msg)
+        }
+    }
+
+
     transform_post <- sanitize_transform_post(transform_post)
     sanity_dots(model = model, ...)
-    sanity_model_specific(
+    model <- sanitize_model_specific(
         model = model,
         newdata = newdata,
         vcov = vcov,
         calling_function = "predictions",
         ...)
-    hypothesis <- sanitize_hypothesis(hypothesis, ...)
+
+    tmp <- sanitize_hypothesis(hypothesis, ...)
+    hypothesis <- tmp$hypothesis
+    hypothesis_null <- tmp$hypothesis_null
+
     conf_level <- sanitize_conf_level(conf_level, ...)
     type <- sanitize_type(model = model, type = type, calling_function = "predictions")
     newdata <- sanitize_newdata(
@@ -292,16 +309,32 @@ predictions <- function(model,
         }
     }
 
-    if (is.null(by)) {
+    if (is.null(by) || isFALSE(by)) {
         vcov_tmp <- vcov
     } else {
         vcov_tmp <- FALSE
     }
 
+
+    ############### sanity checks are over
+
+    # Bootstrap
+    out <- inferences_dispatch(
+        FUN = predictions,
+        model = model, newdata = newdata, vcov = vcov, variables = variables, type = type, by = by,
+        conf_level = conf_level,
+        byfun = byfun, wts = wts, transform_post = transform_post, hypothesis = hypothesis, ...)
+    if (!is.null(out)) {
+        return(out)
+    }
+
+
+
+    # main estimation
     J <- NULL
 
-    tmp <- get_predictions(
-        model,
+    args <- list(
+        model = model,
         newdata = newdata,
         vcov = vcov_tmp,
         conf_level = conf_level,
@@ -309,8 +342,10 @@ predictions <- function(model,
         hypothesis = hypothesis,
         by = by,
         byfun = byfun,
-        ...)
+        ci_method = ci_method)
 
+    args <- utils::modifyList(args, dots)
+    tmp <- do.call(get_predictions, args)
 
     # two cases when tmp is a data.frame
     # insight::get_predicted gets us Predicted et al. but now rowid
@@ -318,11 +353,11 @@ predictions <- function(model,
     if (inherits(tmp, "data.frame")) {
         setnames(tmp,
                  old = c("Predicted", "SE", "CI_low", "CI_high"),
-                 new = c("predicted", "std.error", "conf.low", "conf.high"),
+                 new = c("estimate", "std.error", "conf.low", "conf.high"),
                  skip_absent = TRUE)
     } else {
         tmp <- data.frame(newdata$rowid, type, tmp)
-        colnames(tmp) <- c("rowid", "type", "predicted")
+        colnames(tmp) <- c("rowid", "type", "estimate")
         if ("rowidcf" %in% colnames(newdata)) {
             tmp[["rowidcf"]] <- newdata[["rowidcf"]]
         }
@@ -370,9 +405,9 @@ predictions <- function(model,
             if (isTRUE(checkmate::check_matrix(V))) {
                 # vcov = FALSE to speed things up
                 fun <- function(...) {
-                    get_predictions(..., verbose = FALSE, vcov = FALSE)$predicted
+                    get_predictions(..., verbose = FALSE, vcov = FALSE)$estimate
                 }
-                se <- get_se_delta(
+                args <- list(
                     model,
                     newdata = newdata,
                     vcov = V,
@@ -383,8 +418,9 @@ predictions <- function(model,
                     hypothesis = hypothesis,
                     by = by,
                     byfun = byfun,
-                    conf_level = conf_level,
-                    ...)
+                    conf_level = conf_level)
+                args <- utils::modifyList(args, dots)
+                se <- do.call(get_se_delta, args)
                 if (is.numeric(se) && length(se) == nrow(tmp)) {
                     tmp[["std.error"]] <- se
                 }
@@ -394,11 +430,12 @@ predictions <- function(model,
         tmp <- get_ci(
             tmp,
             conf_level = conf_level,
-            # sometimes insight::get_predicted fails on SE but succeeds on CI (e.g., betareg)
             vcov = vcov,
-            overwrite = FALSE,
             draws = draws,
-            estimate = "predicted",
+            estimate = "estimate",
+            null_hypothesis = hypothesis_null,
+            df = df,
+            model = model,
             ...)
     }
 
@@ -420,7 +457,7 @@ predictions <- function(model,
     stubcols <- c( 
         "rowid", "rowidcf", "type", "term", "group", "hypothesis",
         bycols,
-        "predicted", "std.error", "statistic", "p.value", "conf.low",
+        "estimate", "std.error", "statistic", "p.value", "conf.low",
         "conf.high", "marginaleffects_wts",
         sort(grep("^predicted", colnames(newdata), value = TRUE)))
     cols <- intersect(stubcols, colnames(out))
@@ -429,13 +466,16 @@ predictions <- function(model,
 
     attr(out, "posterior_draws") <- draws
 
+    # equivalence tests
+    out <- equivalence(out, df = df, ...)
+
     # after rename to estimate / after assign draws
     out <- backtransform(out, transform_post = transform_post)
 
     class(out) <- c("predictions", class(out))
-    out <- set_attributes(
+    out <- set_marginaleffects_attributes(
         out,
-        get_attributes(newdata, include_regex = "^newdata"))
+        get_marginaleffects_attributes(newdata, include_regex = "^newdata"))
     attr(out, "model") <- model
     attr(out, "type") <- type
     attr(out, "model_type") <- class(model)[1]
@@ -449,6 +489,8 @@ predictions <- function(model,
     attr(out, "call") <- match.call()
     attr(out, "transform_post_label") <- names(transform_post)[1]
     attr(out, "transform_post") <- transform_post[[1]]
+    # save newdata for use in recall()
+    attr(out, "newdata") <- newdata
 
     if (inherits(model, "brmsfit")) {
         insight::check_if_installed("brms")
@@ -489,14 +531,15 @@ get_predictions <- function(model,
         type = type,
         ...))
 
+
     if (inherits(out$value, "data.frame")) {
         out <- out$value
     } else {
         msg <- "Unable to compute predicted values with this model. You can try to supply a different dataset to the `newdata` argument. If this does not work, you can file a report on the Github Issue Tracker: https://github.com/vincentarelbundock/marginaleffects/issues"
         if (!is.null(out$error)) {
-            msg <- c(msg, paste("This error was also raised:", out$error$message))
+            msg <- c(msg, "", paste("This error was also raised:", "", out$error$message))
         }
-        stop(insight::format_message(msg), call. = FALSE)
+        insight::format_error(msg)
     }
 
     if (!"rowid" %in% colnames(out) && "rowid" %in% colnames(newdata) && nrow(out) == nrow(newdata)) {
@@ -542,7 +585,6 @@ get_predictions <- function(model,
         newdata = newdata,
         by = by,
         byfun = byfun,
-        column = "predicted",
         verbose = verbose,
         ...)
 
@@ -550,8 +592,76 @@ get_predictions <- function(model,
     draws <- attr(out, "posterior_draws")
 
     # hypothesis tests using the delta method
-    out <- get_hypothesis(out, hypothesis, column = "predicted", by = by)
+    out <- get_hypothesis(out, hypothesis = hypothesis, by = by)
 
     return(out)
 }
 
+
+#' Average predictions
+#' @describeIn predictions Average predictions
+#' @export
+#'
+avg_predictions <- function(model,
+                            newdata = NULL,
+                            variables = NULL,
+                            vcov = TRUE,
+                            conf_level = 0.95,
+                            type = NULL,
+                            by = TRUE,
+                            byfun = NULL,
+                            wts = NULL,
+                            transform_post = NULL,
+                            hypothesis = NULL,
+                            df = Inf,
+                            ...) {
+
+    # order of the first few paragraphs is important
+    # if `newdata` is a call to `typical` or `counterfactual`, insert `model`
+    scall <- substitute(newdata)
+    if (is.call(scall)) {
+        lcall <- as.list(scall)
+        fun_name <- as.character(scall)[1]
+        if (fun_name %in% c("datagrid", "datagridcf", "typical", "counterfactual")) {
+            if (!any(c("model", "newdata") %in% names(lcall))) {
+                lcall <- c(lcall, list("model" = model))
+                newdata <- eval.parent(as.call(lcall))
+            }
+        } else if (fun_name == "visualisation_matrix") {
+            if (!"x" %in% names(lcall)) {
+                lcall <- c(lcall, list("x" = get_modeldata))
+                newdata <- eval.parent(as.call(lcall))
+            }
+        }
+    }
+
+    # Bootstrap
+    out <- inferences_dispatch(
+        FUN = avg_predictions,
+        model = model, newdata = newdata, vcov = vcov, variables = variables, type = type, by = by,
+        conf_level = conf_level,
+        byfun = byfun, wts = wts, transform_post = transform_post, hypothesis = hypothesis, ...)
+    if (!is.null(out)) {
+        return(out)
+    }
+
+    out <- predictions(
+        model = model,
+        newdata = newdata,
+        variables = variables,
+        vcov = vcov,
+        conf_level = conf_level,
+        type = type,
+        by = by,
+        byfun = byfun,
+        wts = wts,
+        transform_post = transform_post,
+        hypothesis = hypothesis,
+        df = df,
+        ...)
+
+    # overwrite call because otherwise we get the symbosl sent to predictions()
+    attr(out, "call") <- match.call()
+
+    return(out)
+}

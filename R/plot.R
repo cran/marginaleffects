@@ -1,31 +1,36 @@
-#' Point-range plot of average marginal effects
+#' Plot average comparisons and slopes
 #' 
-#' Uses the `ggplot2` package to draw a point-range plot of the average marginal effects computed by `tidy`.
-#' @inheritParams marginaleffects
-#' @inheritParams tidy.marginaleffects
-#' @inherit tidy.marginaleffects details
+#' `x` is re-evaluated by the corresponding `avg_*()` function the result is drawn as a point-range plot using `ggplot2`.
+#' @param x object produced by the `comparisons()` or `slopes()` object.
+#' @param ... additional arguments are passed to the `aggregate` function (e.g., `conf_level`).
 #' @return A `ggplot2` object
-#' @family plot
-#' @export
-#'
+#' @noRd
 #' @examples
 #' mod <- glm(am ~ hp + wt, data = mtcars)
-#' mfx <- marginaleffects(mod)
-#' plot(mfx)
-#'
-plot.marginaleffects <- function(x,
-                                 conf_level = 0.95,
-                                 ...) {
+#' avg_slopes(mod)
+#' plot_slopes(mod)
+#' 
+#' 
+#' mod <- glm(am ~ hp + factor(gear), data = mtcars)
+#' avg_comparisons(mod)
+#' plot_comparisons(cmp)
+#
+plot_avg <- function(x,  draw = FALSE, ...) {
 
-    assert_dependency("ggplot2")
+    insight::check_if_installed("ggplot2")
 
-    dat <- tidy(x, conf_level = conf_level)
+    dat <- get_averages(x, ...)
 
     # combine term and contrast to avoid overlap
     if (all(c("term", "contrast") %in% colnames(dat))) {
+        dat$contrast <- gsub("mean\\(([\\w|\\/]*)\\)", "\\1", dat$contrast, perl = TRUE)
         dat$term <- ifelse(dat$contrast == "dY/dX",
                            dat$term,
                            sprintf("%s: %s", dat$term, dat$contrast))
+    }
+
+    if (isFALSE(draw)) {
+        return(as.data.frame(dat))
     }
 
     if ("conf.low" %in% colnames(dat)) {
@@ -41,7 +46,7 @@ plot.marginaleffects <- function(x,
                                                    xmin = conf.low,
                                                    xmax = conf.high))
         }
-        xlab <- sprintf("Estimates with %s%% confidence intervals", sprintf("%.0f", conf_level * 100))
+        xlab <- sprintf("Estimates with %s%% confidence intervals", sprintf("%.0f", attr(dat, "conf_level") * 100))
         p <- p +
              ggplot2::geom_pointrange() +
              ggplot2::labs(x = xlab, y = "")
@@ -51,7 +56,7 @@ plot.marginaleffects <- function(x,
         } else {
             p <- ggplot2::ggplot(dat, ggplot2::aes(y = term, x = estimate))
         }
-        xlab <- sprintf("Estimates with %s%% confidence intervals", sprintf("%.0f", conf_level * 100))
+        xlab <- sprintf("Estimates with %s%% confidence intervals", sprintf("%.0f", attr(dat, "conf_level") * 100))
         p <- p +
              ggplot2::geom_point() +
              ggplot2::labs(x = xlab, y = "")

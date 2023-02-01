@@ -1,7 +1,9 @@
-source("helpers.R", local = TRUE)
-if (ON_CRAN) exit_file("on cran")
-requiet("lme4")
-requiet("fixest")
+source("helpers.R")
+using("marginaleffects")
+
+exit_if_not(requiet("lme4"))
+exit_if_not(requiet("fixest"))
+
 
 # informative errors
 expect_error(datagrid(Petal.Length = 4.6), pattern = "inside")
@@ -35,3 +37,7 @@ expect_equivalent(nrow(cmp), 6)
 cmp <- comparisons(mod, newdata = datagrid(am = unique, gear = max))
 expect_equivalent(nrow(cmp), 4)
 
+
+# error
+mod <- lm(mpg ~ hp, mtcars)
+expect_error(predictions(mod, newdata = datagridcf()), pattern = "values")

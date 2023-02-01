@@ -1,5 +1,6 @@
-source("helpers.R", local = TRUE)
-if (ON_CRAN) exit_file("on cran")
+source("helpers.R")
+using("marginaleffects")
+
 
 # datagrid(x = NA)
 # numeric
@@ -19,22 +20,22 @@ expect_true(all(is.na(nd$gear)))
 tmp <- mtcars
 tmp$am <- as.logical(tmp$am)
 mod_int <- lm(mpg ~ am * factor(cyl), tmp)
-mfx <- marginaleffects(mod_int,
+mfx <- slopes(mod_int,
                        newdata = datagrid(cyl = tmp$cyl),
                        variables = "am")
 expect_equivalent(nrow(mfx), 3)
 
 
-# typical FUN.*
+# typical FUN_*
 tmp <- mtcars
 tmp$am <- as.logical(tmp$am)
 tmp$cyl <- as.factor(tmp$cyl)
 tmp$gear <- as.character(tmp$gear)
 typ <- datagrid(
     newdata = tmp,
-    FUN.character = max,
-    FUN.factor = function(x) sort(x)[1],
-    FUN.numeric = stats::median)
+    FUN_character = max,
+    FUN_factor = function(x) sort(x)[1],
+    FUN_numeric = stats::median)
 expect_equivalent(typ$drat, stats::median(mtcars$drat))
 expect_equivalent(typ$cyl, factor("4", levels = c("4", "6", "8")))
 expect_equivalent(typ$gear, "5")
@@ -48,19 +49,22 @@ expect_equivalent(nrow(nd), 1)
 
 
 # errors and warnings
-mod <- lm(hp ~ mpg, mtcars)
+dat <- mtcars
+dat$cyl <- factor(dat$cyl)
+dat <- dat
+mod <- lm(hp ~ mpg, dat)
 expect_error(datagrid(), pattern = "are both .NULL")
 
-mod <- lm(hp ~ factor(cyl), mtcars)
+mod <- lm(hp ~ factor(cyl), dat)
 expect_inherits(datagrid(model = mod, cyl = "4"), "data.frame")
 expect_error(datagrid(model = mod, cyl = "2"), pattern = "must be one of the factor levels")
 
 
-# bugs stay dead: FUN.logical
+# bugs stay dead: FUN_logical
 tmp <- mtcars
 tmp$am <- as.logical(tmp$am)
 mod <- lm(mpg ~ am * factor(cyl), data = tmp)
-mfx <- marginaleffects(mod, newdata = datagrid(cyl = tmp$cyl), variables = "am")
+mfx <- slopes(mod, newdata = datagrid(cyl = tmp$cyl), variables = "am")
 expect_inherits(mfx, "marginaleffects")
 expect_equivalent(nrow(mfx), 3)
 

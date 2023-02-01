@@ -2,6 +2,8 @@
 AAP
 AAPs
 Adelies
+bc
+fwb
 al
 AME
 APM
@@ -11,6 +13,7 @@ Augusto
 Avina
 backtransforming
 bayesian
+bca
 Boca
 brms
 bugfix
@@ -44,6 +47,10 @@ emmeans
 EMMs
 Epidemiologic
 eps
+estimand
+Estimand
+estimands
+Estimands
 et
 ETI
 expdydx
@@ -64,6 +71,7 @@ Gentoos
 geoms
 ggeffects
 github
+GLMMs
 Greifer
 grey
 HC
@@ -85,6 +93,7 @@ JM
 JVJ
 Kapre
 kenward
+Krinsky
 Kurz
 Leeper
 Lenth
@@ -104,6 +113,7 @@ Marcio
 marginalmeans
 MEM
 MER
+methodologists
 MFX
 minmax
 modelbased
@@ -117,6 +127,7 @@ NumPyro
 ORs
 pairwise
 param
+perc
 plasminogen
 poisson
 pre
@@ -138,8 +149,11 @@ Resul
 revpairwise
 revreference
 revsequential
+Robb
 Rohan
 rowid
+rsample
+rvar
 satterthwaite
 sd
 semilog
@@ -153,6 +167,8 @@ streptokinase
 threenum
 tidiers
 TLDR
+Tomz
+TOST
 tPA
 tukey
 Umit
@@ -160,4 +176,5 @@ untransformed
 varepsilon
 vcovHC
 vincentarelbundock
+Wittenberg
 wmean

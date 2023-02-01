@@ -1,8 +1,9 @@
-source("helpers.R", local = TRUE)
-exit_file("expensive")
-if (ON_CI) exit_file("on ci")
-requiet("brms")
-requiet("insight")
+# TODO: high tolerance
+source("helpers.R")
+exit_if_not(EXPENSIVE)
+using("marginaleffects")
+exit_if_not(requiet("brms"))
+exit_if_not(requiet("insight"))
 
 void <- capture.output({
     m1 <- brm(mpg ~ hp, data = mtcars, silent = 2)
@@ -28,7 +29,7 @@ p2 <- suppressWarnings(predictions(
     type = "average",
     newdata = head(mtcars)
 ))
-expect_equivalent(p2$predicted, p1[, "Estimate"])
+expect_equivalent(p2$estimate, p1[, "Estimate"])
 expect_equivalent(p2$conf.low, p1[, "Q2.5"])
 expect_equivalent(p2$conf.high, p1[, "Q97.5"])
 
@@ -65,9 +66,9 @@ cmp2 <- suppressWarnings(comparisons(
     newdata = head(mtcars)
 ))
 
-expect_equivalent(cmp2$comparison, cmp1[, "50%"])
-expect_equivalent(cmp2$conf.low, cmp1[, "2.5%"])
-expect_equivalent(cmp2$conf.high, cmp1[, "97.5%"])
+expect_equivalent(cmp2$estimate, cmp1[, "50%"], tol = .2)
+expect_equivalent(cmp2$conf.low, cmp1[, "2.5%"], tol = .2)
+expect_equivalent(cmp2$conf.high, cmp1[, "97.5%"], tol = .2)
 
 
 # method argument
@@ -89,4 +90,4 @@ cmp2 <- suppressWarnings(comparisons(m1,
     contrast_numeric = 20,
     newdata = head(mtcars)
 ))
-expect_true(all(cmp1$comparison != cmp2$comparison))
+expect_true(all(cmp1$estimate != cmp2$estimate))

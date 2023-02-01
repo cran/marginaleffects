@@ -1,18 +1,19 @@
-source("helpers.R", local = TRUE)
-if (ON_CRAN) exit_file("on cran")
+source("helpers.R")
+using("marginaleffects")
+
 
 
 mod <- glm(vs ~ hp * mpg, data = mtcars, family = binomial)
-mfx <- marginaleffects(mod)
+mfx <- slopes(mod)
 pred <- predictions(mod)
 
 
 # tidy.predictions
-requiet("MASS")
+exit_if_not(requiet("MASS"))
 mod1 <- glm(vs ~ hp * mpg, data = mtcars, family = binomial)
 # there used to be an interaction in this polr model, but it produced
 # negative variances and NaN standard errors
-mod2 <- polr(factor(gear) ~ hp + mpg, data = mtcars)
+mod2 <- polr(factor(gear) ~ hp + mpg, data = mtcars, Hess = TRUE)
 pred1 <- predictions(mod1)
 pred2 <- suppressMessages(predictions(mod2, type = "probs"))
 ti1 <- tidy(pred1)
@@ -37,7 +38,8 @@ expect_equivalent(ti$estimate, 20.09062, tolerance = .0001)
 
 # tidy: minimal
 ti <- tidy(mfx)
-expect_equivalent(dim(ti), c(2, 8))
+expect_equivalent(nrow(ti), 2)
+expect_true(ncol(ti) > 6)
 ti1 <- tidy(mfx, conf.level = .90)
 ti2 <- tidy(mfx, conf.level = .99)
 expect_true(all(ti1$conf.low > ti2$conf.low))
@@ -54,7 +56,7 @@ expect_true(ncol(gl) > 5)
 
 # bug: emmeans contrast rename in binomial
 x <- glm(am ~ mpg + factor(cyl), data = mtcars, family = binomial)
-x <- marginaleffects(x)
+x <- slopes(x)
 x <- tidy(x)
 expect_inherits(x, "data.frame") 
 expect_equivalent(nrow(x), 3)
@@ -66,30 +68,41 @@ tmp <- mtcars
 tmp$am <- as.logical(tmp$am)
 
 # numeric only
-x <- tidy(marginaleffects(lm(mpg ~ hp, tmp)))
-expect_equivalent(dim(x), c(1, 8))
+x <- tidy(slopes(lm(mpg ~ hp, tmp)))
+expect_true(nrow(x) == 1)
+expect_true(ncol(x) > 7)
 
 # logical only
 model <- lm(mpg ~ am, tmp)
-x <- tidy(marginaleffects(model))
-expect_equivalent(dim(x), c(1, 9))
+x <- tidy(slopes(model))
+expect_true(nrow(x) == 1)
+expect_true(ncol(x) > 7)
 
 # factor only
 model <- lm(mpg ~ factor(gear), tmp)
-x <- tidy(marginaleffects(model))
-expect_equivalent(dim(x), c(2, 9))
+x <- tidy(slopes(model))
+expect_true(nrow(x) == 2)
+expect_true(ncol(x) > 7)
 
 # combinations
-x <- tidy(marginaleffects(lm(mpg ~ hp + am, tmp)))
-expect_equivalent(dim(x), c(2, 9))
+x <- tidy(slopes(lm(mpg ~ hp + am, tmp)))
+expect_true(nrow(x) == 2)
+expect_true(ncol(x) > 7)
 
-x <- tidy(marginaleffects(lm(mpg ~ hp + factor(gear), tmp)))
-expect_equivalent(dim(x), c(3, 9))
+x <- tidy(slopes(lm(mpg ~ hp + factor(gear), tmp)))
+expect_true(nrow(x) == 3)
+expect_true(ncol(x) > 7)
 
-x <- tidy(marginaleffects(lm(mpg ~ am + factor(gear), tmp)))
-expect_equivalent(dim(x), c(3, 9))
+x <- tidy(slopes(lm(mpg ~ am + factor(gear), tmp)))
+expect_true(nrow(x) == 3)
+expect_true(ncol(x) > 7)
 
-x <- tidy(marginaleffects(lm(mpg ~ hp + am + factor(gear), tmp)))
-expect_equivalent(dim(x), c(4, 9))
+x <- tidy(slopes(lm(mpg ~ hp + am + factor(gear), tmp)))
+expect_true(nrow(x) == 4)
+expect_true(ncol(x) > 7)
 
 
+# deprecated argument
+mod <- lm(mpg ~ hp, mtcars)
+cmp <- comparisons(mod)
+expect_error(tidy(cmp, transform_avg = exp), pattern = "deprecated")

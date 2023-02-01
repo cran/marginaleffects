@@ -1,8 +1,56 @@
+# marginaleffects 0.9.0
+
+Breaking changes:
+
+* All functions return an `estimate` column instead of the function-specific `predicted`, `comparisons`, `dydx`, etc. This change only affects unit-level estimates, and not average estimates, which already used the `estimate` column name.
+* The `transform_avg` argument in `tidy()` deprecated. Use `transform_post` instead.
+* `plot_*(draw=FALSE)` now return the actual variable names supplied to the `condition` argument, rather than the opaque "condition1", "condition2", etc.
+
+New models supported:
+
+* `blme` package.
+
+New features:
+
+* New functions: `avg_predictions()`, `avg_comparisons()`, `avg_slopes()`
+* Equivalence, non-inferiority, and non-superiority tests with the `hypotheses()` function and `equivalence` argument.
+* New experimental `inferences()` function: simulation-based inferences and bootstrap using the `boot`, `rsample`, and `fwb` package.
+* New `df` argument to set degrees of freedom manually for p and CI.
+* Pretty `print()` for all objects.
+* `by` argument
+  - `TRUE` returns average (marginal) predictions, comparisons, or slopes.
+  - Supports bayesian models.
+* `hypothesis` argument
+  - Numeric value sets the null used in calculating Z and p.
+  - Example: `comparisons(mod, transform_pre = "ratio", hypothesis = 1)`
+* All arguments from the main functions are now available through `tidy()`, and `summary()`: `conf_level`, `transform_post`, etc.
+* Bayesian posterior distribution summaries (median, mean, HDI, quantiles) can be customized using global options. See `?comparisons`
+
+Renamed functions (backward-compatibility is maintained by keeping the old function names as aliases):
+
+* `marginaleffects()` -> `slopes()` 
+* `posteriordraws()` -> `posterior_draws()` 
+* `marginalmeans()` -> `marginal_means()` 
+* `plot_cap()` -> `plot_predictions()`
+* `plot_cme()` -> `plot_slopes()`
+* `plot_cco()` -> `plot_comparisons()`
+
+Bug fixes:
+
+* Incorrect results: In 0.8.1, `plot_*()` the `threenum` and `minmax` labels did not correspond to the correct numeric values.
+* Fix corner case for slopes when the dataset includes infinite values.
+* `mlogit` error with factors.
+* The `vcov` argument now accepts functions for most models.
+
+Other:
+
+* Removed major performance bottleneck for `slopes()`
+
 # marginaleffects 0.8.1
 
 * `deltamethod()` can run hypothesis tests on objects produced by the `comparisons()`, `marginaleffects()`, `predictions()`, and `marginalmeans()` functions. This feature relies on `match.call()`, which means it may not always work when used programmatically, inside functions and nested environments. It is generally safer and more efficient to use the `hypothesis` argument.
 * `plot_cme()` and `plot_cco()` accept lists with user-specified values for the regressors, and can display nice labels for shortcut string-functions like "threenum" or "quartile".
-* `posteriordraws`: new `shape` argument to return MCMC draws in various formats, including the new `rvar` structure from the `posterior` package.
+* `posterior_draws`: new `shape` argument to return MCMC draws in various formats, including the new `rvar` structure from the `posterior` package.
 * `transform_avg` function gets printed in `summary()` output.
 * `transform_post` and `transform_avg` support string shortcuts: "exp" and "ln"
 * Added support for `mlm` models from `lm()`. Thanks to Noah Greifer.
@@ -287,7 +335,7 @@ Misc:
 * `datagrid` function supersedes `typical` and `counterfactual` with the `grid.type`
   argument. The `typical` and `counterfactual` functions will remain available
   and exported, but their use is not encouraged.
-* `posteriordraws` function can be applied to a `predictions` or a
+* `posterior_draws` function can be applied to a `predictions` or a
   `marginaleffects` object to extract draws from the posterior distribution.
 * `marginalmeans` standard errors are now computed using the delta method.
 * `predictions` standard errors are now computed using the delta method when they are not available from `insight::get_predicted`.

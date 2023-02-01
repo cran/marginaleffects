@@ -1,11 +1,14 @@
 get_contrast_data_numeric <- function(model,
                                       newdata,
                                       variable,
-                                      eps,
+                                      eps = 1e-4,
+                                      modeldata = NULL,
                                       ...) {
 
 
-    modeldata <- hush(insight::get_data(model))
+    if (is.null(modeldata)) {
+        modeldata <- get_modeldata(model)
+    }
     if (is.null(modeldata)) {
         modeldata <- newdata
     }

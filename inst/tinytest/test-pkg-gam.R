@@ -1,19 +1,20 @@
-source("helpers.R", local = TRUE)
-if (ON_CRAN) exit_file("on cran")
-requiet("gam")
-requiet("emmeans")
-requiet("broom")
+source("helpers.R")
+using("marginaleffects")
+
+exit_if_not(requiet("gam"))
+exit_if_not(requiet("emmeans"))
+exit_if_not(requiet("broom"))
 
 # gam: marginaleffects vs. emtrends
 data(kyphosis, package = "gam")
 model <- gam::gam(Kyphosis ~ s(Age,4) + Number, family = binomial, data = kyphosis)
-expect_marginaleffects(model)
+expect_slopes(model)
 
 # emmeans
-mfx <- marginaleffects(model, newdata = datagrid(Age = 60, Number = 4), variables = "Number", type = "link")
+mfx <- slopes(model, newdata = datagrid(Age = 60, Number = 4), variables = "Number", type = "link")
 em <- emtrends(model, ~Number, "Number", at = list(Age = 60, Number = 4))
 em <- tidy(em)
-expect_equivalent(mfx$dydx, em$Number.trend)
+expect_equivalent(mfx$estimate, em$Number.trend)
 # low tolerance only for CRAN Atlas test
 expect_equivalent(mfx$std.error, em$std.error, tolerance = .001)
 
@@ -33,18 +34,18 @@ expect_predictions(pred2, n_row = 6, se = TRUE)
 data(kyphosis, package = "gam")
 tmp <- kyphosis
 tmp$categ <- as.factor(sample(letters[1:5], nrow(tmp), replace = TRUE))
-model <- gam::gam(Kyphosis ~ s(Age, 4) + Number + categ,
-            family = binomial, data = tmp)
-mm1 <- marginalmeans(model)
-em1 <- data.frame(emmeans(model, specs = "categ", type = "response"))
-mm2 <- marginalmeans(model, type = "link")
-em2 <- data.frame(emmeans(model, specs = "categ"))
+model <- gam::gam(Kyphosis ~ gam::s(Age, 4) + Number + categ, family = binomial, data = tmp)
 
-expect_equivalent(mm1$marginalmean, em1$prob, tol = .03)
-expect_equivalent(mm2$marginalmean, em2$emmean, tol = .03)
+# `datagrid()` is smarter than `emmeans()` about integers
+atlist <- list(Age = round(mean(tmp$Age)), Number = round(mean(tmp$Number)))
+mm1 <- marginal_means(model)
+em1 <- data.frame(emmeans(model, specs = "categ", type = "response", at = atlist))
+mm2 <- marginal_means(model, type = "link")
+em2 <- data.frame(emmeans(model, specs = "categ", at = atlist))
 
-exit_file("gam: marginal means `std.error` does not match `emmeans`")
+expect_equivalent(mm1$estimate, em1$prob)
+expect_equivalent(mm2$estimate, em2$emmean)
 expect_equivalent(mm1$conf.low, em1$asymp.LCL)
 expect_equivalent(mm1$conf.high, em1$asymp.UCL)
-expect_equivalent(mm2$conf.low, em1$asymp.LCL)
-expect_equivalent(mm2$conf.high, em1$asymp.UCL)
+expect_equivalent(mm2$conf.low, em2$asymp.LCL)
+expect_equivalent(mm2$conf.high, em2$asymp.UCL)

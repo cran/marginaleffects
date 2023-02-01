@@ -1,5 +1,7 @@
 source("helpers.R")
-requiet("emmeans")
+using("marginaleffects")
+
+exit_if_not(requiet("emmeans"))
 
 dat <- mtcars
 dat$carb <- factor(dat$carb)
@@ -9,15 +11,15 @@ mod <- lm(mpg ~ carb + cyl, dat)
 
 # informative errors and warnings
 tmp <- lm(mpg ~ drat + wt, data = mtcars)
-expect_error(marginaleffects(tmp, hypothesis = "drat = wt"), pattern = "newdata")
+expect_error(slopes(tmp, hypothesis = "drat = wt"), pattern = "newdata")
 expect_error(comparisons(tmp, hypothesis = "drat = wt"), pattern = "newdata")
 
 expect_error(
-    marginaleffects(mod, newdata = dat, hypothesis = "pairwise"),
+    slopes(mod, newdata = dat, hypothesis = "pairwise"),
     pattern = "smaller")
 
 expect_warning(
-    marginaleffects(mod, lincom = "pairwise"),
+    slopes(mod, lincom = "pairwise"),
     pattern = "lincom")
 
 tmp <- lm(mpg ~ wt + drat, data = mtcars)
@@ -39,10 +41,10 @@ expect_error(
     pattern = "indices")
 
 expect_error(
-    marginaleffects(mod, newdata = dat, hypothesis = "reference"),
+    slopes(mod, newdata = dat, hypothesis = "reference"),
     pattern = "smaller")
 
-expect_error(marginaleffects(
+expect_error(slopes(
     mod,
     newdata = "mean",
     hypothesis = c(1, 1, 1),
@@ -50,7 +52,7 @@ expect_error(marginaleffects(
     pattern = "of length")
 
 # errors
-expect_error(marginaleffects(
+expect_error(slopes(
     mod,
     newdata = "mean",
     hypothesis = matrix(rep(1, 6), ncol = 2),
@@ -58,7 +60,7 @@ expect_error(marginaleffects(
     pattern = "2 rows")
 
 # marginaleffects: hypothesis
-mfx <- marginaleffects(
+mfx <- slopes(
     mod,
     newdata = "mean",
     variables = "cyl",
@@ -77,11 +79,11 @@ cmp2 <- comparisons(
     variables = "cyl",
     newdata = "mean",
     hypothesis = "revpairwise")
-expect_equivalent(diff(cmp1$comparison), cmp2$comparison)
+expect_equivalent(diff(cmp1$estimate), cmp2$estimate)
 
 
 # marginaleffects: hypothesis
-mfx <- marginaleffects(
+mfx <- slopes(
     mod,
     newdata = "mean",
     variables = "cyl",
@@ -98,7 +100,7 @@ p1 <- predictions(
 p2 <- predictions(
     mod,
     datagrid(cyl = c(4, 6)))
-expect_equivalent(p1$predicted, diff(p2$predicted))
+expect_equivalent(p1$estimate, diff(p2$estimate))
 
 lc <- matrix(c(
     -1, 1,
@@ -125,16 +127,16 @@ lc <- c(-2, 1, 1, 0, -1, 1)
 em <- emmeans(mod, "carb") 
 em <- contrast(em, method = data.frame(custom_contrast = lc))
 em <- data.frame(em)
-mm <- marginalmeans(mod, variables = "carb", hypothesis = lc)
-expect_equivalent(mm$marginalmean, em$estimate)
+mm <- marginal_means(mod, variables = "carb", hypothesis = lc)
+expect_equivalent(mm$estimate, em$estimate)
 expect_equivalent(mm$std.error, em$SE)
 
 # marginalmeans: hypothesis shortcut
-mm <- marginalmeans(mod, variables = "carb", hypothesis = "reference")
+mm <- marginal_means(mod, variables = "carb", hypothesis = "reference")
 expect_equivalent(nrow(mm), 5)
-mm <- marginalmeans(mod, variables = "carb", hypothesis = "sequential")
+mm <- marginal_means(mod, variables = "carb", hypothesis = "sequential")
 expect_equivalent(nrow(mm), 5)
-mm <- marginalmeans(mod, variables = "carb", hypothesis = "pairwise")
+mm <- marginal_means(mod, variables = "carb", hypothesis = "pairwise")
 expect_equivalent(nrow(mm), 15)
 
 # marginalmeans: hypothesis complex matrix
@@ -142,33 +144,33 @@ lc <- matrix(c(
     -2, 1, 1, 0, -1, 1,
     -1, 1, 0, 0, 0, 0
     ), ncol = 2)
-mm <- marginalmeans(mod, variables = "carb", hypothesis = lc)
+mm <- marginal_means(mod, variables = "carb", hypothesis = lc)
 expect_inherits(mm, "marginalmeans")
 expect_equal(nrow(mm), 2)
 
 
 # marginalmeans: string function
-mm1 <- marginalmeans(
+mm1 <- marginal_means(
     mod,
     hypothesis = "b1 + b2 = 12")
-mm2 <- marginalmeans(mod)
+mm2 <- marginal_means(mod)
 expect_equivalent(
-    mm2$marginalmean[1] + mm2$marginalmean[2] - 12,
-    mm1$marginalmean)
+    mm2$estimate[1] + mm2$estimate[2] - 12,
+    mm1$estimate)
 
 
 # marginaleffects: string function
 mod <- lm(mpg ~ hp + drat, data = mtcars)
-mfx1 <- marginaleffects(
+mfx1 <- slopes(
     mod,
     newdata = "mean",
     hypothesis = "exp(b1 + b2) = 100")
-mfx2 <- marginaleffects(
+mfx2 <- slopes(
     mod,
     newdata = "mean",
     hypothesis = "exp(hp + drat) = 100")
 expect_inherits(mfx1, "marginaleffects")
-expect_equivalent(mfx1$dydx, mfx2$dydx)
+expect_equivalent(mfx1$estimate, mfx2$estimate)
 expect_equivalent(mfx1$std.error, mfx2$std.error)
 
 
@@ -184,8 +186,8 @@ p3 <- predictions(
     mod,
     hypothesis = "b1 = b2",
     newdata = datagrid(hp = c(100, 110, 120)))
-expect_equivalent(sum(p1$predicted) - 10, p2$predicted)
-expect_equivalent(p1$predicted[1] - p1$predicted[2], p3$predicted)
+expect_equivalent(sum(p1$estimate) - 10, p2$estimate)
+expect_equivalent(p1$estimate[1] - p1$estimate[2], p3$estimate)
 
 
 # pad missing character levels + hypothesis
@@ -218,3 +220,39 @@ cmp <- comparisons(
     hypothesis = "reference")
 expect_inherits(cmp, "comparisons")
 expect_equivalent(nrow(cmp), 2)
+
+
+# Issue #559
+mod <- lm(mpg ~ hp + drat, data = mtcars)
+H <- matrix(c(0, 1, -1, 1/3, 1/3, 1/3), ncol = 2)
+colnames(H) <- c("H1", "H2")
+dm <- hypotheses(mod, hypothesis = H)
+expect_equivalent(dm$term, c("H1", "H2"))
+
+
+
+# # Issue #568
+# # TODO: p-value computed before transform_post; null on the pre-transform scale
+# mod <- glm(vs ~ hp, data = mtcars, family = binomial)
+
+# comparisons(mod,
+#     newdata = "mean",
+#     transform_pre = "ratio")
+
+# comparisons(mod,
+#     newdata = "mean",
+#     transform_pre = "ratio",
+#     hypothesis = 0)
+
+# comparisons(mod,
+#     newdata = "mean",
+#     transform_pre = "ratio",
+#     hypothesis = 1)
+
+# marginaleffects
+
+# hypotheses(mod, hypothesis = -2)
+
+# predictions(mod, newdata = "mean", hypothesis = .75)
+
+# slopes(mod, newdata = "mean", hypothesis = .75)

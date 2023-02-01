@@ -12,7 +12,7 @@ sanity_dots <- function(model, calling_function = NULL, ...) {
         unsupported <- intersect(names(dots), unsupported)
         if (length(unsupported) > 0) {
             msg <- sprintf(
-                "These arguments are supported by the `comparisons()` function but not by the `marginaleffects()` function: %s",
+                "These arguments are supported by the `comparisons()` function but not by the `slopes()` function: %s",
                 paste(unsupported, collapse = ", "))
             stop(msg, call. = FALSE)
         }
@@ -38,7 +38,9 @@ sanity_dots <- function(model, calling_function = NULL, ...) {
 
     white_list <- c(
         "conf.int", "modeldata", "contrast_factor", "contrast_numeric", "internal_call", "df",
-        "transform_avg", "transform_post", "transform_pre")
+        "transform_post", "transform_pre", "ci_method", "side", "delta", "null", "equivalence", "draw",
+        "at" # topmodels procast
+        )
 
     model_class <- class(model)[1]
 

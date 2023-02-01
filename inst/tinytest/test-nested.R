@@ -1,6 +1,7 @@
-source("helpers.R", local = TRUE)
-if (ON_CRAN) exit_file("on cran")
-requiet("fixest")
+source("helpers.R")
+using("marginaleffects")
+
+exit_if_not(requiet("fixest"))
 
 # predictions() call is nested in a function
 test <- function() {

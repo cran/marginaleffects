@@ -1,10 +1,20 @@
-source("helpers.R", local = TRUE)
-if (ON_CRAN) exit_file("on cran")
-requiet("aod")
+source("helpers.R")
+using("marginaleffects")
+
+exit_if_not(requiet("aod"))
 
 # betabin: no validity
-data("orob2", package = "aod")
-mod <- betabin(cbind(y, n - y) ~ seed, ~ 1, data = orob2)
-expect_marginaleffects(mod, n_unique = 1)
-expect_predictions(predictions(mod))
+dat <- read.csv("https://vincentarelbundock.github.io/Rdatasets/csv/aod/orob2.csv")
+
+# character variables should be padded, but I am lazy
+mod <- betabin(cbind(y, n - y) ~ seed, ~ 1, data = dat)
+expect_error(slopes(mod), pattern = "support.*character")
+
+# factor variables work
+dat$seed <- factor(dat$seed)
+mod <- betabin(cbind(y, n - y) ~ seed, ~ 1, data = dat)
+expect_slopes(mod, n_unique = 1)
+
+pre <- predictions(mod)
+expect_predictions(pre)
 

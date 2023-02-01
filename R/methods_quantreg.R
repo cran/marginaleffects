@@ -9,19 +9,19 @@ get_predict.rq <- function(model,
 
     # type argument of the method is used to specify confidence interval type
     # TODO: add support for this in `insight`
-    assert_dependency("quantreg") # predict method must be available
+    insight::check_if_installed("quantreg")
     out <- quantreg::predict.rq(model,
                                 newdata = newdata,
                                 ...)
     out <- data.frame(rowid = seq_len(nrow(newdata)),
-                      predicted = out)
+                      estimate = out)
     return(out)
 }
 
 
 #' @include sanity_model.R
-#' @rdname sanity_model_specific
+#' @rdname sanitize_model_specific
 #' @keywords internal
-sanity_model_specific.rqs <- function(model, ...) {
+sanitize_model_specific.rqs <- function(model, ...) {
     stop("`marginaleffects` only supports `quantreg::rq` models with a single `tau` value.", call. = FALSE)
 }

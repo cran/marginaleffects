@@ -1,18 +1,17 @@
 # HPD tests against emmeans, which uses HDI, but our default is ETI
 # HDI is implemented specifically for these tests
 # https://github.com/vincentarelbundock/marginaleffects/issues/240
-source("helpers.R", local = TRUE)
-# exit_file("expensive")
-# if (ON_CI) exit_file("on ci")
+source("helpers.R")
+using("marginaleffects")
+exit_if_not(EXPENSIVE)
 if (ON_WINDOWS) exit_file("on windows")
-if (ON_CRAN) exit_file("on cran")
 if (!minver("base", "4.1.0")) exit_file("R 4.1.0")
-options("marginaleffects_credible_interval" = "hdi")
-requiet("brms")
-requiet("emmeans")
-requiet("broom")
-requiet("posterior")
-requiet("brmsmargins")
+options("marginaleffects_posterior_interval" = "hdi")
+exit_if_not(requiet("brms"))
+exit_if_not(requiet("emmeans"))
+exit_if_not(requiet("broom"))
+exit_if_not(requiet("posterior"))
+exit_if_not(requiet("brmsmargins"))
 tol <- 0.0001
 tol_se <- 0.001
 
@@ -35,17 +34,30 @@ brms_vdem <- marginaleffects:::modelarchive_model("brms_vdem")
 brms_lognormal_hurdle <- marginaleffects:::modelarchive_model("brms_lognormal_hurdle")
 brms_lognormal_hurdle2 <- marginaleffects:::modelarchive_model("brms_lognormal_hurdle2")
 brms_binomial <- marginaleffects:::modelarchive_model("brms_binomial")
-brms_mixed_3 <- insight::download_model("brms_mixed_3")
 brms_mv_1 <- marginaleffects:::modelarchive_model("brms_mv_1")
 brms_vdem <- marginaleffects:::modelarchive_model("brms_vdem")
 brms_ordinal_1 <- insight::download_model("brms_ordinal_1")
 brms_categorical_1 <- marginaleffects:::modelarchive_model("brms_categorical_1")
 brms_logit_re <- marginaleffects:::modelarchive_model("brms_logit_re")
 
+# link (code from easystats circus)
+# brms_mixed_3 <- insight::download_model("brms_mixed_3")
+set.seed(123)
+tmp <- read.csv("https://vincentarelbundock.github.io/Rdatasets/csv/lme4/sleepstudy.csv")
+tmp$grp <- sample(1:5, size = 180, replace = TRUE)
+tmp$cat <- as.factor(sample(1:5, size = 180, replace = TRUE))
+tmp$Reaction_d <-
+  ifelse(tmp$Reaction < median(tmp$Reaction), 0, 1)
+tmp <- tmp |>
+  dplyr::group_by(grp) |>
+  dplyr::mutate(subgrp = sample(1:15, size = dplyr::n(), replace = TRUE))
+void <- capture.output(suppressMessages(
+    brms_mixed_3 <- brm(Reaction ~ Days + (1 | grp / subgrp) + (1 | Subject), data = tmp)
+))
 
 
 # average marginal effects brmsmargins
-options("marginaleffects_credible_interval" = "eti")
+options("marginaleffects_posterior_interval" = "eti")
 h <- 5e-5
 bm <- brmsmargins(
   brms_numeric,
@@ -54,18 +66,17 @@ bm <- brmsmargins(
   CI = 0.95, CIType = "ETI")
 bm <- data.frame(bm$ContrastSummary)
 
-mfx <- marginaleffects(brms_numeric)
+mfx <- slopes(brms_numeric)
 mfx <- tidy(mfx)
 
-expect_equivalent(mean(posteriordraws(mfx)$draw), bm$M, tolerance = tol)
+expect_equivalent(mean(posterior_draws(mfx)$draw), bm$M, tolerance = tol)
 expect_equivalent(mfx$conf.low, bm$LL, tolerance = tol)
 expect_equivalent(mfx$conf.high, bm$UL, tolerance = tol)
 
-options("marginaleffects_credible_interval" = "hdi")
-
+options("marginaleffects_posterior_interval" = "hdi")
 
 # marginaleffects vs. emmeans
-mfx <- marginaleffects(
+mfx <- slopes(
     brms_numeric2,
     newdata = datagrid(mpg = 20, hp = 100),
     variables = "mpg",
@@ -73,25 +84,25 @@ mfx <- marginaleffects(
 
 em <- emtrends(brms_numeric2, ~mpg, "mpg", at = list(mpg = 20, hp = 100))
 em <- tidy(em)
-expect_equivalent(mfx$dydx, em$mpg.trend)
+expect_equivalent(mfx$estimate, em$mpg.trend)
 expect_equivalent(mfx$conf.low, em$lower.HPD)
 expect_equivalent(mfx$conf.high, em$upper.HPD)
 # tolerance is less good for back-transformed response
-mfx <- marginaleffects(brms_numeric2, newdata = datagrid(mpg = 20, hp = 100),
+mfx <- slopes(brms_numeric2, newdata = datagrid(mpg = 20, hp = 100),
                    variables = "mpg", type = "response")
 em <- emtrends(brms_numeric2, ~mpg, "mpg", at = list(mpg = 20, hp = 100), regrid = "response")
 em <- tidy(em)
-expect_equivalent(mfx$dydx, em$mpg.trend, tolerance = .1)
+expect_equivalent(mfx$estimate, em$mpg.trend, tolerance = .1)
 expect_equivalent(mfx$conf.low, em$lower.HPD, tolerance = .01)
 expect_equivalent(mfx$conf.high, em$upper.HPD, tolerance = .1)
 
 
 # brms: cumulative: marginaleffects: no validity
-expect_marginaleffects(brms_cumulative_random, se = FALSE)
+expect_slopes(brms_cumulative_random, se = FALSE)
 
 
 # brms: logical regressor
-mfx <- marginaleffects(brms_logical)
+mfx <- slopes(brms_logical)
 expect_inherits(mfx, "marginaleffects")
 expect_equivalent(nrow(mfx), nrow(attr(mfx, "posterior_draws")))
 
@@ -105,26 +116,24 @@ set.seed(1024)
 p2 <- predictions(brms_mixed_3, newdata = nd, allow_new_levels = TRUE, sample_new_levels = "gaussian")
 set.seed(1024)
 p3 <- predictions(brms_mixed_3, newdata = nd, allow_new_levels = TRUE, sample_new_levels = "uncertainty")
-expect_false(any(p1$predicted == p2$predicted))
+expect_false(any(p1$estimate == p2$estimate))
 expect_equivalent(p1, p3)
-expect_inherits(posteriordraws(p3), "data.frame")
+expect_inherits(posterior_draws(p3), "data.frame")
 
 
 # predictions w/ random effects
-
-# link
 w <- apply(posterior_linpred(brms_mixed_3), 2, stats::median)
-x <- get_predict(brms_mixed_3, type = "link")
+x <- get_predict(brms_mixed_3, newdata = tmp, type = "link")
 y <- predictions(brms_mixed_3, type = "link")
-expect_equivalent(w, x$predicted)
-expect_equivalent(w, y$predicted)
+expect_equivalent(w, x$estimate)
+expect_equivalent(w, y$estimate)
 
 # response
 w <- apply(posterior_epred(brms_mixed_3), 2, stats::median)
 x <- get_predict(brms_mixed_3, type = "response")
 y <- predictions(brms_mixed_3, type = "response")
-expect_equivalent(w, x$predicted)
-expect_equivalent(w, y$predicted)
+expect_equivalent(w, x$estimate)
+expect_equivalent(w, y$estimate)
 
 # no random effects
 w1 <- apply(posterior_epred(brms_mixed_3), 2, stats::median)
@@ -132,8 +141,8 @@ w2 <- apply(posterior_epred(brms_mixed_3, re_formula = NA), 2, stats::median)
 x <- get_predict(brms_mixed_3, re_formula = NA, type = "response")
 y <- predictions(brms_mixed_3, re_formula = NA, type = "response")
 expect_true(all(w1 != w2))
-expect_equivalent(w2, x$predicted)
-expect_equivalent(w2, y$predicted)
+expect_equivalent(w2, x$estimate)
+expect_equivalent(w2, y$estimate)
 
 
 # brms: cumulative: predictions: no validity
@@ -146,17 +155,17 @@ expect_warning(predictions(brms_cumulative_random, include_random = FALSE)) # on
 
 
 # marginaleffects: ordinal no validity
-expect_marginaleffects(brms_ordinal_1, se = FALSE)
+expect_slopes(brms_ordinal_1, se = FALSE)
 
 
 # predict new unit: no validity
 dat1 <- dat2 <- datagrid(model = brms_epi)
 dat2$patient <- 9999
 set.seed(1024)
-mfx1 <- marginaleffects(brms_epi, newdata = dat1)
+mfx1 <- slopes(brms_epi, newdata = dat1)
 set.seed(1024)
-mfx2 <- marginaleffects(brms_epi, newdata = dat2, allow_new_levels = TRUE)
-expect_false(any(mfx1$dydx == mfx2$dydx))
+mfx2 <- slopes(brms_epi, newdata = dat2, allow_new_levels = TRUE)
+expect_false(any(mfx1$estimate == mfx2$estimate))
 
 
 
@@ -165,10 +174,11 @@ dat <- mtcars
 dat$logic <- as.logical(dat$vs)
 dat$cyl_fac <- as.factor(dat$cyl)
 dat$cyl_cha <- as.character(dat$cyl)
-mfx <- marginaleffects(brms_factor, newdata = dat)
+mfx <- slopes(brms_factor, newdata = dat)
 ti <- tidy(mfx)
 expect_inherits(ti, "data.frame")
-expect_equivalent(dim(ti), c(3, 6))
+expect_true(nrow(ti) == 3)
+expect_true(ncol(ti) > 5)
 expect_true(all(c("term", "estimate", "conf.low") %in% colnames(ti)))
 
 
@@ -196,100 +206,100 @@ expect_true(all(p1$conf.high > p2$conf.high))
 # re_formula
 p1 <- predictions(brms_epi, newdata = datagrid(patient = 1))
 p2 <- predictions(brms_epi, newdata = datagrid(patient = 1), re_formula = NA)
-expect_false(p1$predicted == p2$predicted)
+expect_false(p1$estimate == p2$estimate)
 expect_false(p1$conf.low == p2$conf.low)
 expect_false(p1$conf.high == p2$conf.high)
 
 
 
 # predictions vs. emmeans
-requiet("emmeans")
+exit_if_not(requiet("emmeans"))
 em <- emmeans::emmeans(brms_numeric, ~hp, "hp", at = list(hp = c(100, 120)))
 em <- data.frame(em)
 pred <- predictions(brms_numeric, newdata = datagrid(hp = c(100, 120)), type = "link")
-expect_equivalent(pred$predicted, em$emmean)
+expect_equivalent(pred$estimate, em$emmean)
 expect_equivalent(pred$conf.low, em$lower.HPD)
 expect_equivalent(pred$conf.high, em$upper.HPD)
 
 
 
 # marginalmeans vs. emmeans
-requiet("emmeans")
-requiet("broom")
-expect_error(marginalmeans(brms_factor, variables = "cyl_fac", type = "link"), pattern = "github.*issues")
+exit_if_not(requiet("emmeans"))
+exit_if_not(requiet("broom"))
+expect_error(marginal_means(brms_factor, variables = "cyl_fac", type = "link"), pattern = "github.*issues")
 # emmeans::emmeans(brms_factor, specs = ~cyl_fac)
 
 
 
 # marginaleffects: no validity
-expect_marginaleffects(brms_numeric2, se = FALSE)
-expect_marginaleffects(brms_interaction, se = FALSE)
-expect_marginaleffects(brms_factor, se = FALSE)
+expect_slopes(brms_numeric2, se = FALSE)
+expect_slopes(brms_interaction, se = FALSE)
+expect_slopes(brms_factor, se = FALSE)
 # credible intervals and posterior draws
-tmp <- marginaleffects(brms_factor)
+tmp <- slopes(brms_factor)
 expect_true("conf.low" %in% colnames(tmp))
-expect_true(all(tmp$dydx > tmp$conf.low))
-expect_true(all(tmp$dydx < tmp$conf.high))
+expect_true(all(tmp$estimate > tmp$conf.low))
+expect_true(all(tmp$estimate < tmp$conf.high))
 expect_false(is.null(attr(tmp, "posterior_draws")))
 expect_equivalent(nrow(attr(tmp, "posterior_draws")), nrow(tmp))
 
 
 
 # marginaleffects vs. emmeans
-requiet("emmeans")
+exit_if_not(requiet("emmeans"))
 
 # # known frequentist example to compare syntax
 # brms_numeric_freq <- glm(am ~ hp, data = mtcars, family = binomial)
-# marginaleffects(brms_numeric_freq, newdata = datagrid(hp = 147), type = "link")
+# slopes(brms_numeric_freq, newdata = datagrid(hp = 147), type = "link")
 # emmeans::emtrends(brms_numeric_freq, specs = ~hp, var = "hp", at = list(hp = 147))
 
 # one variable: link scale
-mfx1 <- marginaleffects(brms_numeric, variables = "hp", newdata = datagrid(hp = 110), type = "link")
+mfx1 <- slopes(brms_numeric, variables = "hp", newdata = datagrid(hp = 110), type = "link")
 mfx2 <- as.data.frame(emmeans::emtrends(brms_numeric, ~hp, var = "hp", at = list(hp = 110)))
-expect_equivalent(mfx1$dydx, mfx2$hp.trend)
+expect_equivalent(mfx1$estimate, mfx2$hp.trend)
 expect_equivalent(mfx1$conf.low, mfx2$lower.HPD)
 expect_equivalent(mfx1$conf.high, mfx2$upper.HPD)
 
 # one variable: response scale
-mfx1 <- marginaleffects(brms_numeric, variables = "hp", newdata = datagrid(hp = 110))
+mfx1 <- slopes(brms_numeric, variables = "hp", newdata = datagrid(hp = 110))
 mfx2 <- as.data.frame(emtrends(brms_numeric, ~hp, var = "hp", at = list(hp = 110), regrid = "response"))
-expect_equivalent(mfx1$dydx, mfx2$hp.trend, tolerance = .001)
+expect_equivalent(mfx1$estimate, mfx2$hp.trend, tolerance = .001)
 expect_equivalent(mfx1$conf.low, mfx2$lower.HPD, tolerance = .001)
 expect_equivalent(mfx1$conf.high, mfx2$upper.HPD, tolerance = .001)
 
 # numeric + factor: numeric variable
 dat <- datagrid(model = brms_factor, mpg = 25, cyl_fac = 4)
-mfx1 <- marginaleffects(brms_factor, variables = "mpg", newdata = dat, type = "link")
+mfx1 <- slopes(brms_factor, variables = "mpg", newdata = dat, type = "link")
 mfx2 <- as.data.frame(emmeans::emtrends(brms_factor, ~mpg, var = "mpg", at = list(mpg = 25, cyl_fac = 4)))
-expect_equivalent(mfx1$dydx, mfx2$mpg.trend, tolerance = .001)
+expect_equivalent(mfx1$estimate, mfx2$mpg.trend, tolerance = .001)
 expect_equivalent(mfx1$conf.low, mfx2$lower.HPD, tolerance = .001)
 expect_equivalent(mfx1$conf.high, mfx2$upper.HPD, tolerance = .001)
 
 # numeric + factor: factor
 dat <- datagrid(model = brms_factor, mpg = 25, cyl_fac = 4)
-mfx1 <- marginaleffects(brms_factor, variables = "cyl_fac", newdata = dat, type = "link")
+mfx1 <- slopes(brms_factor, variables = "cyl_fac", newdata = dat, type = "link")
 mfx2 <- emmeans::emmeans(brms_factor, ~ cyl_fac, var = "cyl_fac", at = list(mpg = 25))
 mfx2 <- emmeans::contrast(mfx2, method = "revpairwise")
 mfx2 <- data.frame(mfx2)[1:2,]
-expect_equivalent(mfx1$dydx, mfx2$estimate, tolerance = .001)
+expect_equivalent(mfx1$estimate, mfx2$estimate, tolerance = .001)
 expect_equivalent(mfx1$conf.low, mfx2$lower.HPD, tolerance = .001)
 expect_equivalent(mfx1$conf.high, mfx2$upper.HPD, tolerance = .001)
 
 
 
-# # plot_cap: no validity
-# p <- plot_cap(brms_interaction, condition = c("mpg", "vs"))
-# vdiffr::expect_doppelganger("brms logit plot_cap", p)
+# # plot_predictions: no validity
+# p <- plot_predictions(brms_interaction, condition = c("mpg", "vs"))
+# vdiffr::expect_doppelganger("brms logit plot_predictions", p)
 #
 #
 #
-# # plot_cap: no validity
-# p <- plot_cap(brms_interaction, condition = c("mpg", "vs"))
-# vdiffr::expect_doppelganger("brms logit plot_cap", p)
+# # plot_predictions: no validity
+# p <- plot_predictions(brms_interaction, condition = c("mpg", "vs"))
+# vdiffr::expect_doppelganger("brms logit plot_predictions", p)
 
 
 # factor in formula
-expect_error(marginaleffects(brms_factor_formula),
+expect_error(slopes(brms_factor_formula),
          pattern = "factor")
 expect_error(predictions(brms_factor_formula),
          pattern = "factor")
@@ -298,22 +308,23 @@ expect_error(predictions(brms_factor_formula),
 
 # bugs stay dead: factor indexing for posterior draws
 tmp <- predictions(brms_factor, newdata = datagrid(cyl_fac = 4, mpg = c(10, 20)))
-expect_inherits(posteriordraws(tmp), "data.frame")
+expect_inherits(posterior_draws(tmp), "data.frame")
 
 
 
 # mo() recognized as factor: Issue #220
 # marginaleffects
-mfx1 <- marginaleffects(brms_monotonic)
-mfx2 <- marginaleffects(brms_monotonic, variable = "carb")
-expect_error(marginaleffects(brms_monotonic_factor), pattern = "cannot be used")
+mfx1 <- slopes(brms_monotonic)
+mfx2 <- slopes(brms_monotonic, variable = "carb")
+expect_error(slopes(brms_monotonic_factor), pattern = "cannot be used")
 expect_inherits(mfx1, "marginaleffects")
 expect_inherits(mfx2, "marginaleffects")
 
 # comparisons
 expect_error(comparisons(brms_monotonic_factor), pattern = "cannot be used")
 contr1 <- tidy(comparisons(brms_monotonic))
-expect_true(all(paste(c(2, 3, 4, 6, 8), "-", 1) %in% contr1$contrast))
+known <- c("mean(+1)", sprintf("mean(%s) - mean(1)", c(2:4, 6, 8)))
+expect_equivalent(contr1$contrast, known)
 contr2 <- tidy(comparisons(brms_monotonic, contrast_factor = "pairwise", variables = "carb"))
 expect_equivalent(nrow(contr2), 15)
 
@@ -323,7 +334,7 @@ expect_equivalent(nrow(contr2), 15)
 beta <- get_coef(brms_mv_1)
 expect_equivalent(length(beta), 12)
 
-mfx <- marginaleffects(brms_mv_1)
+mfx <- slopes(brms_mv_1)
 expect_inherits(mfx, "marginaleffects")
 
 pred <- predictions(brms_mv_1)
@@ -332,12 +343,12 @@ expect_inherits(pred, "predictions")
 comp <- comparisons(brms_mv_1)
 expect_inherits(comp, "comparisons")
 
-draws <- posteriordraws(mfx)
+draws <- posterior_draws(mfx)
 expect_inherits(draws, "data.frame")
 expect_true(all(c("drawid", "draw", "rowid") %in% colnames(draws)))
 
 # categorical outcome
-mfx <- marginaleffects(brms_categorical_1)
+mfx <- slopes(brms_categorical_1)
 expect_inherits(mfx, "marginaleffects")
 
 pred <- predictions(brms_categorical_1)
@@ -346,7 +357,7 @@ expect_inherits(pred, "predictions")
 comp <- comparisons(brms_categorical_1)
 expect_inherits(comp, "comparisons")
 
-draws <- posteriordraws(mfx)
+draws <- posterior_draws(mfx)
 expect_inherits(draws, "data.frame")
 expect_true(all(c("drawid", "draw", "rowid") %in% colnames(draws)))
 
@@ -372,15 +383,15 @@ expect_predictions(p_prediction, se = FALSE)
 
 
 # bugs stay dead: character regressors used to produce duplicates
-expect_marginaleffects(brms_character, se = FALSE)
-mfx <- marginaleffects(brms_character)
+expect_slopes(brms_character, se = FALSE)
+mfx <- slopes(brms_character)
 ti <- tidy(mfx)
 expect_true(length(unique(ti$estimate)) == nrow(ti))
 
 
 
 # warning: vcov not supported
-expect_warning(marginaleffects(brms_numeric, vcov = "HC3"),
+expect_warning(slopes(brms_numeric, vcov = "HC3"),
            pattern = "vcov.*not supported")
 
 # Andrew Heiss says that lognormal_hurdle are tricky because the link is
@@ -397,7 +408,7 @@ p2 <- predictions(
     brms_lognormal_hurdle,
     newdata = datagrid(lifeExp = seq(30, 80, 10)),
     dpar = "mu")
-expect_true(all(p1$predicted != p2$predicted))
+expect_true(all(p1$estimate != p2$estimate))
 
 eps <- 0.01
 cmp1 <- comparisons(
@@ -412,7 +423,7 @@ cmp2 <- comparisons(
     newdata = datagrid(lifeExp = seq(30, 80, 10)),
     transform_pre = function(hi, lo) exp((hi - lo) / eps),
     dpar = "mu")
-expect_true(all(cmp1$comparison != cmp2$comparison))
+expect_true(all(cmp1$estimate != cmp2$estimate))
 
 cmp <- comparisons(
     brms_lognormal_hurdle2,
@@ -420,7 +431,7 @@ cmp <- comparisons(
     datagrid(disp = c(150, 300, 450)),
     transform_pre = "expdydx")
 
-expect_equivalent(cmp$comparison, 
+expect_equivalent(cmp$estimate, 
     c(-0.0464610297239711, -0.0338017059188856, -0.0245881481374242),
     # seed difference?
     # c(-0.0483582312992919, -0.035158983842012, -0.0255763979591749),
@@ -443,12 +454,12 @@ expect_equivalent(nrow(cmp4), 2)
 # Issue #432: comparisons = conf.low = conf.high because mean() returns a
 # single number when applied to the draws matrix
 cmp <- comparisons(brms_binomial, variables = "tx", transform_pre = "lnoravg")
-expect_true(all(cmp$comparison != cmp$conf.low))
-expect_true(all(cmp$comparison != cmp$conf.high))
+expect_true(all(cmp$estimate != cmp$conf.low))
+expect_true(all(cmp$estimate != cmp$conf.high))
 expect_true(all(cmp$conf.high != cmp$conf.low))
 
-# Issue #432: posteriordraws() and tidy() error with `transform_pre="avg"`
-pd <- posteriordraws(cmp)
+# Issue #432: posterior_draws() and tidy() error with `transform_pre="avg"`
+pd <- posterior_draws(cmp)
 expect_inherits(pd, "data.frame")
 expect_equivalent(nrow(pd), 4000)
 ti <- tidy(cmp)
@@ -471,7 +482,7 @@ expect_inherits(p1, "predictions")
 expect_inherits(p2, "predictions")
 expect_equivalent(nrow(p1), 1)
 expect_equivalent(nrow(p2), 1)
-expect_equivalent(p1$predicted, p2$predicted)
+expect_equivalent(p1$estimate, p2$estimate)
 expect_true(all(c("conf.low", "conf.high") %in% colnames(p1)))
 expect_true(all(c("conf.low", "conf.high") %in% colnames(p2)))
 
@@ -484,7 +495,7 @@ p3 <- predictions(
 expect_inherits(p3, "predictions")
 expect_equivalent(nrow(p3), 2)
 expect_equivalent(p3$term, c("Contrast A", "Contrast B"))
-expect_equivalent(p3$predicted[1], -p3$predicted[2])
+expect_equivalent(p3$estimate[1], -p3$estimate[2])
 
 
 # `by` argument is supported for predictions() because it is a simple average.
@@ -516,9 +527,10 @@ expect_equivalent(nrow(p), 1)
 
 
 
-# `by` not supported in comparisons() or marginaleffects()
-expect_error(comparisons(brms_factor, by = "cyl_fac"), pattern = "supported")
-expect_error(marginaleffects(brms_factor, by = "cyl_fac"), pattern = "supported")
+# # `by` not supported in comparisons() or slopes()
+# # this is not supported!!
+# expect_error(comparisons(brms_factor, by = "cyl_fac"), pattern = "supported")
+# expect_error(slopes(brms_factor, by = "cyl_fac"), pattern = "supported")
 
 
 
@@ -560,14 +572,14 @@ void <- capture.output(suppressMessages(
 
 p1 <- predictions(mod, type = "link")
 p2 <- predictions(mod, type = "link", transform_post = exp)
-expect_equivalent(exp(p1$predicted), p2$predicted)
+expect_equivalent(exp(p1$estimate), p2$estimate)
 expect_equivalent(exp(p1$conf.low), p2$conf.low)
 expect_equivalent(exp(p1$conf.high), p2$conf.high)
 expect_equivalent(exp(attr(p1, "posterior_draws")), attr(p2, "posterior_draws"))
 
 p1 <- comparisons(mod, type = "link")
 p2 <- comparisons(mod, type = "link", transform_post = exp)
-expect_equivalent(exp(p1$comparison), p2$comparison)
+expect_equivalent(exp(p1$estimate), p2$estimate)
 expect_equivalent(exp(p1$conf.low), p2$conf.low)
 expect_equivalent(exp(p1$conf.high), p2$conf.high)
 expect_equivalent(exp(attr(p1, "posterior_draws")), attr(p2, "posterior_draws"))
@@ -580,10 +592,10 @@ by <- data.frame(
 p1 <- predictions(brms_cumulative_random, newdata = "mean")
 p2 <- predictions(brms_cumulative_random, newdata = "mean", by = by)
 p3 <- predictions(brms_cumulative_random, newdata = "mean", by = by, byfun = sum)
-expect_equivalent(mean(p1$predicted[1:2]), p2$predicted[1], tolerance = 0.1)
-expect_equivalent(mean(p1$predicted[3:4]), p2$predicted[2], tolerance = 0.1)
-expect_equivalent(sum(p1$predicted[1:2]), p3$predicted[1], tolerance = 0.1)
-expect_equivalent(sum(p1$predicted[3:4]), p3$predicted[2], tolerance = 0.1)
+expect_equivalent(mean(p1$estimate[1:2]), p2$estimate[1], tolerance = 0.1)
+expect_equivalent(mean(p1$estimate[3:4]), p2$estimate[2], tolerance = 0.1)
+expect_equivalent(sum(p1$estimate[1:2]), p3$estimate[1], tolerance = 0.1)
+expect_equivalent(sum(p1$estimate[3:4]), p3$estimate[2], tolerance = 0.1)
 
 
 
@@ -603,7 +615,7 @@ void <- capture.output(suppressMessages(
         chains = 1,
         verbose = FALSE)
 ))
-p <- plot_cap(fit, condition = "z")
+p <- plot_predictions(fit, condition = "z")
 expect_inherits(p, "gg")
 
 
@@ -616,8 +628,8 @@ cmp <- comparisons(
     brms_logit_re,
     newdata = datagrid(firm = sample(1e5:2e6, K)),
     allow_new_levels = TRUE,
-    sample_new_levels = "gaussian") |>
-    tidy()
+    sample_new_levels = "gaussian")
+cmp <- tidy(cmp)
 
 bm <- brmsmargins(
   k = K,
@@ -633,19 +645,18 @@ expect_equivalent(cmp$conf.high, bm$UL, tolerance = .05)
 
 
 
-# posteriordraws(shape = )
+# posterior_draws(shape = )
 cmp <- comparisons(brms_numeric2)
 tid <- tidy(cmp)
-pd <- posteriordraws(tid, shape = "DxP")
+pd <- posterior_draws(tid, shape = "DxP")
 hyp <- brms::hypothesis(pd, "b1 - b2 > 0")
 expect_inherits(hyp, "brmshypothesis")
-
 
 
 # posterior::rvar
 cmp <- comparisons(brms_numeric2)
 tid <- tidy(cmp)
-rv <- posteriordraws(tid, "rvar")
+rv <- posterior_draws(tid, "rvar")
 expect_equivalent(nrow(rv), 2)
 expect_inherits(rv$rvar[[1]], "rvar")
 
@@ -653,3 +664,17 @@ expect_inherits(rv$rvar[[1]], "rvar")
 # Issue #546
 cmp <- comparisons(brms_numeric2, newdata = datagrid())
 expect_false(anyNA(cmp$am))
+
+
+# Issue #576
+void <- capture.output(suppressMessages(
+    mod <- brm(mpg ~ hp, data = mtcars, verbose = 0)
+))
+cmp <- comparisons(mod)
+expect_equal(nrow(cmp), 32)
+cmp <- comparisons(mod, by = "term")
+expect_equal(nrow(cmp), 1)
+cmp <- comparisons(mod, by = "cyl")
+expect_equal(nrow(cmp), 3)
+cmp <- comparisons(mod, by = "am")
+expect_equal(nrow(cmp), 2)

@@ -1,11 +1,12 @@
-source("helpers.R", local = TRUE)
+source("helpers.R")
+using("marginaleffects")
 
 # conf.level argument changes conf.int size
 dat <- mtcars
 dat$cyl <- factor(dat$cyl)
 mod <- lm(mpg ~ hp + cyl, data = mtcars)
-mfx95 <- marginaleffects(mod, conf.level = .95)
-mfx99 <- marginaleffects(mod, conf.level = .99)
+mfx95 <- slopes(mod, conf.level = .95)
+mfx99 <- slopes(mod, conf.level = .99)
 cmp95 <- comparisons(mod, conf.level = .95)
 cmp99 <- comparisons(mod, conf.level = .99)
 pre95 <- predictions(mod, conf.level = .95)
@@ -31,8 +32,8 @@ expect_true(all(tid95$conf.high < tid99$conf.high))
 mod <- lm(mpg ~ hp, data = mtcars)
 cmp <- comparisons(mod)
 critical_z <- qnorm(.025)
-lb <- cmp$comparison - abs(critical_z) * cmp$std.error
-ub <- cmp$comparison + abs(critical_z) * cmp$std.error
+lb <- cmp$estimate - abs(critical_z) * cmp$std.error
+ub <- cmp$estimate + abs(critical_z) * cmp$std.error
 expect_equivalent(cmp$conf.low, lb)
 expect_equivalent(cmp$conf.high, ub)
 

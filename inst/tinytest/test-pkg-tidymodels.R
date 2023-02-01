@@ -1,5 +1,6 @@
 source("helpers.R")
-requiet("tidymodels")
+using("marginaleffects")
+exit_if_not(requiet("tidymodels"))
 
 dat <- read.csv("https://vincentarelbundock.github.io/Rdatasets/csv/palmerpenguins/penguins.csv")
 dat$large_penguin <- ifelse(
@@ -12,6 +13,6 @@ mod <- fit(
     large_penguin ~ bill_length_mm + flipper_length_mm + species,
     data = dat)
 
-mfx <- marginaleffects(mod)
+mfx <- slopes(mod)
 expect_inherits(mfx, "marginaleffects")
 expect_true(nrow(mfx) > 0)

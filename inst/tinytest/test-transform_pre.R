@@ -1,7 +1,8 @@
 # TODO: CI: See comment in last test for how the intervals are back transformed
-source("helpers.R", local = TRUE)
-if (ON_CRAN) exit_file("on cran")
-requiet("modelsummary")
+source("helpers.R")
+using("marginaleffects")
+
+exit_if_not(requiet("modelsummary"))
 tol <- .0001
 
 
@@ -15,14 +16,14 @@ cmp2 <- comparisons(
     mod,
     variables = list(vs = 0:1))
 cmp2 <- tidy(cmp2)
-expect_equivalent(cmp1$comparison, cmp2$estimate)
+expect_equivalent(cmp1$estimate, cmp2$estimate)
 expect_equivalent(cmp1$std.error, cmp2$std.error)
 
 
 
 
 # error when function breaks or returns a bad vector
-requiet("survey")
+exit_if_not(requiet("survey"))
 data(nhanes, package = "survey")
 dat <- setNames(nhanes, tolower(names(nhanes)))
 dat$female <- dat$riagendr == 2
@@ -122,7 +123,7 @@ arr_r <- comparisons(
     mod,
     variables = "insurance",
     transform_pre = function(hi, lo) log(mean(hi) / mean(lo)))
-arr_r <- unlist(tidy(arr_r, transform_avg = exp)[, cols])
+arr_r <- unlist(tidy(arr_r, transform_post = exp)[, cols])
 expect_equivalent(arr_r, arr_s[c(1, 3, 4)], tolerance = tol)
 
 
@@ -138,16 +139,16 @@ expect_equivalent(length(unique(cmp$estimate)), nrow(cmp))
 
 
 
-# TODO: fix eps to make sure marginaleffects() and comparisons() give same result
-# transform_pre slope vs marginaleffects()
+# TODO: fix eps to make sure slopes() and comparisons() give same result
+# transform_pre slope vs slopes()
 mod <- glm(vs ~ mpg + hp, data = mtcars, family = binomial)
-mfx1 <- marginaleffects(mod)
+mfx1 <- slopes(mod)
 mfx2 <- comparisons(mod, transform_pre = "dydx")
-mfx3 <- marginaleffects(mod, eps = 1e-5)
+mfx3 <- slopes(mod, eps = 1e-5)
 mfx4 <- comparisons(mod, transform_pre = "dydx", eps = 1e-5)
-expect_equivalent(mfx1$dydx, mfx2$comparison)
+expect_equivalent(mfx1$estimate, mfx2$estimate)
 expect_equivalent(mfx1$std.error, mfx2$std.error)
-expect_equivalent(mfx3$dydx, mfx4$comparison)
+expect_equivalent(mfx3$estimate, mfx4$estimate)
 expect_equivalent(mfx3$std.error, mfx4$std.error)
 
 

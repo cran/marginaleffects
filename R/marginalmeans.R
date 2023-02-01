@@ -1,8 +1,10 @@
 #' Marginal Means
 #'
+#' @description
 #' Marginal means are adjusted predictions, averaged across a grid of categorical predictors,
 #' holding other numeric predictors at their means. To learn more, read the marginal means vignette, visit the
 #' package website, or scroll down this page for a full list of vignettes:
+#' 
 #' * <https://vincentarelbundock.github.io/marginaleffects/articles/marginalmeans.html>
 #' * <https://vincentarelbundock.github.io/marginaleffects/>
 #'
@@ -34,14 +36,9 @@
 #' * `FALSE` (default): Marginal means are computed for each predictor individually.
 #' * `TRUE`: Marginal means are computed for each combination of predictors specified in the `variables` argument.
 #' @param by Collapse marginal means into categories. Data frame with a `by` column of group labels, and merging columns shared by `newdata` or the data frame produced by calling the same function without the `by` argument.
-#' @inheritParams marginaleffects
+#' @inheritParams slopes
 #' @inheritParams predictions
 #' @inheritParams comparisons
-#' @section Vignettes and documentation:
-#'
-#' ```{r child = "vignettes/toc.Rmd"}
-#' ```
-#'
 #' @details
 #'   This function begins by calling the `predictions` function to obtain a
 #'   grid of predictors, and adjusted predictions for each cell. The grid
@@ -51,10 +48,10 @@
 #'   In the prediction grid, numeric variables are held at their means.
 #'
 #'   After constructing the grid and filling the grid with adjusted predictions,
-#'   `marginalmeans` computes marginal means for the variables listed in the
+#'   `marginal_means` computes marginal means for the variables listed in the
 #'   `variables` argument, by average across all categories in the grid.
 #'
-#'   `marginalmeans` can only compute standard errors for linear models, or for
+#'   `marginal_means` can only compute standard errors for linear models, or for
 #'   predictions on the link scale, that is, with the `type` argument set to
 #'   "link".
 #'
@@ -63,6 +60,7 @@
 #'   functionality: https://vincentarelbundock.github.io/marginaleffects/
 #'
 #' @template model_specific_arguments
+#' @template bayesian
 #'
 #' @return Data frame of marginal means with one row per variable-value
 #' combination.
@@ -77,7 +75,7 @@
 #' dat$am <- as.logical(dat$am)
 #' mod <- lm(mpg ~ carb + cyl + am, dat)
 #' 
-#' marginalmeans(
+#' marginal_means(
 #'   mod,
 #'   variables = "cyl")
 #' 
@@ -85,18 +83,18 @@
 #' by <- data.frame(
 #'   cyl = c(4, 6, 8),
 #'   by = c("4 & 6", "4 & 6", "8"))
-#' marginalmeans(mod,
+#' marginal_means(mod,
 #'   variables = "cyl",
 #'   by = by)
 #' 
 #' # pairwise differences between collapsed levels
-#' marginalmeans(mod,
+#' marginal_means(mod,
 #'   variables = "cyl",
 #'   by = by,
 #'   hypothesis = "pairwise")
 #' 
 #' # cross
-#' marginalmeans(mod,
+#' marginal_means(mod,
 #'   variables = c("cyl", "carb"),
 #'   cross = TRUE)
 #' 
@@ -117,15 +115,14 @@
 #' mod <- lm(mpg ~ hp + am + carb, data = dat)
 #'
 #' # Compute and summarize marginal means
-#' mm <- marginalmeans(mod)
-#' summary(mm)
+#' marginal_means(mod)
 #'
 #' # Contrast between marginal means (carb2 - carb1), or "is the 1st marginal means equal to the 2nd?"
 #' # see the vignette on "Hypothesis Tests and Custom Contrasts" on the `marginaleffects` website.
 #' lc <- c(-1, 1, 0, 0, 0, 0)
-#' marginalmeans(mod, variables = "carb", hypothesis = "b2 = b1")
+#' marginal_means(mod, variables = "carb", hypothesis = "b2 = b1")
 #'
-#' marginalmeans(mod, variables = "carb", hypothesis = lc)
+#' marginal_means(mod, variables = "carb", hypothesis = lc)
 #'
 #' # Multiple custom contrasts
 #' lc <- matrix(c(
@@ -134,20 +131,21 @@
 #'     ),
 #'   ncol = 2,
 #'   dimnames = list(NULL, c("A", "B")))
-#' marginalmeans(mod, variables = "carb", hypothesis = lc)
+#' marginal_means(mod, variables = "carb", hypothesis = lc)
 #' 
-marginalmeans <- function(model,
-                          variables = NULL,
-                          variables_grid = NULL,
-                          vcov = TRUE,
-                          conf_level = 0.95,
-                          type = NULL,
-                          transform_post = NULL,
-                          cross = FALSE,
-                          hypothesis = NULL,
-                          wts = "equal",
-                          by = NULL,
-                          ...) {
+marginal_means <- function(model,
+                           variables = NULL,
+                           variables_grid = NULL,
+                           vcov = TRUE,
+                           conf_level = 0.95,
+                           type = NULL,
+                           transform_post = NULL,
+                           cross = FALSE,
+                           hypothesis = NULL,
+                           df = Inf,
+                           wts = "equal",
+                           by = NULL,
+                           ...) {
 
 
     # if type is NULL, we backtransform if relevant
@@ -168,17 +166,24 @@ marginalmeans <- function(model,
         type <- sanitize_type(model = model, type = type, calling_function = "marginalmeans")
     }
 
-    modeldata <- newdata <- hush(insight::get_data(model))
+    modeldata <- newdata <- get_modeldata(model)
 
     transform_post <- sanitize_transform_post(transform_post)
     cross <- sanitize_cross(cross, variables, model)
     conf_level <- sanitize_conf_level(conf_level, ...)
-    hypothesis <- sanitize_hypothesis(hypothesis, ...)
     model <- sanitize_model(model, vcov = vcov, calling_function = "marginalmeans")
     checkmate::assert_choice(wts, choices = c("equal", "cells", "proportional"))
 
+    tmp <- sanitize_hypothesis(hypothesis, ...)
+    hypothesis <- tmp$hypothesis
+    hypothesis_null <- tmp$hypothesis_null
+
     # by: usual tests + only data frames
-    checkmate::assert_data_frame(by, null.ok = TRUE)
+    checkmate::assert(
+        checkmate::check_data_frame(by),
+        checkmate::check_false(by),
+        checkmate::check_null(by)
+    )
     sanity_by(by, newdata)
 
     # fancy vcov processing to allow strings like "HC3"
@@ -188,57 +193,44 @@ marginalmeans <- function(model,
     # sanity
     sanity_dots(model = model, ...)
     if (inherits(model, "brmsfit")) {
-        msg <- format_msg(
-        "`brmsfit` objects are yet not supported by the `marginalmeans` function.
-        Follow this link to track progress:
-
-        https://github.com/vincentarelbundock/marginaleffects/issues/137")
-        stop(msg, call. = FALSE)
+        insight::format_error(c(
+            "`brmsfit` objects are yet not supported by the `marginal_means` function.  Follow this link to track progress:",
+            "https://github.com/vincentarelbundock/marginaleffects/issues/137"))
     }
 
     checkmate::assert_character(variables, min.len = 1, null.ok = TRUE)
     if (!is.null(variables)) {
         bad <- setdiff(variables, colnames(newdata))
         if (length(bad) > 0) {
-            msg <- format_msg(
-            "Elements of the `variables` argument were not found as column names in the
-            data used to fit the model: %s")
-            msg <- sprintf(msg, paste(bad, collapse = ", "))
-            stop(msg, call. = FALSE)
+            msg <- sprintf(
+                "Elements of the `variables` argument were not found as column names in the data used to fit the model: %s",
+                paste(bad, collapse = ", "))
+            insight::format_error(msg)
         }
     }
     if (any(variables %in% insight::find_response(model))) {
-        stop("The `variables` vector cannot include the response.")
+        insight::format_error("The `variables` vector cannot include the response.")
     }
 
     checkmate::assert_character(variables_grid, min.len = 1, null.ok = TRUE)
     if (!is.null(variables_grid)) {
         bad <- setdiff(variables_grid, colnames(newdata))
         if (length(bad) > 0) {
-            msg <- format_msg(
-            "Elements of the `variables_grid` argument were not found as column names in
-            the data used to fit the model: %s")
-            msg <- sprintf(msg, paste(bad, collapse = ", "))
-            stop(msg, call. = FALSE)
+            msg <- sprintf(
+                "Elements of the `variables_grid` argument were not found as column names in the data used to fit the model: %s",
+                paste(bad, collapse = ", "))
+            insight::format_error(msg)
         }
     }
 
-
     # categorical variables, excluding response
-    variables_categorical <- find_categorical(newdata = newdata, model = model)
-    variables_categorical <- unique(variables_categorical)
-    idx <- !grepl("as\\.logical", variables_categorical)
-    variables_categorical <- variables_categorical[idx]
+    variables_categorical <- insight::find_variables(model, flatten = TRUE)
+    idx <- sapply(variables_categorical, function(x) get_variable_class(newdata, x, "categorical"))
     variables_categorical <- setdiff(
-        variables_categorical,
+        unique(variables_categorical[idx]),
         insight::find_response(model, flatten = TRUE))
     if (length(variables_categorical) == 0) {
-        msg <- format_msg(
-        "No logical, factor, or character variable was found in the dataset used to fit
-        the `model` object. This error is often raised when users convert variables to
-        factor in the model formula (e.g., `lm(y ~ factor(x)`). If this is the case,
-        you may consider converting variables in the dataset before fitting the model.")
-        stop(msg, call. = FALSE)
+        msg <- insight::format_error("No logical, factor, or character variable was found in the dataset used to fit the `model` object. This error is often raised when users convert variables to factor in the model formula (e.g., `lm(y ~ factor(x)`). If this is the case, you may consider converting variables in the dataset before fitting the model.")
     }
 
     # subset variables and grid
@@ -256,11 +248,12 @@ marginalmeans <- function(model,
 
     variables_grid <- unique(c(variables, variables_grid))
 
-    if (!is.null(by)) {
+    if (isTRUE(checkmate::check_character(by))) {
         if (!all(by %in% variables_grid)) {
-            msg <- format_msg(sprintf(
-            "Elements of `by` must be part of: %s",
-            paste(variables_grid, collapse = ", ")))
+            msg <- sprintf(
+                "All elements of `by` must be part of: %s",
+                paste(variables_grid, collapse = ", "))
+            insight::format_warning(msg)
         }
         variables <- setdiff(variables, by)
     }
@@ -306,7 +299,7 @@ marginalmeans <- function(model,
             for (v in colnames(newgrid)) {
                 if (v %in% colnames(wtsgrid) && is.factor(newgrid[[v]])) {
                     wtsgrid[[v]] <- factor(wtsgrid[[v]], levels = levels(newgrid[[v]]))
-                }
+                 }
             }
             wtsgrid <- unique(wtsgrid)
             newgrid <- merge(newgrid, wtsgrid, all.x = TRUE)
@@ -315,23 +308,26 @@ marginalmeans <- function(model,
         }
     }
 
-    mm <- get_marginalmeans(model = model,
-                            newdata = newgrid,
-                            type = type,
-                            variables = variables,
-                            cross = cross,
-                            hypothesis = hypothesis,
-                            by = by,
-                            modeldata = modeldata,
-                            ...)
+    # `equivalence` should not be passed to predictions() at this stage
+    args <- list(
+        model = model,
+        newdata = newgrid,
+        type = type,
+        variables = variables,
+        cross = cross,
+        hypothesis = hypothesis,
+        by = by,
+        modeldata = modeldata)
+    args <- c(args, list(...))
+    args[["equivalence"]] <- NULL
+    mm <- do.call(get_marginalmeans, args)
 
     # we want consistent output, regardless of whether `data.table` is installed/used or not
     out <- as.data.frame(mm)
 
     # standard errors via delta method
-    J <- NULL
     if (!vcov_false) {
-        se <- get_se_delta(
+        args <- list(
             model,
             vcov = vcov,
             type = type,
@@ -342,11 +338,16 @@ marginalmeans <- function(model,
             cross = cross,
             modeldata = modeldata,
             hypothesis = hypothesis,
-            by = by,
-            ...)
+            by = by)
+        args <- c(args, list(...))
+        args[["equivalence"]] <- NULL
+        se <- do.call(get_se_delta, args)
+
         # get rid of attributes in column
         out[["std.error"]] <- as.numeric(se)
         J <- attr(se, "jacobian")
+    } else {
+        J <- NULL
     }
 
     lin <- tryCatch(insight::model_info(model)$is_linear, error = function(e) FALSE)
@@ -355,17 +356,20 @@ marginalmeans <- function(model,
             out,
             conf_level = conf_level,
             vcov = vcov,
-            overwrite = FALSE,
-            estimate = "marginalmean",
+            null_hypothesis = hypothesis_null,
+            df = df,
+            model = model,
             ...)
     }
+
+    # equivalence tests
+    out <- equivalence(out, df = df, ...)
 
     # after assign draws
     out <- backtransform(out, transform_post)
 
     # column order
-    cols <- c("type", "group", colnames(by), "term", "hypothesis", "value", variables, "marginalmean",
-              "std.error", "conf.low", "conf.high", sort(colnames(out)))
+    cols <- c("rowid", "type", "group", colnames(by), "term", "hypothesis", "value", variables, "estimate", "std.error", "statistic", "p.value", "conf.low", "conf.high", sort(colnames(out)))
     cols <- unique(cols)
     cols <- intersect(cols, colnames(out))
     out <- out[, cols, drop = FALSE]
@@ -378,6 +382,7 @@ marginalmeans <- function(model,
     attr(out, "model_type") <- class(model)[1]
     attr(out, "variables") <- variables
     attr(out, "call") <- match.call()
+    attr(out, "conf_level") <- conf_level
     attr(out, "transform_post_label") <- names(transform_post)[1]
 
     if (isTRUE(cross)) {
@@ -395,7 +400,7 @@ marginalmeans <- function(model,
 }
 
 
-#' Workhorse function for `marginalmeans`
+#' Workhorse function for `marginal_means`
 #'
 #' Needs to be separate because we also need it in `delta_method`
 #' @inheritParams marginalmeans
@@ -412,58 +417,97 @@ get_marginalmeans <- function(model,
                               by = NULL,
                               ...) {
 
+    if ("wts" %in% colnames(newdata)) {
+        wts <- "wts"
+    } else {
+        wts <- NULL
+    }
 
     # predictions for each cell of all categorical data, but not the response
-    pred <- predictions(
-        model = model,
-        newdata = newdata,
-        type = type,
-        vcov = FALSE,
-        modeldata = modeldata,
-        ...)
+    if (isTRUE(cross) || length(variables) == 1) {
+        out <- predictions(
+            model = model,
+            newdata = newdata,
+            type = type,
+            vcov = FALSE,
+            modeldata = modeldata,
+            wts = wts,
+            by = c("group", variables),
+            ...)
+        if (length(variables) == 1) {
+            out$term <- variables
+            out$value <- out[[variables]]
+        }
+
+    # predictions for each variable individual, then bind
+    } else {
+        pred_list <- draw_list <- list()
+        for (v in variables) {
+            tmp <- predictions(
+                model = model,
+                newdata = newdata,
+                type = type,
+                vcov = FALSE,
+                modeldata = modeldata,
+                wts = wts,
+                by = c("group", v),
+                ...)
+            draw_list[[v]] <- attr(tmp, "posterior_draws")
+            tmp$term <- v
+            data.table::setnames(tmp, old = v, new = "value")
+            pred_list[[v]] <- tmp
+        }
+        # try to preserve term-value class, but convert to character if needed to bind
+        classes <- sapply(pred_list, function(x) class(x$value)[1])
+        if (length(unique(classes)) > 1) {
+            for (i in seq_along(pred_list)) {
+                pred_list[[i]]$value <- as.character(pred_list[[i]]$value)
+            }
+        }
+        out <- rbindlist(pred_list)
+        data.table::setorderv(out, c("term", "value"))
+    }
+
+    data.table::setDT(out)
+    keys <- intersect(colnames(out), c("term", "value", variables))
+    data.table::setorderv(out, keys)
 
     if (isTRUE(checkmate::check_data_frame(by))) {
         # warnings for factor vs numeric vs character. merge.data.table usually still works.
-        pred <- suppressWarnings(merge(pred, by))
-    }
-
-    # marginal means
-    if (!isTRUE(cross)) {
-        mm <- list()
-        for (v in variables) {
-            idx <- intersect(colnames(pred), c("term", "group", "by", v))
-            tmp <- data.table(pred)[
-                , .(marginalmean = stats::weighted.mean(predicted, w = wts, na.rm = TRUE)),
-                by = idx]
-            tmp[, "term" := v]
-            setnames(tmp, old = v, new = "value")
-            mm[[v]] <- tmp
+        bycols <- intersect(colnames(out), colnames(by))
+        if (length(bycols) == 0) {
+            msg <- "There is no common columns in `by` and in the output of `marginal_means()`. Make sure one of the entries in the `variables` argument corresponds to one of the columns in `by`."
+            insight::format_error(msg)
         }
-
-        # try to preserve term-value class, but convert to character if needed to bind
-        classes <- sapply(mm, function(x) class(x$value)[1])
-        if (length(unique(classes)) > 1) {
-            for (i in seq_along(mm)) {
-                mm[[i]]$value <- as.character(mm[[i]]$value)
+        for (b in bycols) {
+            if (is.factor(out[[b]]) && is.numeric(by[[b]])) {
+                out[[b]] <- as.numeric(as.character(out[[b]]))
+            } else if (is.numeric(out[[b]]) && is.factor(by[[b]])) {
+                by[[b]] <- as.numeric(as.character(by[[b]]))
+            } else if (is.factor(out[[b]]) && is.character(by[[b]])) {
+                out[[b]] <- as.character(out[[b]])
+            } else if (is.character(out[[b]]) && is.factor(by[[b]])) {
+                by[[b]] <- as.character(by[[b]])
             }
         }
-        out <- rbindlist(mm)
-        setorder(out, "term", "value")
-    } else {
-        idx <- intersect(colnames(pred), c("term", "group", "by", variables))
-
-        out <- data.table(pred)[
-            , .(marginalmean = stats::weighted.mean(predicted, w = wts, na.rm = TRUE)),
-            by = idx]
-    }
-
-    if (isTRUE(checkmate::check_data_frame(by))) {
-        out <- out[, .(marginalmean = mean(marginalmean)), by = "by"]
+        out <- merge(out, by)
+        out <- out[, .(estimate = mean(estimate)), by = "by"]
     }
 
     if (!is.null(hypothesis)) {
-        out <- get_hypothesis(out, hypothesis, column = "marginalmean", by = by)
+        out <- get_hypothesis(out, hypothesis, by = by)
     }
 
     return(out)
 }
+
+
+
+#' `marginal_means()` is an alias to `marginal_means()`
+#' 
+#' This alias is kept for backward compatibility and because some users may prefer that name.
+#'
+#' @inherit marginal_means
+#' @keywords internal
+#' @export
+marginalmeans <- marginal_means

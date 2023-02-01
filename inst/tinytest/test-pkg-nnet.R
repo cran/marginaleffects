@@ -1,6 +1,8 @@
-source("helpers.R", local = TRUE)
-if (ON_CRAN) exit_file("on cran")
-requiet("nnet")
+source("helpers.R")
+exit_if_not(!ON_CI)
+using("marginaleffects")
+
+exit_if_not(requiet("nnet"))
 
 # multinom group estimates
 TitanicSurvival <- "https://vincentarelbundock.github.io/Rdatasets/csv/carData/TitanicSurvival.csv"
@@ -12,7 +14,7 @@ TitanicSurvival$age3 <- cut(
     dig.lab = 4,
     breaks = c(0, 25, 50, 80))
 m1 <- nnet::multinom(passengerClass ~ sex * age3, data = TitanicSurvival, trace = FALSE)
-mfx <- marginaleffects(
+mfx <- slopes(
     m1,
     type = "probs",
     variables = "sex",
@@ -26,7 +28,7 @@ dat <- read.csv(testing_path("stata/databases/MASS_polr_01.csv"))
 void <- capture.output(
     mod <- nnet::multinom(factor(y) ~ x1 + x2, data = dat, quiet = true)
 )
-expect_marginaleffects(mod, type = "probs")
+expect_slopes(mod, type = "probs")
 
 
 # marginaleffects summary
@@ -34,7 +36,7 @@ dat <- read.csv(testing_path("stata/databases/MASS_polr_01.csv"))
 void <- capture.output(
     mod <- nnet::multinom(factor(y) ~ x1 + x2, data = dat, quiet = true)
 )
-mfx <- marginaleffects(mod, type = "probs")
+mfx <- slopes(mod, type = "probs")
 s <- tidy(mfx)
 expect_false(anyNA(s$estimate))
 expect_false(anyNA(s$std.error))
@@ -47,7 +49,7 @@ dat$y <- as.factor(dat$y)
 void <- capture.output(
     mod <- nnet::multinom(y ~ x1 + x2, data = dat, quiet = true)
 )
-mfx <- marginaleffects(mod, type = "probs")
+mfx <- slopes(mod, type = "probs")
 mfx <- merge(tidy(mfx), stata, all = TRUE)
 mfx <- na.omit(mfx)
 expect_true(nrow(mfx) == 6) # na.omit doesn't trash everything
@@ -75,10 +77,10 @@ dat <- read.csv(testing_path("stata/databases/MASS_polr_01.csv"))
 void <- capture.output(
     mod <- nnet::multinom(factor(y) ~ x1 + x2, data = dat, quiet = true)
 )
-mfx <- marginaleffects(mod, variables = "x1", newdata = datagrid(), type = "probs")
+mfx <- slopes(mod, variables = "x1", newdata = datagrid(), type = "probs")
 expect_inherits(mfx, "data.frame")
 expect_equivalent(nrow(mfx), 4)
-mfx <- marginaleffects(mod, newdata = datagrid(), type = "probs")
+mfx <- slopes(mod, newdata = datagrid(), type = "probs")
 expect_inherits(mfx, "data.frame")
 expect_equivalent(nrow(mfx), 8)
 
@@ -101,8 +103,8 @@ void <- capture.output({
 
 # class outcome not supported
 expect_error(predictions(m1, type = "class"), pattern = "type")
-expect_error(marginalmeans(m1, type = "class"), pattern = "type")
-expect_error(marginaleffects(m1, type = "class"), pattern = "type")
+expect_error(marginal_means(m1, type = "class"), pattern = "type")
+expect_error(slopes(m1, type = "class"), pattern = "type")
 
 # small predictions
 pred1 <- predictions(m1, type = "probs")
@@ -129,7 +131,7 @@ dat <- data.frame(
 void <- capture.output(
     model <- nnet::multinom(y ~ x + z1 + z2, data = dat, verbose = FALSE, hessian = TRUE)
 )
-mfx <- marginaleffects(model, type = "probs")
+mfx <- slopes(model, type = "probs")
 expect_inherits(mfx, "marginaleffects")
 
 
@@ -165,5 +167,5 @@ p3 <- predictions(mod, newdata = "mean", byfun = mean, by = by)
 expect_equivalent(nrow(p1), 3)
 expect_equivalent(nrow(p2), 2)
 expect_equivalent(nrow(p3), 2)
-expect_equivalent(sum(p1$predicted[1:2]), p2$predicted[1])
-expect_equivalent(mean(p1$predicted[1:2]), p3$predicted[1])
+expect_equivalent(sum(p1$estimate[1:2]), p2$estimate[1])
+expect_equivalent(mean(p1$estimate[1:2]), p3$estimate[1])

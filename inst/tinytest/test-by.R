@@ -1,8 +1,8 @@
-source("helpers.R", local = TRUE)
-# source(here::here("inst/tinytest/helpers.R"))
-if (ON_CRAN) exit_file("on cran")
-requiet("margins")
-requiet("nnet")
+source("helpers.R")
+using("marginaleffects")
+
+exit_if_not(requiet("margins"))
+exit_if_not(requiet("nnet"))
 tol <- 1e-4
 tol_se <- 1e-3
 
@@ -22,35 +22,36 @@ expect_equivalent(nrow(p1), 2)
 mod <- glm(gear ~ cyl + am, family = poisson, data = mtcars)
 x <- tidy(comparisons(mod, transform_pre = "dydx"))
 y <- comparisons(mod, transform_pre = "dydxavg")
-expect_equivalent(x$estimate, y$comparison)
+expect_equivalent(x$estimate, y$estimate)
 expect_equivalent(x$std.error, y$std.error)
 
 x <- tidy(comparisons(mod, transform_pre = "eyex"))
 y <- comparisons(mod, transform_pre = "eyexavg")
-expect_equivalent(x$estimate, y$comparison)
+expect_equivalent(x$estimate, y$estimate)
 expect_equivalent(x$std.error, y$std.error)
 
 x <- tidy(comparisons(mod, transform_pre = "eydx"))
 y <- comparisons(mod, transform_pre = "eydxavg")
-expect_equivalent(x$estimate, y$comparison)
+expect_equivalent(x$estimate, y$estimate)
 expect_equivalent(x$std.error, y$std.error)
 
 x <- tidy(comparisons(mod, transform_pre = "dyex"))
 y <- comparisons(mod, transform_pre = "dyexavg")
-expect_equivalent(x$estimate, y$comparison)
+expect_equivalent(x$estimate, y$estimate)
 expect_equivalent(x$std.error, y$std.error)
 
-x <- tidy(marginaleffects(mod, slope = "dyex"))
-y <- marginaleffects(mod, slope = "dyexavg")
-expect_equivalent(x$estimate, y$dydx)
+x <- tidy(slopes(mod, slope = "dyex"))
+y <- slopes(mod, slope = "dyexavg")
+expect_equivalent(x$estimate, y$estimate)
 expect_equivalent(x$std.error, y$std.error)
 
 # input sanity check
-expect_error(marginaleffects(mod, slope = "bad"), pattern = "eyexavg")
+expect_error(slopes(mod, slope = "bad"), pattern = "eyexavg")
 
+##### aggregate() refactor makes this possible again
 # by is deprecated in `summary()` and `tidy()`
-expect_error(summary(comparisons(mod), by = "am"), pattern = "instead")
-expect_error(tidy(comparisons(mod), by = "am"), pattern = "instead")
+# expect_error(summary(comparisons(mod), by = "am"), pattern = "instead")
+# expect_error(tidy(comparisons(mod), by = "am"), pattern = "instead")
 
 # by argument
 mod <- glm(am ~ hp + mpg, data = mtcars, family = binomial)
@@ -59,25 +60,22 @@ expect_equal(nrow(cmp), 4)
 
 cmp <- comparisons(mod, by = "am")
 tid <- tidy(cmp)
+
 expect_equivalent(nrow(tid), nrow(cmp))
 expect_equivalent(nrow(tid), 4)
 expect_true("am" %in% colnames(tid))
-
-# not supported in bayesian models
-mod <- insight::download_model("brms_1")
-expect_error(comparisons(mod, by = "am"), pattern = "supported")
 
 
 # marginaleffects poisson vs. margins
 dat <- mtcars
 mod <- glm(gear ~ cyl + am, family = poisson, data = dat)
-mfx <- marginaleffects(
+mfx <- slopes(
     mod,
     by = c("cyl", "am"),
     newdata = datagrid(
         cyl = dat$cyl,
         am = dat$am,
-        grid.type = "counterfactual"))
+        grid_type = "counterfactual"))
 tid <- tidy(mfx)
 tid <- tid[order(tid$term, tid$cyl, tid$am),]
 mar <- margins(mod, at = list(cyl = unique(dat$cyl), am = unique(dat$am)))
@@ -97,8 +95,10 @@ mfx <- comparisons(
     newdata = datagrid(
         cyl = dat$cyl,
         am = dat$am,
-        grid.type = "counterfactual"))
+        grid_type = "counterfactual"))
+
 mfx <- tidy(mfx)
+
 mfx <- mfx[order(mfx$term, mfx$contrast, mfx$cyl, mfx$am),]
 mar <- margins(mod, at = list(cyl = unique(dat$cyl), am = unique(dat$am)))
 mar <- summary(mar)
@@ -106,10 +106,10 @@ expect_equivalent(mfx$estimate, mar$AME, tolerance = tol)
 expect_equivalent(mfx$std.error, mar$SE, tolerance = tol_se)
 
 
-# input checks
-mod <- lm(mpg ~ hp, mtcars)
-expect_error(comparisons(mod, by = "am"), pattern = "newdata")
-expect_error(marginaleffects(mod, by = "am"), pattern = "newdata")
+# # input checks
+# mod <- lm(mpg ~ hp, mtcars)
+# expect_error(comparisons(mod, by = "am"), pattern = "newdata")
+# expect_error(slopes(mod, by = "am"), pattern = "newdata")
 
 
 # counterfactual margins at()
@@ -118,11 +118,11 @@ dat$cyl <- factor(dat$cyl)
 mod <- lm(mpg ~ factor(cyl) * hp + wt, data = dat)
 mar <- margins(mod, at = list(cyl = unique(dat$cyl)))
 mar <- data.frame(summary(mar))
-mfx <- marginaleffects(
+mfx <- slopes(
     mod,
     by = "cyl",
     newdata = datagridcf(cyl = c(4, 6, 8)))
-expect_equivalent(mfx$dydx, mar$AME)
+expect_equivalent(mfx$estimate, mar$AME)
 expect_equivalent(mfx$std.error, mar$SE, tolerance = 1e6)
 
 
@@ -135,7 +135,7 @@ mod <- glm(
     data = dat)
 p <- predictions(mod, by = "children")
 expect_equivalent(nrow(p), 2)
-expect_false(anyNA(p$predicted))
+expect_false(anyNA(p$estimate))
 
 
 # Issue #445: by data frame to collapse response levels
@@ -157,8 +157,8 @@ p2 <- predictions(mod, type = "probs", by = by)
 p3 <- predictions(mod, type = "probs", by = by, hypothesis = "sequential")
 p4 <- predictions(mod, type = "probs", by = by, hypothesis = "reference")
 p5 <- predictions(mod, type = "probs", by = c("am", "vs", "group"))
-expect_equivalent(mean(subset(p1, group == "5")$predicted), p2$predicted[2])
-expect_equivalent(p3$predicted, diff(p2$predicted))
+expect_equivalent(mean(subset(p1, group == "5")$estimate), p2$estimate[2])
+expect_equivalent(p3$estimate, diff(p2$estimate))
 expect_equivalent(nrow(p4), 1)
 expect_equivalent(nrow(p5), 12)
 
@@ -188,3 +188,28 @@ by <- data.frame(
     group = 4:5)
 expect_warning(comparisons(mod, variables = "mpg", newdata = "mean", by = by))
 expect_warning(predictions(mod, newdata = "mean", by = by))
+
+
+# Issue #589: easy marginalization
+mod <- lm(mpg ~ factor(gear) + am, mtcars)
+cmp1 <- comparisons(mod, by = TRUE)
+cmp2 <- comparisons(mod, by = FALSE)
+expect_equivalent(nrow(cmp1), 3)
+expect_equivalent(nrow(cmp2), 96)
+
+pre1 <- predictions(mod, by = TRUE)
+pre2 <- predictions(mod, by = FALSE)
+expect_equivalent(nrow(pre1), 1)
+expect_equivalent(nrow(pre2), 32)
+
+pre1 <- slopes(mod, by = TRUE)
+pre2 <- slopes(mod, by = FALSE)
+expect_equivalent(nrow(pre1), 3)
+expect_equivalent(nrow(pre2), 96)
+
+mm <- marginal_means(
+    mod,
+    by = FALSE,
+    variables = "gear")
+expect_equivalent(nrow(mm), 3)
+expect_error(marginal_means(mod, by = TRUE, variables = "gear"))

@@ -48,7 +48,7 @@ package. See the "Model-Specific Arguments" section of the
 arguments.}
 
 \item{type}{string indicates the type (scale) of the predictions used to
-compute marginal effects or contrasts. This can differ based on the model
+compute contrasts or slopes. This can differ based on the model
 type, but will typically be a string such as: "response", "link", "probs",
 or "zero". When an unsupported string is entered, the model-specific list of
 acceptable values is returned in an error message. When \code{type} is \code{NULL}, the

@@ -8,6 +8,8 @@ sanitize_newdata <- function(model, newdata, by = NULL, modeldata = NULL) {
     # to respect the `by` argument, we need all values to be preserved
     if (isTRUE(checkmate::check_data_frame(by))) {
         by <- setdiff(colnames(by), "by")
+    } else if (isTRUE(checkmate::check_flag(by))) {
+        by <- NULL
     }
     args <- list(model = model)
     for (b in by) {
@@ -16,7 +18,7 @@ sanitize_newdata <- function(model, newdata, by = NULL, modeldata = NULL) {
 
     # we always need this to extract attributes
     if (is.null(modeldata)) {
-        modeldata <- hush(insight::get_data(model))
+        modeldata <- get_modeldata(model)
         # cannot extract data on unsupported custom models (e.g., numpyro)
         if (is.null(modeldata)) {
             modeldata <- newdata
@@ -30,32 +32,34 @@ sanitize_newdata <- function(model, newdata, by = NULL, modeldata = NULL) {
         newdata <- do.call("datagrid", args)
 
     } else if (identical(newdata, "median")) {
-        args[["FUN.numeric"]] <- function(x) stats::median(x, na.rm = TRUE)
+        args[["FUN_numeric"]] <- function(x) stats::median(x, na.rm = TRUE)
         newdata <- do.call("datagrid", args)
 
     } else if (identical(newdata, "tukey")) {
-        args[["FUN.numeric"]] <- function(x) stats::fivenum(x, na.rm = TRUE)
+        args[["FUN_numeric"]] <- function(x) stats::fivenum(x, na.rm = TRUE)
         newdata <- do.call("datagrid", args)
 
     } else if (identical(newdata, "grid")) {
-        args[["FUN.numeric"]] <- function(x) stats::fivenum(x, na.rm = TRUE)
-        args[["FUN.factor"]] <- args[["FUN.character"]] <- args[["FUN.logical"]] <- unique
+        args[["FUN_numeric"]] <- function(x) stats::fivenum(x, na.rm = TRUE)
+        args[["FUN_factor"]] <- args[["FUN_character"]] <- args[["FUN_logical"]] <- unique
         newdata <- do.call("datagrid", args)
 
     # grid with all unique values of categorical variables, and numerics at their means
     } else if (identical(newdata, "marginalmeans")) {
-        args[["FUN.factor"]] <- args[["FUN.character"]] <- args[["FUN.logical"]] <- unique
+        args[["FUN_factor"]] <- args[["FUN_character"]] <- args[["FUN_logical"]] <- unique
         newdata <- do.call("datagrid", args)
+        # Issue #580: outcome should not duplicate grid rows
+        dv <- hush(insight::find_response(model))
+        if (isTRUE(dv %in% colnames(newdata))) {
+            newdata[[dv]] <- get_mean_or_mode(newdata[[dv]])
+            newdata <- unique(newdata)
+        }
     }
 
     if (!inherits(newdata, "data.frame")) {
-        msg <- format_msg(
-        "Unable to extract the data from model of class `%s`. This can happen in a
-        variety of cases, such as when a `marginaleffects` package function is called
-        from inside a user-defined function. Please supply a data frame explicitly via
-        the `newdata` argument.")
+        msg <- "Unable to extract the data from model of class `%s`. This can happen in a variety of cases, such as when a `marginaleffects` package function is called from inside a user-defined function. Please supply a data frame explicitly via the `newdata` argument."
         msg <- sprintf(msg, class(model)[1])
-        stop(msg, call. = FALSE)
+        insight::format_error(msg)
     }
 
     # column subsets later and predict
@@ -65,7 +69,7 @@ sanitize_newdata <- function(model, newdata, by = NULL, modeldata = NULL) {
     mc <- Filter(function(x) is.matrix(modeldata[[x]]), colnames(modeldata))
     cl <- Filter(function(x) is.character(modeldata[[x]]), colnames(modeldata))
     cl <- lapply(modeldata[, cl], unique)
-    vc <- sapply(names(modeldata), find_variable_class, newdata = modeldata, model = model)
+    vc <- attributes(modeldata)$marginaleffects_variable_class
     column_attributes <- list(
         "matrix_columns" = mc,
         "character_levels" = cl,
@@ -73,7 +77,7 @@ sanitize_newdata <- function(model, newdata, by = NULL, modeldata = NULL) {
 
     # {modelbased} sometimes attaches useful attributes
     exclude <- c("class", "row.names", "names", "data", "reference")
-    modelbased_attributes <- get_attributes(newdata, exclude = exclude)
+    modelbased_attributes <- get_marginaleffects_attributes(newdata, exclude = exclude)
 
     # required for the type of column indexing to follow
     data.table::setDF(newdata)
@@ -100,7 +104,7 @@ sanitize_newdata <- function(model, newdata, by = NULL, modeldata = NULL) {
 
     # if there are no categorical variables in `newdata`, check the model terms
     # to find transformation and warn accordingly.
-    categorical_variables <- find_categorical(newdata = newdata, model = model)
+    categorical_variables <- get_variable_class(newdata, compare = "categorical")
     flag <- FALSE
     if (length(categorical_variables) == 0) {
         termlabs <- try(attr(stats::terms(model), "term.labels"), silent = TRUE)
@@ -111,8 +115,8 @@ sanitize_newdata <- function(model, newdata, by = NULL, modeldata = NULL) {
     }
 
     # attributes
-    newdata <- set_attributes(newdata, modelbased_attributes, prefix = "newdata_")
-    newdata <- set_attributes(newdata, column_attributes, prefix = "newdata_")
+    newdata <- set_marginaleffects_attributes(newdata, modelbased_attributes, prefix = "newdata_")
+    newdata <- set_marginaleffects_attributes(newdata, column_attributes, prefix = "newdata_")
     attr(newdata, "newdata_modeldata") <- modeldata
 
     # we will need this to merge the original data back in, and it is better to
@@ -125,11 +129,15 @@ sanitize_newdata <- function(model, newdata, by = NULL, modeldata = NULL) {
     resp <- insight::find_response(model)
     if (isTRUE(checkmate::check_character(resp, len = 1)) &&
         !resp %in% colnames(newdata)) {
-        y <- insight::get_response(model)
+        y <- hush(insight::get_response(model))
         # protect df or matrix response
         if (isTRUE(checkmate::check_atomic_vector(y))) {
             newdata[[resp]] <- y[1]
         }
+    }
+
+    if (is.null(attr(newdata, "marginaleffects_variable_class"))) {
+        newdata <- set_variable_class(newdata, model = model)
     }
 
     return(newdata)

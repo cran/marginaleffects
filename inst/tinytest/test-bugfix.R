@@ -1,5 +1,6 @@
-source("helpers.R", local = TRUE)
-if (ON_CRAN) exit_file("on cran")
+source("helpers.R")
+using("marginaleffects")
+
 
 # Bug stay dead: Issue 55
 # Error: Argument 1 must have names.
@@ -8,7 +9,7 @@ dat <- read.csv("https://vincentarelbundock.github.io/Rdatasets/csv/palmerpengui
 dat$large_penguin <- ifelse(dat$body_mass_g > median(dat$body_mass_g, na.rm = TRUE), 1, 0)
 mod <- glm(large_penguin ~ bill_length_mm + flipper_length_mm + species, 
        data = dat, family = binomial)
-mfx <- marginaleffects(mod, variables = "species")
+mfx <- slopes(mod, variables = "species")
 expect_inherits(mfx, "data.frame")
 expect_true(nrow(mfx) > 0)
 expect_true(ncol(mfx) > 0)
@@ -23,8 +24,8 @@ f <- wt82_71 ~ qsmk + sex + race + age + I(age*age) + factor(education) +
 
 fit <- glm(f, data = nhefs)
 pre <- predictions(fit, newdata = nhefs)
+mfx <- slopes(fit, newdata = nhefs)
 cmp <- comparisons(fit, newdata = nhefs)
-mfx <- marginaleffects(fit, newdata = nhefs)
 expect_inherits(pre, "predictions")
 expect_inherits(cmp, "comparisons")
 expect_inherits(mfx, "marginaleffects")
@@ -35,8 +36,46 @@ expect_inherits(mfx, "marginaleffects")
 dat <- mtcars
 dat$group <- dat$am
 mod <- lm(mpg ~ group, data = dat)
-expect_warning(comparisons(mod), pattern = "forbidden")
-expect_error(suppressWarnings(comparisons(mod)), pattern = "change")
+expect_error(comparisons(mod), pattern = "forbidden")
 mod <- lm(mpg ~ group + hp, data = dat)
-expect_warning(comparisons(mod), pattern = "forbidden")
-expect_equivalent(nrow(suppressWarnings(comparisons(mod))), 32)
+expect_error(comparisons(mod), pattern = "forbidden")
+
+
+
+exit_if_not(packageVersion("insight") > "0.18.8")
+exit_file("works interactively")
+
+# Issue #556
+set.seed(12345)
+n = 500
+x = sample(1:3, n, replace = TRUE)
+y = rnorm(n)
+z = ifelse(x + y + rlogis(n) > 1.5, 1, 0)
+dat = data.frame(x = factor(x), y = y, z = z)
+dat <- dat
+
+m1 = glm(z ~ x + y, family = binomial, data = dat)
+nd <- datagrid(model = m1, y = seq(-2.5, 2.5, by = 0.25))
+p1 <- predictions(m1, newdata = nd, type = "link")
+p2 <- as.data.frame(predict(m1, newdata = nd, se.fit = TRUE))
+
+expect_equal(p1$estimate, p2$fit)
+expect_equal(p1$std.error, p2$se.fit)
+
+set.seed(12345)
+n = 60
+x = sample(1:3, n, replace = TRUE)
+z = ifelse(x + rlogis(n) > 1.5, 1, 0)
+dat = data.frame(x = factor(x), z = z)
+dat <- dat
+
+m2 = glm(z ~ I(x==2) + I(x==3), family = binomial, data = dat)
+
+p1 <- predictions(m2, type = "link")
+p2 <- predictions(m2, newdata = dat, type = "link")
+p3 <- as.data.frame(predict(m2, se.fit = TRUE, type = "link"))
+
+expect_equal(p1$estimate, p3$fit)
+expect_equal(p1$std.error, p3$se.fit)
+expect_equal(p2$estimate, p3$fit)
+expect_equal(p2$std.error, p3$se.fit)

@@ -1,5 +1,6 @@
 source("helpers.R")
-requiet("ggplot2")
+using("marginaleffects")
+exit_if_not(requiet("ggplot2"))
 
 data("diamonds", package = "ggplot2")
 dat <- diamonds[1:1000, ]
@@ -28,22 +29,6 @@ expect_equivalent(n_unique, 4)
 
 
 mod <- lm(mpg ~ hp * drat, mtcars)
-dm <- deltamethod(mod, "`hp:drat` = drat")
-expect_inherits(dm, "deltamethod")
+dm <- hypotheses(mod, "`hp:drat` = drat")
+expect_inherits(dm, "hypotheses")
 expect_equivalent(nrow(dm), 1)
-
-
-
-# library(brms)
-# dat <- mtcars
-# dat$gear <- factor(dat$gear)
-# mod <- lm(mpg ~ hp + gear, data = dat)
-# modb <- brm(mpg ~ hp + gear, data = dat)
-
-
-
-# Q
-# pkgload::load_all()
-# marginaleffects(modb, slope = "eyex") |> summary()
-# marginaleffects(mod, slope = "eyex") |> summary()
-

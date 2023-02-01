@@ -7,7 +7,7 @@ get_predict.fixest <- function(model,
                                type = "response",
                                ...) {
 
-    assert_dependency("fixest")
+    insight::check_if_installed("fixest")
 
     # names = base, value = insight
     type <- unname(sanitize_type(model, type))
@@ -94,7 +94,7 @@ get_predict.fixest <- function(model,
                 out$rowid <- seq_len(nrow(newdata))
             }
         }
-        colnames(out)[colnames(out) == "fit"] <- "predicted"
+        colnames(out)[colnames(out) == "fit"] <- "estimate"
         colnames(out)[colnames(out) == "se.fit"] <- "std.error"
         colnames(out)[colnames(out) == "ci_low"] <- "conf.low"
         colnames(out)[colnames(out) == "ci_high"] <- "conf.high"
@@ -102,21 +102,18 @@ get_predict.fixest <- function(model,
         if ("rowid" %in% colnames(newdata)) {
             out <- data.frame(
                 rowid = newdata$rowid,
-                predicted = as.numeric(pred))
+                estimate = as.numeric(pred))
         } else {
             out <- data.frame(
                 rowid = 1:nrow(newdata),
-                predicted = as.numeric(pred))
+                estimate = as.numeric(pred))
         }
     } else {
         if (inherits(pred, "try-error")) {
             stop(as.character(pred), call. = FALSE)
         }
-        msg <- format_msg(
-        "Unable to extract predictions from a model of type `fixest`. Please
-        report this problem, along with replicable code, on the `marginaleffects` issue tracker:
-        https://github.com/vincentarelbundock/marginaleffects/issues")
-        stop(msg, call. = FALSE)
+        msg <- "Unable to extract predictions from a model of type `fixest`. Please report this problem, along with replicable code, on the `marginaleffects` issue tracker: https://github.com/vincentarelbundock/marginaleffects/issues"
+        insight::format_error(msg)
     }
 
     return(out)

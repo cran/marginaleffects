@@ -1,4 +1,10 @@
-#' Generate a data grid of "typical," "counterfactual," or user-specified values for use in the `newdata` argument of the `marginaleffects` or `predictions` functions.
+#' Data grids
+#' 
+#' @description 
+#' Generate a data grid of user-specified values for use in the `newdata` argument of the `predictions()`, `comparisons()`, and `slopes()` functions. This is useful to define where in the predictor space we want to evaluate the quantities of interest. Ex: the predicted outcome or slope for a 37 year old college graduate.
+#'
+#' * `datagrid()` generates data frames with combinations of "typical" or user-supplied predictor values.
+#' * `datagridcf()` generates "counter-factual" data frames, by replicating the entire dataset once for every combination of predictor values supplied by the user.
 #'
 #' @param ... named arguments with vectors of values or functions for user-specified variables.
 #' + Functions are applied to the variable in the `model` dataset or `newdata`, and must return a vector of the appropriate type.
@@ -16,13 +22,9 @@
 #' @param FUN_numeric the function to be applied to numeric variables.
 #' @param FUN_other the function to be applied to other variable types.
 #' @details
-#' If `datagrid` is used in a `marginaleffects` or `predictions` call as the
-#' `newdata` argument, the model is automatically inserted in the function
-#' call, and users do not need to specify either the `model` or `newdata`
-#' arguments. Note that only the variables used to fit the models will be
-#' attached to the results. If a user wants to attach other variables as well
-#' (e.g., weights or grouping variables), they can supply a data.frame
-#' explicitly to the `newdata` argument inside `datagrid()`.
+#' If `datagrid` is used in a `predictions()`, `comparisons()`, or `slopes()` call as the
+#' `newdata` argument, the model is automatically inserted in the `model` argument of `datagrid()` 
+#' call, and users do not need to specify either the `model` or `newdata` arguments.
 #'
 #' If users supply a model, the data used to fit that model is retrieved using
 #' the `insight::get_data` function.
@@ -30,7 +32,6 @@
 #' A `data.frame` in which each row corresponds to one combination of the named
 #' predictors supplied by the user via the `...` dots. Variables which are not
 #' explicitly defined are held at their mean or mode.
-#' @family grid
 #' @export
 #' @examples
 #' # The output only has 2 rows, and all the variables except `hp` are at their
@@ -42,9 +43,9 @@
 #' datagrid(model = mod, hp = c(100, 110))
 #'
 #' # Use in `marginaleffects` to compute "Typical Marginal Effects". When used
-#' # in `marginaleffects()` or `predictions()` we do not need to specify the
+#' # in `slopes()` or `predictions()` we do not need to specify the
 #' #`model` or `newdata` arguments.
-#' marginaleffects(mod, newdata = datagrid(hp = c(100, 110)))
+#' slopes(mod, newdata = datagrid(hp = c(100, 110)))
 #'
 #' # datagrid accepts functions
 #' datagrid(hp = range, cyl = unique, newdata = mtcars)
@@ -65,25 +66,15 @@ datagrid <- function(
     model = NULL,
     newdata = NULL,
     grid_type = "typical",
-    FUN_character = Mode,
+    FUN_character = get_mode,
     # need to be explicit for numeric variables transfered to factor in model formula
-    FUN_factor = Mode,
-    FUN_logical = Mode,
+    FUN_factor = get_mode,
+    FUN_logical = get_mode,
     FUN_numeric = function(x) mean(x, na.rm = TRUE),
     FUN_integer = function(x) round(mean(x, na.rm = TRUE)),
     FUN_other = function(x) mean(x, na.rm = TRUE)) {
 
-
-    # backward compatibility
     dots <- list(...)
-    FUN_character <- arg_name_change(FUN_character, "FUN.character", dots)
-    FUN_factor <- arg_name_change(FUN_factor, "FUN.factor", dots)
-    FUN_logical <- arg_name_change(FUN_logical, "FUN.logical", dots)
-    FUN_numeric <- arg_name_change(FUN_numeric, "FUN.numeric", dots)
-    FUN_other <- arg_name_change(FUN_other, "FUN.other", dots)
-    grid_type <- arg_name_change(grid_type, "grid.type", dots)
-    idx <- !grepl("^FUN\\.|grid\\.type", names(dots))
-    dots <- dots[idx]
 
     # sanity
     checkmate::assert_choice(grid_type, choices = c("typical", "counterfactual"))
@@ -116,53 +107,40 @@ datagrid <- function(
     # better to assume "standard" class as output
     setDF(out)
 
+    attr(out, "variables_datagrid") <- names(dots)
+
     return(out)
 }
 
 
-#' A "counterfactual" version of the `datagrid()` function.
-#'
-#' For each combination of the variable values specified, this function
-#' duplicates the entire data frame supplied to `newdata`, or the entire
-#' dataset used to fit `model`. This is a convenience shortcut to call the
-#' `datagrid()` function with argument `grid_type="counterfactual"`.
-#'
-#' @inheritParams datagrid
-#' @examples
-#' # Fit a model with 32 observations from the `mtcars` dataset.
-#' nrow(mtcars)
-#'
-#' mod <- lm(mpg ~ hp + am, data = mtcars)
-#'
-#' # We specify two values for the `am` variable and obtain a counterfactual
-#' # dataset with 64 observations (32 x 2).
-#' dat <- datagridcf(model = mod, am = 0:1)
-#' head(dat)
-#' nrow(dat)
-#'
-#' # We specify 2 values for the `am` variable and 3 values for the `hp` variable
-#' # and obtained a dataset with 192 observations (2x3x32), corresponding to the
-#' # full original data, with each possible combination of `hp` and `am`.
-#' dat <- datagridcf(am = 0:1, hp = c(100, 110, 120), newdata = mtcars)
-#' head(dat)
-#' dim(dat)
-#'
-#' @family grid
+#' Counterfactual data grid
+#' @describeIn datagrid Counterfactual data grid
 #' @export
+#' 
 datagridcf <- function(
     ...,
     model = NULL,
     newdata = NULL) {
 
-    datagrid(...,
+    dots <- list(...)
+
+    if (length(dots) == 0) {
+        insight::format_error("Users must specify variable values in the `datagridcf()` call.")
+    }
+
+    out <- datagrid(
+        ...,
         model = model,
         newdata = newdata,
         grid_type = "counterfactual")
+
+    attr(out, "variables_datagrid") <- names(out)
+
+    return(out)
+        
 }
 
 
-#' Superseded by `datagridcf`
-#' @export
 #' @keywords internal
 counterfactual <- function(..., model = NULL, newdata = NULL) {
 
@@ -194,19 +172,14 @@ counterfactual <- function(..., model = NULL, newdata = NULL) {
 }
 
 
-#' Superseded by datagrid(...)
-#'
-#' @inheritParams datagrid
-#' @keywords internal
-#' @export
 typical <- function(
     ...,
     model = NULL,
     newdata = NULL,
-    FUN_character = Mode,
+    FUN_character = get_mode,
     # need to be explicit for numeric variables transfered to factor in model formula
-    FUN_factor = Mode,
-    FUN_logical = Mode,
+    FUN_factor = get_mode,
+    FUN_logical = get_mode,
     FUN_numeric = function(x) mean(x, na.rm = TRUE),
     FUN_integer = function(x) round(mean(x, na.rm = TRUE)),
     FUN_other = function(x) mean(x, na.rm = TRUE)) {
@@ -235,20 +208,19 @@ typical <- function(
         # na.omit destroys attributes, and we need the "factor" attribute
         # created by insight::get_data
         for (n in names(dat_automatic)) {
-            variable_class <- find_variable_class(n, newdata = dat_automatic, model = model)
-            if (variable_class == "factor" || n %in% tmp[["cluster"]]) {
+            if (get_variable_class(dat, n, "factor") || n %in% tmp[["cluster"]]) {
                 out[[n]] <- FUN_factor(dat_automatic[[n]])
-            } else if (variable_class == "logical") {
+            } else if (get_variable_class(dat, n, "logical")) {
                 out[[n]] <- FUN_logical(dat_automatic[[n]])
-            } else if (variable_class == "character") {
+            } else if (get_variable_class(dat, n, "character")) {
                 out[[n]] <- FUN_character(dat_automatic[[n]])
-            } else if (variable_class == "numeric") {
+            } else if (get_variable_class(dat, n, "numeric")) {
                 if (is.integer(dat_automatic[[n]])) {
                     out[[n]] <- FUN_integer(dat_automatic[[n]])
                 } else {
                     out[[n]] <- FUN_numeric(dat_automatic[[n]])
                 }
-            } else if (variable_class == "other") {
+            } else {
                 out[[n]] <- FUN_other(dat_automatic[[n]])
             }
         }
@@ -268,7 +240,7 @@ typical <- function(
     # warn on very large prediction grid
     num <- as.numeric(sapply(out, length)) # avoid integer overflow
     num <- Reduce(f = "*", num)
-    if (num > 1e9) {
+    if (isTRUE(num > 1e9)) {
         stop("You are trying to create a prediction grid with more than 1 billion rows, which is likely to exceed the memory and computational power available on your local machine. Presumably this is because you are considering many variables with many levels. All of the functions in the `marginaleffects` package include arguments to specify a restricted list of variables over which to create a prediction grid.", call. = FALSE)
     }
 
@@ -279,7 +251,7 @@ typical <- function(
     # na.omit destroys attributes, and we need the "factor" attribute
     # created by insight::get_data
     for (n in names(out)) {
-        attr(out[[n]], "factor") <- attr(dat[[n]], "factor")
+        attr(out, "marginaleffects_variable_class") <- attr(dat, "marginaleffects_variable_class")
     }
 
     return(out)
@@ -298,13 +270,8 @@ prep_datagrid <- function(..., model = NULL, newdata = NULL) {
     # }
 
     if (is.null(model) & is.null(newdata)) {
-        msg <- format_msg(
-        "The `model` and `newdata` arguments are both `NULL`. When calling `datagrid()`
-        *inside* the `marginaleffects()` or `comparisons()` functions, the `model` and
-        `newdata` arguments can both be omitted. However, when calling `datagrid()` on
-        its own, users must specify either the `model` or the `newdata` argument (but
-        not both).")
-        stop(msg, call. = FALSE)
+        msg <- "The `model` and `newdata` arguments are both `NULL`. When calling `datagrid()` *inside* the `slopes()` or `comparisons()` functions, the `model` and `newdata` arguments can both be omitted. However, when calling `datagrid()` on its own, users must specify either the `model` or the `newdata` argument (but not both)."
+        insight::format_error(msg)
     }
 
     if (!is.null(model)) {
@@ -312,20 +279,23 @@ prep_datagrid <- function(..., model = NULL, newdata = NULL) {
         variables_all <- unlist(variables_list, recursive = TRUE)
         # weights are not extracted by default
         variables_all <- c(variables_all, insight::find_weights(model))
+
     } else if (!is.null(newdata)) {
         variables_list <- NULL
         variables_all <- colnames(newdata)
+        newdata <- set_variable_class(modeldata = newdata)
     }
+
     variables_manual <- names(at)
     variables_automatic <- setdiff(variables_all, variables_manual)
 
     # fill in missing data after sanity checks
     if (is.null(newdata)) {
-        newdata <- hush(insight::get_data(model))
+        newdata <- get_modeldata(model)
     }
 
     # check `at` names
-    variables_missing <- setdiff(names(at), variables_all)
+    variables_missing <- setdiff(names(at), c(variables_all, "group"))
     if (length(variables_missing) > 0) {
         warning(sprintf("Some of the variable names are missing from the model data: %s",
                         paste(variables_missing, collapse = ", ")),
@@ -354,7 +324,7 @@ prep_datagrid <- function(..., model = NULL, newdata = NULL) {
         }
 
         # not an "else" situation because we want to process the output of functions too
-        if (is.factor(newdata[[n]]) || isTRUE(attributes(newdata[[n]])$factor)) {
+        if (is.factor(newdata[[n]]) || isTRUE(get_variable_class(newdata, n, "factor"))) {
             if (is.factor(newdata[[n]])) {
                 levs <- levels(newdata[[n]])
             } else {

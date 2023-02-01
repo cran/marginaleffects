@@ -1,17 +1,20 @@
-source("helpers.R", local = TRUE)
-if (ON_CRAN) exit_file("on cran")
+source("helpers.R")
+using("marginaleffects")
 
-requiet("mgcv")
-requiet("emmeans")
-requiet("broom")
-requiet("dplyr")
-requiet("tsModel")
+
+exit_if_not(requiet("mgcv"))
+exit_if_not(requiet("emmeans"))
+exit_if_not(requiet("broom"))
+exit_if_not(requiet("dplyr"))
+exit_if_not(requiet("tsModel"))
 
 
 # marginaleffects vs. emtrends
 set.seed(2)
 void <- capture.output(dat <- gamSim(1, n = 400, dist = "normal", scale = 2))
 void <- capture.output(dat2 <- gamSim(1, n = 2000, dist = "poisson", scale = .1))
+dat <- dat
+dat2 <- dat2
 m1 <- mgcv::gam(y ~ s(x0) + s(x1) + s(x2) + s(x3), data = dat)
 m2 <- mgcv::gam(y ~ te(x0, x1, k = 7) + s(x2) + s(x3), data = dat, method = "REML")
 m3 <- mgcv::gam(y ~ s(x0) + s(x1) + s(x2) + s(x3) + ti(x1, x2, k = 6), data = dat, method = "REML")
@@ -22,19 +25,19 @@ m7 <- mgcv::gam(y ~ s(x0, sp = .01) + s(x1) + s(x2) + s(x3), data = dat)
 m8 <- mgcv::gam(y ~ s(x0) + s(x1) + s(x2) + s(x3), min.sp = c(0.001, 0.01, 0, 10), data = dat)
 m9 <- mgcv::gam(y ~ s(x0, bs = "cr") + s(x1, bs = "cr") + s(x2, bs = "cr") +
       s(x3, bs = "cr"), family = poisson, data = dat2, method = "REML")
-expect_marginaleffects(m1)
-expect_marginaleffects(m2)
-expect_marginaleffects(m3)
-expect_marginaleffects(m4)
-expect_marginaleffects(m5)
-expect_marginaleffects(m6)
-expect_marginaleffects(m7)
-expect_marginaleffects(m8)
-expect_marginaleffects(m9)
+expect_slopes(m1)
+expect_slopes(m2)
+expect_slopes(m3)
+expect_slopes(m4)
+expect_slopes(m5)
+expect_slopes(m6)
+expect_slopes(m7)
+expect_slopes(m8)
+expect_slopes(m9)
 
 
 # emtrends
-mfx <- marginaleffects(m1,
+mfx <- slopes(m1,
     variables = "x1",
     newdata = datagrid(
         x1 = 0,
@@ -45,13 +48,14 @@ mfx <- marginaleffects(m1,
 # TODO: emmeans no longer seems to work
 # em <- emtrends(m1, specs = ~x1, var = "x1", at = list(x1 = 0, x2 = 0, x3 = 0))
 # em <- tidy(em)
-# expect_equivalent(mfx$dydx, em$x1.trend)
+# expect_equivalent(mfx$estimate, em$x1.trend)
 # expect_equivalent(mfx$std.error, em$std.error, tolerance = .0001)
 
 
 # predictions: no validity
 set.seed(2)
 void <- capture.output(dat <- gamSim(1, n = 400, dist = "normal", scale = 2))
+dat <- dat
 mod <- mgcv::gam(y ~ s(x0) + s(x1) + s(x2) + s(x3), data = dat)
 pred1 <- predictions(mod)
 pred2 <- predictions(mod, newdata = head(dat))
@@ -86,11 +90,11 @@ if (packageVersion("insight") > "0.17.1.6") {
     x <- runif(n)/20;z <- runif(n);
     f <- test1(x,z)
     y <- f + rnorm(n)*0.2
-    df <- tibble(y, x, z) %>% 
+    df <- tibble(y, x, z) |> 
       mutate(x_lags = tsModel::Lag(x, 0:10),
              L = matrix(0:10, nrow = 1))
     b <- mgcv::gam(y ~ s(z) + te(x_lags, L), data = df)
-    mfx <- suppressWarnings(marginaleffects(b))
+    mfx <- suppressWarnings(slopes(b))
     cmp <- suppressWarnings(comparisons(b))
     pre <- predictions(b)
     expect_inherits(pre, "predictions")
@@ -100,10 +104,10 @@ if (packageVersion("insight") > "0.17.1.6") {
     expect_true(all(mfx$term == "z"))
     expect_true(all(cmp$term == "z"))
 
-    expect_error(suppressWarnings(marginaleffects(b, variables = "L")), pattern = "no valid")
+    expect_error(suppressWarnings(slopes(b, variables = "L")), pattern = "no valid")
     expect_error(suppressWarnings(comparisons(b, variables = "L")), pattern = "no valid")
-    expect_warning(plot_cap(b, condition = "z"), pattern = "Matrix columns")
-    expect_warning(plot_cme(b, effect = "L", condition = "z"), pattern = "Matrix columns")
+    expect_warning(plot_predictions(b, condition = "z"), pattern = "Matrix columns")
+    expect_warning(plot_slopes(b, effect = "L", condition = "z"), pattern = "Matrix columns")
 }
 
 
@@ -115,11 +119,11 @@ if (packageVersion("insight") > "0.17.1.6") {
     b <- bam(y ~ s(x0) + s(x1) + s(x2) + s(x3), data = dat)
     p1 <- predictions(b)
     p2 <- predictions(b, exclude = "s(x3)")
-    expect_true(all(p1$predicted != p2$predicted))
+    expect_true(all(p1$estimate != p2$estimate))
 
 
     # exclude a smooth
-    requiet("itsadug")
+    exit_if_not(requiet("itsadug"))
     set.seed(1024)
     data(simdat)
     simdat$Subject <- as.factor(simdat$Subject)
@@ -130,21 +134,21 @@ if (packageVersion("insight") > "0.17.1.6") {
         Group = "Adults")
 
     expect_equivalent(
-        predictions(model, newdata = nd)$predicted,
+        predictions(model, newdata = nd)$estimate,
         predict(model, newdata = nd)[1])
 
     expect_equivalent(
-        predictions(model, newdata = nd, exclude = "s(Subject)")$predicted,
+        predictions(model, newdata = nd, exclude = "s(Subject)")$estimate,
         predict(model, newdata = nd, exclude = "s(Subject)")[1])
 
 
-    mfx <- marginaleffects(model, newdata = "mean", variables = "Time", type = "link")
+    mfx <- slopes(model, newdata = "mean", variables = "Time", type = "link")
     emt <- suppressMessages(data.frame(
         emtrends(model, ~Time, "Time", at = list(Time = 1000, Subject = "a01", Group = "Adults"))))
-    expect_equivalent(mfx$dydx, emt$Time.trend, tolerance = 1e-2)
+    expect_equivalent(mfx$estimate, emt$Time.trend, tolerance = 1e-2)
     expect_equivalent(mfx$std.error, emt$SE, tolerance = 1e-3)
 
     # Issue #545
-    p <- plot_cme(model, effect = "Time", condition = "Time", draw = FALSE)
+    p <- plot_slopes(model, effect = "Time", condition = "Time", draw = FALSE)
     expect_true(nrow(p) > 1)
 }

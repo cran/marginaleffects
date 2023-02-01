@@ -7,7 +7,7 @@ get_contrast_data_character <- function(model,
 
     # factors store all levels, but characters do not, so we need to extract the
     # original data from the model.
-    tmp <- modeldata <- hush(insight::get_data(model))
+    tmp <- modeldata <- get_modeldata(model)
 
     # unsupported by insight (e.g., numpyro)
     if (is.null(tmp)) {
@@ -76,7 +76,6 @@ get_contrast_data_character <- function(model,
         error = function(e) variable$label))
     levs_idx <- stats::setNames(levs_idx, paste0("marginaleffects_contrast_", colnames(levs_idx)))
 
-    setDT(newdata)
     lo <- hi <- cjdt(list(newdata, levs_idx))
 
     lo[[variable$name]] <- lo[["marginaleffects_contrast_lo"]]

@@ -1,10 +1,11 @@
-source("helpers.R", local = TRUE)
+source("helpers.R")
+using("marginaleffects")
 # exit_file("glmmTMB always causes problems")
-if (ON_CRAN) exit_file("on cran")
+
 if (ON_CI) exit_file("on ci") # install and test fails on Github
-requiet("glmmTMB")
-requiet("emmeans")
-requiet("broom")
+exit_if_not(requiet("glmmTMB"))
+exit_if_not(requiet("emmeans"))
+exit_if_not(requiet("broom"))
 
 data("Owls", package = "glmmTMB")
 
@@ -18,18 +19,18 @@ m0 <- glmmTMB(NCalls ~ (FT + ArrivalTime) * SexParent + offset(log(BroodSize)) +
     data = Owls,
     ziformula = ~1,
     family = poisson)
-expect_marginaleffects(m0)
+expect_slopes(m0)
 
 m1 <- glmmTMB(count ~ mined + (1 | site),
   zi = ~mined,
   family = poisson, data = Salamanders)
-expect_marginaleffects(m1)
+expect_slopes(m1)
 
 # Binomial model
 data(cbpp, package = "lme4")
 m4 <- glmmTMB(cbind(incidence, size - incidence) ~ period + (1 | herd),
 family = binomial, data = cbpp)
-expect_marginaleffects(m4)
+expect_slopes(m4)
 
 # comparisons vs. emmeans
 
@@ -46,8 +47,8 @@ co <- comparisons(m2,
                                  spp = "GP",
                                  site = "VF-1"))
 em <- tidy(pairs(emmeans(m2, "mined", at = list(spp = "GP", site = "VF-1"))))
-expect_marginaleffects(m2)
-expect_equivalent(co$comparison, -1 * em$estimate)
+expect_slopes(m2)
+expect_equivalent(co$estimate, -1 * em$estimate)
 expect_equivalent(co$std.error, em$std.error)
 
 
@@ -56,11 +57,11 @@ bug <- glmmTMB(count ~ spp + mined,
   ziformula = ~spp + mined,
   family = "nbinom2",
   data = Salamanders)
-mfx <- marginaleffects(bug)
+mfx <- slopes(bug)
 tid1 <- comparisons(bug, transform_pre = "dydxavg")
-tid2 <- tidy(marginaleffects(bug))
+tid2 <- tidy(slopes(bug))
 
-expect_equivalent(tid1$comparison, tid2$estimate)
+expect_equivalent(tid1$estimate, tid2$estimate)
 expect_equivalent(tid1$std.error, tid2$std.error)
 expect_equivalent(tid1$statistic, tid2$statistic)
 expect_equivalent(tid1$p.value, tid2$p.value)
@@ -72,7 +73,7 @@ mzip_3 <- glmmTMB(
   ziformula = ~ res + inc + age,
   family = "nbinom2",
   data = bed)
-mfx <- marginaleffects(mzip_3, type = "response")
+mfx <- slopes(mzip_3, type = "response")
 tid <- tidy(mfx)
 
 # checked against Stata
@@ -88,7 +89,7 @@ expect_equivalent(tid$std.error, se)
 m3 <- glmmTMB(count ~ spp + mined + (1 | site),
   zi = ~spp + mined,
   family = truncated_poisson, data = Salamanders)
-expect_marginaleffects(m3)
+expect_slopes(m3)
 co <- comparisons(m3,
               type = "link",
               variables = "mined",
@@ -96,8 +97,8 @@ co <- comparisons(m3,
                                  spp = "GP",
                                  site = "VF-1"))
 em <- tidy(pairs(emmeans(m3, "mined", at = list(spp = "GP", site = "VF-1"))))
-expect_marginaleffects(m3)
-expect_equivalent(co$comparison, -1 * em$estimate)
+expect_slopes(m3)
+expect_equivalent(co$estimate, -1 * em$estimate)
 expect_equivalent(co$std.error, em$std.error)
 
 
@@ -114,7 +115,7 @@ dat2$mined <- "no"
 cont1 <- predict(mod, type = "response", newdata = dat2) -
      predict(mod, type = "response", newdata = dat1)
 cont2 <- comparisons(mod, variables = "mined")
-expect_equivalent(cont2$comparison, cont1)
+expect_equivalent(cont2$estimate, cont1)
 
 
 
@@ -143,32 +144,32 @@ mod <- glmmTMB(
     Survived ~ Sex + z + (1 + Age | PClass),
     family = binomial,
     data = dat)
-mm1 <- marginalmeans(mod, variables = c("Sex", "PClass"))
-mm2 <- marginalmeans(mod, type = "link", variables = c("Sex", "PClass"))
-mm3 <- marginalmeans(mod, variables = c("Sex", "PClass"), cross = TRUE)
-mm4 <- marginalmeans(mod, type = "link", variables = c("Sex", "PClass"), cross = TRUE)
-expect_true(all(mm1$marginalmean != mm2$marginalmean))
+mm1 <- marginal_means(mod, variables = c("Sex", "PClass"))
+mm2 <- marginal_means(mod, type = "link", variables = c("Sex", "PClass"))
+mm3 <- marginal_means(mod, variables = c("Sex", "PClass"), cross = TRUE)
+mm4 <- marginal_means(mod, type = "link", variables = c("Sex", "PClass"), cross = TRUE)
+expect_true(all(mm1$estimate != mm2$estimate))
 expect_true(all(mm1$std.error != mm2$std.error))
-expect_true(all(mm3$marginalmean != mm4$marginalmean))
+expect_true(all(mm3$estimate != mm4$estimate))
 expect_true(all(mm3$std.error != mm4$std.error))
 expect_true(nrow(mm3) > nrow(mm1))
 
 
 # marginalmeans: some validity
 em <- data.frame(emmeans(mod, ~Sex))
-mm <- marginalmeans(mod, variables = "Sex", type = "link", re.form = NA)
-expect_equivalent(em$emmean, mm$marginalmean)
+mm <- marginal_means(mod, variables = "Sex", type = "link", re.form = NA)
+expect_equivalent(em$emmean, mm$estimate)
 expect_equivalent(em$SE, mm$std.error)
 
 
-mfx <- marginaleffects(m1)
+mfx <- slopes(m1)
 
 
 m1 <- glmmTMB(
     count ~ mined + (1 | site),
     zi = ~mined,
     family = poisson, data = Salamanders)
-expect_inherits(marginalmeans(m1, variables = "mined"), "marginalmeans")
+expect_inherits(marginal_means(m1, variables = "mined"), "marginalmeans")
 
 
 
@@ -189,9 +190,9 @@ model <- glmmTMB(
   REML = FALSE,
   data = dat)
 em <- data.frame(emmeans(model, ~trial + groupid, df = Inf))
-mm <- marginalmeans(model, variables = c("trial", "groupid"), cross = TRUE, re.form = NA)
+mm <- marginal_means(model, variables = c("trial", "groupid"), cross = TRUE, re.form = NA)
 mm <- mm[order(mm$groupid, mm$trial),]
-expect_equivalent(mm$marginalmean, em$emmean)
+expect_equivalent(mm$estimate, em$emmean)
 expect_equivalent(mm$conf.high, em$asymp.UCL)
 
 model_REML <- glmmTMB(
@@ -199,10 +200,10 @@ model_REML <- glmmTMB(
   REML = TRUE,
   data = dat)
 
-expect_error(marginaleffects(model_REML), pattern = "REML")
+expect_error(slopes(model_REML), pattern = "REML")
 expect_error(comparisons(model_REML), pattern = "REML")
 expect_error(predictions(model_REML), pattern = "REML")
-expect_error(marginalmeans(model_REML), pattern = "REML")
-expect_inherits(marginaleffects(model_REML, vcov = FALSE), "marginaleffects")
+expect_error(marginal_means(model_REML), pattern = "REML")
+expect_inherits(slopes(model_REML, vcov = FALSE), "marginaleffects")
 expect_inherits(predictions(model_REML, re.form = NA, vcov = FALSE), "predictions")
 expect_inherits(predictions(model_REML, vcov = FALSE, re.form = NA), "predictions")

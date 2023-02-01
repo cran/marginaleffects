@@ -3,10 +3,10 @@
 %   R/methods_afex.R, R/methods_aod.R, R/methods_betareg.R, R/methods_bife.R,
 %   R/methods_biglm.R, R/methods_nnet.R, R/methods_brglm2.R, R/methods_brms.R,
 %   R/methods_crch.R, R/methods_fixest.R, R/methods_gamlss.R,
-%   R/methods_glmmTMB.R, R/methods_lme4.R, R/methods_mclogit.R,
-%   R/methods_mhurdle.R, R/methods_mlogit.R, R/methods_ordinal.R,
-%   R/methods_quantreg.R, R/methods_robustlmm.R, R/methods_rstanarm.R,
-%   R/methods_survival.R, R/methods_tobit1.R
+%   R/methods_glmmTMB.R, R/methods_inferences_simulation.R, R/methods_lme4.R,
+%   R/methods_mclogit.R, R/methods_mhurdle.R, R/methods_mlogit.R,
+%   R/methods_ordinal.R, R/methods_quantreg.R, R/methods_robustlmm.R,
+%   R/methods_rstanarm.R, R/methods_survival.R, R/methods_tobit1.R
 \name{get_predict}
 \alias{get_predict}
 \alias{get_predict.default}
@@ -24,6 +24,7 @@
 \alias{get_predict.fixest}
 \alias{get_predict.gamlss}
 \alias{get_predict.glmmTMB}
+\alias{get_predict.inferences_simulation}
 \alias{get_predict.merMod}
 \alias{get_predict.lmerModLmerTest}
 \alias{get_predict.lmerMod}
@@ -161,6 +162,8 @@ get_predict(model, newdata, vcov, conf_level, type, ...)
   ...
 )
 
+\method{get_predict}{inferences_simulation}(model, newdata, vcov = FALSE, ...)
+
 \method{get_predict}{merMod}(
   model,
   newdata = insight::get_data(model),
@@ -265,22 +268,22 @@ get_predict(model, newdata, vcov, conf_level, type, ...)
 \arguments{
 \item{model}{Model object}
 
-\item{newdata}{\code{NULL}, data frame, string, or \code{datagrid()} call. Determines the predictor values for which to compute marginal effects.
+\item{newdata}{\code{NULL}, data frame, string, or \code{datagrid()} call. Determines the predictor values for which to compute slopes.
 \itemize{
-\item \code{NULL} (default): Unit-level marginal effects for each observed value in the original dataset.
-\item data frame: Unit-level marginal effects for each row of the \code{newdata} data frame.
-\item string:
-\itemize{
-\item "mean": Marginal Effects at the Mean. Marginal effects when each predictor is held at its mean or mode.
-\item "median": Marginal Effects at the Median. Marginal effects when each predictor is held at its median or mode.
-\item "marginalmeans": Marginal Effects at Marginal Means. See Details section below.
-\item "tukey": Marginal Effects at Tukey's 5 numbers.
-\item "grid": Marginal Effects on a grid of representative numbers (Tukey's 5 numbers and unique values of categorical predictors).
-}
+\item \code{NULL} (default): Unit-level slopes each observed value in the original dataset.
+\item data frame: Unit-level slopes for each row of the \code{newdata} data frame.
 \item \code{\link[=datagrid]{datagrid()}} call to specify a custom grid of regressors. For example:
 \itemize{
 \item \code{newdata = datagrid(cyl = c(4, 6))}: \code{cyl} variable equal to 4 and 6 and other regressors fixed at their means or modes.
 \item See the Examples section and the \code{\link[=datagrid]{datagrid()}} documentation.
+}
+\item string:
+\itemize{
+\item "mean": Marginal Effects at the Mean. Slopes when each predictor is held at its mean or mode.
+\item "median": Marginal Effects at the Median. Slopes when each predictor is held at its median or mode.
+\item "marginalmeans": Marginal Effects at Marginal Means. See Details section below.
+\item "tukey": Marginal Effects at Tukey's 5 numbers.
+\item "grid": Marginal Effects on a grid of representative numbers (Tukey's 5 numbers and unique values of categorical predictors).
 }
 }}
 
@@ -303,7 +306,7 @@ get_predict(model, newdata, vcov, conf_level, type, ...)
 \item{conf_level}{numeric value between 0 and 1. Confidence level to use to build a confidence interval.}
 
 \item{type}{string indicates the type (scale) of the predictions used to
-compute marginal effects or contrasts. This can differ based on the model
+compute contrasts or slopes. This can differ based on the model
 type, but will typically be a string such as: "response", "link", "probs",
 or "zero". When an unsupported string is entered, the model-specific list of
 acceptable values is returned in an error message. When \code{type} is \code{NULL}, the
@@ -321,7 +324,7 @@ arguments.}
 }
 \value{
 A data.frame of predicted values with a number of rows equal to the
-number of rows in \code{newdata} and columns "rowid" and "predicted". A "group"
+number of rows in \code{newdata} and columns "rowid" and "estimate". A "group"
 column is added for multivariate models or models with categorical outcomes.
 }
 \description{

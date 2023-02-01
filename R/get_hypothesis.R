@@ -10,12 +10,8 @@ get_hypothesis <- function(x, hypothesis, column, by = NULL) {
     # must be checked here when we know how many rows the output has
     if (isTRUE(hypothesis %in% c("pairwise", "reference", "sequential"))) {
         if (nrow(x) > 25) {
-            msg <- format_msg(
-            'The "pairwise", "reference", and "sequential" options of the `hypothesis`
-            argument are not supported for `marginaleffects` commands which generate more
-            than 25 rows of results. Use the `newdata`, `by`, and/or `variables` arguments
-            to compute a smaller set of results on which to conduct hypothesis tests.')
-            stop(msg, call. = FALSE)
+            msg <- 'The "pairwise", "reference", and "sequential" options of the `hypotheses` argument are not supported for `marginaleffects` commands which generate more than 25 rows of results. Use the `newdata`, `by`, and/or `variables` arguments to compute a smaller set of results on which to conduct hypothesis tests.'
+            insight::format_error(msg)
         }
     }
 
@@ -23,7 +19,7 @@ get_hypothesis <- function(x, hypothesis, column, by = NULL) {
         isTRUE(checkmate::check_atomic_vector(hypothesis))) {
         if (length(hypothesis) != nrow(x)) {
             msg <- sprintf(
-            "The `hypothesis` vector must be of length %s.", nrow(x))
+            "The `hypotheses` vector must be of length %s.", nrow(x))
             stop(msg, call. = FALSE)
         }
         lincom <- as.matrix(hypothesis)
@@ -33,7 +29,7 @@ get_hypothesis <- function(x, hypothesis, column, by = NULL) {
     if (isTRUE(checkmate::check_matrix(hypothesis))) {
         if (nrow(hypothesis) != nrow(x)) {
             msg <- sprintf(
-            "The `hypothesis` matrix must be have %s rows.", nrow(x))
+            "The `hypotheses` matrix must be have %s rows.", nrow(x))
             stop(msg, call. = FALSE)
         }
         lincom <- hypothesis
@@ -150,7 +146,7 @@ get_hypothesis <- function(x, hypothesis, column, by = NULL) {
     # we assume this is a string formula
     if (is.character(hypothesis) && is.null(lincom)) {
 
-        # row indices: `hypothesis` includes them, but `term` does not
+        # row indices: `hypotheses` includes them, but `term` does not
         if (isTRUE(grepl("\\bb\\d+\\b", hypothesis)) && !any(grepl("\\bb\\d+\\b", x[["term"]]))) {
             lab <- hypothesis
             for (i in seq_len(nrow(x))) {
@@ -162,19 +158,14 @@ get_hypothesis <- function(x, hypothesis, column, by = NULL) {
         # term names
         } else {
             if (!"term" %in% colnames(x) || anyDuplicated(x$term) > 0) {
-                msg <- format_msg(
-                'To use term names in a `hypothesis` string, the same function call without
-                `hypothesis` argument must produce a `term` column with unique row identifiers.
-                You can use `b1`, `b2`, etc. indices instead of term names in the `hypothesis`
-                string Ex: "b1 + b2 = 0" Alternatively, you can use the `newdata`, `variables`,
-                or `by` arguments:
-
-                mod <- lm(mpg ~ am * vs + cyl, data = mtcars)
-                comparisons(mod, newdata = "mean", hypothesis = "b1 = b2")
-                comparisons(mod, newdata = "mean", hypothesis = "am = vs")
-                comparisons(mod, variables = "am", by = "cyl", hypothesis = "pairwise")
-                ')
-                stop(msg, call. = FALSE)
+                msg <- c(
+                'To use term names in a `hypothesis` string, the same function call without `hypothesis` argument must produce a `term` column with unique row identifiers. You can use `b1`, `b2`, etc. indices instead of term names in the `hypotheses` string Ex: "b1 + b2 = 0" Alternatively, you can use the `newdata`, `variables`, or `by` arguments:',
+                "",
+                'mod <- lm(mpg ~ am * vs + cyl, data = mtcars)',
+                'comparisons(mod, newdata = "mean", hypothesis = "b1 = b2")',
+                'comparisons(mod, newdata = "mean", hypothesis = "am = vs")',
+                'comparisons(mod, variables = "am", by = "cyl", hypothesis = "pairwise")')
+                insight::format_error(msg)
             }
             rowlabels <- x$term
         }
@@ -190,6 +181,7 @@ get_hypothesis <- function(x, hypothesis, column, by = NULL) {
 
         draws <- attr(x, "posterior_draws")
         if (!is.null(draws)) {
+            insight::check_if_installed("collapse", minimum_version = "1.9.0")
             tmp <- apply(
                 draws,
                 MARGIN = 2,
@@ -199,12 +191,12 @@ get_hypothesis <- function(x, hypothesis, column, by = NULL) {
             draws <- matrix(tmp, ncol = ncol(draws))
             out <- data.table(
                 term = gsub("\\s+", "", attr(hypothesis, "label")),
-                tmp = apply(draws, 1, stats::median))
+                tmp = collapse::dapply(draws, MARGIN = 1, FUN = collapse::fmedian))
 
 
         } else {
             out <- eval_string_function(
-                x[[column]],
+                x[["estimate"]],
                 hypothesis = hypothesis,
                 rowlabels = rowlabels)
             out <- data.table(
@@ -212,7 +204,7 @@ get_hypothesis <- function(x, hypothesis, column, by = NULL) {
                 tmp = out)
         }
 
-        setnames(out, old = "tmp", new = column)
+        setnames(out, old = "tmp", new = "estimate")
         attr(out, "posterior_draws") <- draws
         return(out)
 
@@ -225,15 +217,15 @@ get_hypothesis <- function(x, hypothesis, column, by = NULL) {
             out <- data.table(
                 term = colnames(lincom),
                 tmp = apply(draws, 1, stats::median))
-            setnames(out, old = "tmp", new = column)
+            setnames(out, old = "tmp", new = "estimate")
             attr(out, "posterior_draws") <- draws
 
         # frequentist
         } else {
             out <- data.table(
                 term = colnames(lincom),
-                tmp = as.vector(x[[column]] %*% lincom))
-            setnames(out, old = "tmp", new = column)
+                tmp = as.vector(x[["estimate"]] %*% lincom))
+            setnames(out, old = "tmp", new = "estimate")
         }
 
         out <- out[out$term != "1 - 1", , drop = FALSE]
@@ -241,7 +233,7 @@ get_hypothesis <- function(x, hypothesis, column, by = NULL) {
     }
 
     msg <- 
-    "`hypothesis` is broken. Please report this bug:
+    "`hypotheses` is broken. Please report this bug:
     https://github.com/vincentarelbundock/marginaleffects/issues."
     stop(msg, call. = FALSE)
 }
@@ -259,5 +251,11 @@ get_hypothesis_row_labels <- function(x, by = NULL) {
     } else {
         lab <- apply(data.frame(x)[, lab, drop = FALSE], 1, paste, collapse = ",")
     }
+
+    # wrap in parentheses to avoid a-b-c-d != (a-b)-(c-d)
+    if (any(grepl("-", lab))) {
+        lab <- sprintf("(%s)", lab)
+    }
+
     return(lab)
 }

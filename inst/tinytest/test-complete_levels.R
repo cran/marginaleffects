@@ -1,4 +1,5 @@
-source("helpers.R", local = TRUE)
+source("helpers.R")
+using("marginaleffects")
 
 # padding with interactions
 dat <- read.csv("https://vincentarelbundock.github.io/Rdatasets/csv/ggplot2movies/movies.csv")

@@ -43,13 +43,14 @@ get_coef.betareg <- function(model, ...) {
 get_predict.betareg <- function(model, newdata, ...) {
     out <- stats::predict(model, newdata = newdata)
     out <- data.frame(rowid = seq_len(nrow(newdata)),
-                      predicted = out)
+                      estimate = out)
     return(out)
 }
 
 
-#' @rdname sanity_model_specific
-sanity_model_specific.betareg <- function(model, ...) {
+#' @rdname sanitize_model_specific
+sanitize_model_specific.betareg <- function(model, ...) {
     insight::check_if_installed("insight", minimum_version = "0.17.1")
+    return(model)
 }
 

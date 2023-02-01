@@ -19,7 +19,7 @@ get_predict.glmmTMB <- function(model,
         vcov = vcov,
         conf_level = conf_level,
         type = type,
-        allow.new.levels = TRUE, # otherwise we get errors in marginalmeans()
+        allow.new.levels = TRUE, # otherwise we get errors in marginal_means()
         ...)
     return(out)
 }
@@ -68,11 +68,11 @@ set_coef.glmmTMB <- function(model, coefs, ...) {
 
 
 
-#' @rdname sanity_model_specific
-sanity_model_specific.glmmTMB <- function(model, vcov = NULL, calling_function = "marginaleffects", ...) {
+#' @rdname sanitize_model_specific
+sanitize_model_specific.glmmTMB <- function(model, vcov = NULL, calling_function = "marginaleffects", ...) {
     REML <- as.list(insight::get_call(model))[["REML"]]
     if (isTRUE(REML) && !identical(vcov, FALSE)) {
-        msg <- insight::format_message("Uncertainty estimates cannot be computed for `glmmTMB` models with the `REML=TRUE` option. Either set `REML=FALSE` when fitting the model, or set `vcov=FALSE` when calling a `marginaleffects` function to avoid this error.")
+        msg <- insight::format_message("Uncertainty estimates cannot be computed for `glmmTMB` models with the `REML=TRUE` option. Either set `REML=FALSE` when fitting the model, or set `vcov=FALSE` when calling a `slopes` function to avoid this error.")
         stop(msg, call. = FALSE)
     }
 
@@ -89,4 +89,5 @@ sanity_model_specific.glmmTMB <- function(model, vcov = NULL, calling_function =
         msg <- sprintf("This value of the `vcov` argument is not supported for models of class `%s`. Please set `vcov` to `TRUE`, `FALSE`, `NULL`, or supply a variance-covariance matrix.", class(model)[1])
         stop(msg, call. = FALSE)
     }
+    return(model)
 }
