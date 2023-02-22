@@ -59,7 +59,7 @@ expect_equivalent(mfx$std.error[1], em$std.error, tolerance = 1e-3)
 # emmeans contrasts
 mfx <- slopes(model, type = "link", newdata = datagrid(wt = 3, cyl = 4))
 em <- emmeans(model, specs = "cyl") 
-em <- contrast(em, method = "revpairwise", at = list(wt = 3, cyl = 4))
+em <- emmeans::contrast(em, method = "revpairwise", at = list(wt = 3, cyl = 4))
 em <- tidy(em)
 expect_equivalent(mfx$estimate[mfx$contrast == "6 - 4"], em$estimate[em$contrast == "cyl6 - cyl4"])
 expect_equivalent(mfx$std.error[mfx$contrast == "6 - 4"], em$std.error[em$contrast == "cyl6 - cyl4"])
@@ -176,10 +176,12 @@ expect_equivalent(ti$std.error, em$std.error)
 exit_if_not(requiet("lme4")) # glmmPQL fails when lme4 is not installed
 tmp <- bacteria
 tmp$week_bin <- tmp$week > 2
-mod <- glmmPQL(y ~ trt + week_bin, random = ~ 1 | ID,
-           family = binomial,
-           verbose = FALSE,
-           data = tmp)
+mod <- glmmPQL(
+    y ~ trt + week_bin,
+    random = ~ 1 | ID,
+    family = binomial,
+    verbose = FALSE,
+    data = tmp)
 expect_slopes(mod, type = "link", n_unique = 1)
 expect_slopes(mod, type = "response")
 expect_predictions(predictions(mod))
@@ -190,8 +192,6 @@ em <- tidy(em)
 mfx <- slopes(mod, newdata = datagrid(week_bin = 0), type = "link")
 expect_equivalent(mfx$estimate[3], em$week_bin.trend)
 expect_equivalent(mfx$std.error[3], em$std.error, tolerance = .01)
-
-
 
 
 # bugs stay dead: character regressor with categorical outcome
@@ -245,3 +245,7 @@ mod <- suppressWarnings(MASS::polr(factor(gear) ~ vs + am, data = k, Hess = TRUE
 # em <- tidy(em)
 mm <- marginal_means(mod, variables = "am", type = "probs")
 expect_equivalent(nrow(mm), 6)
+
+
+
+rm(list = ls())

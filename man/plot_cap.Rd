@@ -7,10 +7,14 @@
 plot_cap(
   model,
   condition = NULL,
-  type = "response",
+  by = NULL,
+  type = NULL,
   vcov = NULL,
   conf_level = 0.95,
   transform_post = NULL,
+  points = 0,
+  rug = FALSE,
+  gray = FALSE,
   draw = TRUE,
   ...
 )
@@ -18,11 +22,23 @@ plot_cap(
 \arguments{
 \item{model}{Model object}
 
-\item{condition}{character vector or named list of length smaller than 4. Character vectors must be the names of the predictor variables to display. The names of the list must The first element is displayed on the x-axis. The second element determines the colors. The third element creates facets. Other variables are held at their means or modes. Lists can include these types of values:
+\item{condition}{Conditional predictions
+\itemize{
+\item Character vector (max length 3): Names of the predictors to display.
+\item Named list (max length 3): List names correspond to predictors. List elements can be:
 \itemize{
 \item Numeric vector
 \item Function which returns a numeric vector or a set of unique categorical values
 \item Shortcut strings for common reference values: "minmax", "quartile", "threenum"
+}
+\item 1: x-axis. 2: color/shape. 3: facets.
+\item Numeric variables in positions 2 and 3 are summarized by Tukey's five numbers \code{?stats::fivenum}
+}}
+
+\item{by}{Marginal predictions
+\itemize{
+\item Character vector (max length 3): Names of the categorical predictors to marginalize across.
+\item 1: x-axis. 2: color. 3: facets.
 }}
 
 \item{type}{string indicates the type (scale) of the predictions used to
@@ -51,7 +67,13 @@ the \code{marginaleffects:::type_dictionary} dataframe.}
 
 \item{conf_level}{numeric value between 0 and 1. Confidence level to use to build a confidence interval.}
 
-\item{transform_post}{(experimental) A function applied to unit-level adjusted predictions and confidence intervals just before the function returns results. For bayesian models, this function is applied to individual draws from the posterior distribution, before computing summaries.}
+\item{transform_post}{A function applied to unit-level adjusted predictions and confidence intervals just before the function returns results. For bayesian models, this function is applied to individual draws from the posterior distribution, before computing summaries.}
+
+\item{points}{Number between 0 and 1 which controls the transparency of raw data points. 0 (default) does not display any points.}
+
+\item{rug}{TRUE displays tick marks on the axes to mark the distribution of raw data.}
+
+\item{gray}{FALSE grayscale or color plot}
 
 \item{draw}{\code{TRUE} returns a \code{ggplot2} plot. \code{FALSE} returns a \code{data.frame} of the underlying data.}
 

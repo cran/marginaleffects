@@ -44,9 +44,9 @@ avg_comparisons(
 \arguments{
 \item{model}{Model object}
 
-\item{newdata}{\code{NULL}, data frame, string, or \code{datagrid()} call. Determines the predictor values for which to compute contrasts.
+\item{newdata}{Grid of predictor values at which we evaluate the comparisons.
 \itemize{
-\item \code{NULL} (default): Unit-level contrasts for each observed value in the original dataset.
+\item \code{NULL} (default): Unit-level contrasts for each observed value in the original dataset (empirical distribution).
 \item data frame: Unit-level contrasts for each row of the \code{newdata} data frame.
 \item string:
 \itemize{
@@ -64,9 +64,9 @@ avg_comparisons(
 }
 }}
 
-\item{variables}{\code{NULL}, character vector, or named list. The subset of variables for which to compute contrasts.
+\item{variables}{Focal variables
 \itemize{
-\item \code{NULL}: compute contrasts for all the variables in the model object (can be slow).
+\item \code{NULL}: compute comparisons for all the variables in the model object (can be slow).
 \item Character vector: subset of variables (usually faster).
 \item Named list: names identify the subset of variables of interest, and values define the type of contrast to compute. Acceptable values depend on the variable type:
 \itemize{
@@ -76,6 +76,7 @@ avg_comparisons(
 \item "all": All combinations of observed levels
 \item "sequential": Each factor level is compared to the previous factor level
 \item "pairwise": Each factor level is compared to all other levels
+\item "minmax": The highest and lowest levels of a factor.
 \item Vector of length 2 with the two values to compare.
 }
 \item Logical variables:
@@ -207,6 +208,19 @@ package. See the "Model-Specific Arguments" section of the
 \code{?marginaleffects} documentation for a non-exhaustive list of available
 arguments.}
 }
+\value{
+A \code{data.frame} with one row per observation (per term/group) and several columns:
+\itemize{
+\item \code{rowid}: row number of the \code{newdata} data frame
+\item \code{type}: prediction type, as defined by the \code{type} argument
+\item \code{group}: (optional) value of the grouped outcome (e.g., categorical outcome models)
+\item \code{term}: the variable whose marginal effect is computed
+\item \code{dydx}: slope of the outcome with respect to the term, for a given combination of predictor values
+\item \code{std.error}: standard errors computed by via the delta method.
+}
+
+See \code{?print.marginaleffects} for printing options.
+}
 \description{
 Predict the outcome variable at different regressor values (e.g., college
 graduates vs. others), and compare those predictions by computing a difference,
@@ -231,6 +245,27 @@ See the comparisons vignette and package website for worked examples and case st
 \item \code{avg_comparisons()}: Average comparisons
 
 }}
+\section{Standard errors using the delta method}{
+
+
+Standard errors for all quantities estimated by \code{marginaleffects} can be obtained via the delta method. This requires differentiating a function with respect to the coefficients in the model using a finite difference approach. In some models, the delta method standard errors can be sensitive to various aspects of the numeric differentiation strategy, including the step size. By default, the step size is set to \code{1e-8}, or to \code{1e-4} times the smallest absolute model coefficient, whichever is largest.
+
+\code{marginaleffects} can delegate numeric differentiation to the \code{numDeriv} package, which allows more flexibility. To do this, users can pass arguments to the \code{numDeriv::jacobian} function through a global option. For example:
+\itemize{
+\item \code{options(marginaleffects_numDeriv = list(method = "simple", method.args = list(eps = 1e-6)))}
+\item \code{options(marginaleffects_numDeriv = list(method = "Richardson", method.args = list(eps = 1e-5)))}
+\item \code{options(marginaleffects_numDeriv = NULL)}
+}
+
+See the "Standard Errors and Confidence Intervals" vignette on the \code{marginaleffects} website for more details on the computation of standard errors:
+
+https://vincentarelbundock.github.io/marginaleffects/articles/uncertainty.html
+
+Note that the \code{inferences()} function can be used to compute uncertainty estimates using a bootstrap or simulation-based inference. See the vignette:
+
+https://vincentarelbundock.github.io/marginaleffects/articles/bootstrap.html
+}
+
 \section{Model-Specific Arguments}{
 
 
@@ -248,6 +283,7 @@ marginal effects, predictions, marginal means, and contrasts.\tabular{llll}{
    \code{mgcv} \tab \code{bam} \tab \code{exclude} \tab \link[mgcv:predict.bam]{mgcv::predict.bam} \cr
    \code{robustlmm} \tab \code{rlmerMod} \tab \code{re.form} \tab \link[robustlmm:rlmerMod-class]{robustlmm::predict.rlmerMod} \cr
     \tab  \tab \code{allow.new.levels} \tab \link[robustlmm:rlmerMod-class]{robustlmm::predict.rlmerMod} \cr
+   \code{MCMCglmm} \tab \code{MCMCglmm} \tab \code{ndraws} \tab  \cr
 }
 }
 

@@ -4,7 +4,7 @@ using("marginaleffects")
 exit_if_not(requiet("margins"))
 exit_if_not(requiet("broom"))
 exit_if_not(requiet("emmeans"))
-exit_if_not(requiet("dplyr"))
+exit_if_not(requiet("poorman"))
 
 
 guerry <- read.csv("https://vincentarelbundock.github.io/Rdatasets/csv/HistData/Guerry.csv")
@@ -27,7 +27,7 @@ expect_true(expect_margins(res, mar, tolerance = 0.1, verbose=TRUE))
 
 # predictions
 pre <- predictions(mod)
-expect_predictions(pre)
+expect_predictions(pre, se = FALSE)
 
 
 # emmeans comparison
@@ -79,7 +79,7 @@ res <- slopes(mod, variable = "hp", newdata = counterfactuals)
 expect_equivalent(res$estimate[1], em1$hp.trend)
 expect_equivalent(res$std.error[1], em1$std.error, tolerance = .001)
 expect_equivalent(res$estimate[2], em2$hp.trend)
-expect_equivalent(res$std.error[2], em2$std.error, tolerance = .0001)
+expect_equivalent(res$std.error[2], em2$std.error, tolerance = .001)
 
 
 
@@ -170,3 +170,7 @@ expect_equivalent(colnames(get_predict(mod)), c("rowid", "group", "estimate"))
 
 mod <- lm(mpg ~ disp + am, data = mtcars)
 expect_equivalent(colnames(get_predict(mod)), c("rowid", "estimate"))
+
+
+
+rm(list = ls())

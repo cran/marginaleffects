@@ -2,7 +2,6 @@ get_se_delta_marginalmeans <- function(model,
                                        variables,
                                        newdata,
                                        type,
-                                       eps = 1e-4, # avoid pushing through ...
                                        cross = FALSE,
                                        ...) {
     get_marginalmeans(
@@ -20,9 +19,6 @@ get_se_delta_contrasts <- function(model,
                                    variables,
                                    newdata,
                                    type,
-                                   contrast_factor,
-                                   contrast_numeric,
-                                   eps,
                                    hypothesis,
                                    lo,
                                    hi,
@@ -33,7 +29,6 @@ get_se_delta_contrasts <- function(model,
         newdata = newdata,
         variables = variables,
         type = type,
-        eps = eps,
         hypothesis = hypothesis,
         lo = lo,
         hi = hi,
@@ -92,6 +87,7 @@ get_se_delta <- function(model,
         if (!is.null(type)) args[["type"]] <- type
         if (!is.null(newdata)) args[["newdata"]] <- newdata
         if (!is.null(J)) args[["J"]] <- J
+        if (!is.null(eps)) args[["eps"]] <- eps
         g <- do.call("FUN", args)
         return(g)
     }
@@ -100,11 +96,6 @@ get_se_delta <- function(model,
         args <- list(
             func = inner,
             x = coefs)
-        if (is.null(eps)) {
-            args[["eps"]] <- 1e-4
-        } else {
-            args[["eps"]] <- eps
-        }
         J <- do.call("get_jacobian", args)
         colnames(J) <- names(get_coef(model, ...))
     }
@@ -124,6 +115,7 @@ get_se_delta <- function(model,
     # computing the full matrix is memory-expensive, and we only need the diagonal
     # algebra trick: https://stackoverflow.com/a/42569902/342331
     se <- sqrt(colSums(t(J %*% V) * t(J)))
+    se[se == 0] <- NA_real_
     attr(se, "jacobian") <- J
 
     return(se)

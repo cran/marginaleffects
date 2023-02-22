@@ -2,16 +2,29 @@ get_contrast_data <- function(model,
                               newdata,
                               variables,
                               cross,
-                              eps,
                               modeldata = NULL,
                               ...) {
 
     lo <- hi <- ter <- lab <- original <- rowid <- list()
 
+    # after variable class assignment
     if (is.null(modeldata)) {
         modeldata <- attr(newdata, "newdata_modeldata")
     }
+    # sometimes needed for extensions when get_data doesn't work
+    if (is.null(modeldata) || nrow(modeldata) == 0) {
+        modeldata <- newdata
+    }
+    
+    # safety need for extensions not supported by `insight`
     variable_classes <- attr(newdata, "newdata_variable_class")
+    if (length(variable_classes) == 0) {
+        newdata <- set_variable_class(newdata)
+        variable_classes <- attr(newdata, "marginaleffects_variable_class")
+    }
+    if (length(attr(modeldata, "marginaleffects_variable_class")) == 0) {
+        modeldata <- set_variable_class(modeldata)
+    }
 
     if (any(c("factor", "character") %in% variable_classes)) {
         first_cross <- names(variable_classes[variable_classes %in% c("factor", "character")])[1]
@@ -32,16 +45,6 @@ get_contrast_data <- function(model,
             first_cross = identical(v$name, first_cross),
             modeldata = modeldata)
         args <- append(args, list(...))
-        if (is.null(eps) && isTRUE(variable_classes[[v$name]] == "numeric")) {
-            args[["eps"]] <- 1e-4 * diff(range(modeldata[[v$name]], na.rm = TRUE, finite = TRUE))
-        } else {
-            args[["eps"]] <- eps
-        }
-
-        # protec: when newdata is 1-row and the original is not available
-        if (isTRUE(args[["eps"]] <= 0) || !"eps" %in% names(args)) {
-            args[["eps"]] <- NULL
-        }
 
         # logical and character before factor used to be important; but I don't think so anymore
         if (get_variable_class(modeldata, v$name, "logical")) {
@@ -109,14 +112,15 @@ get_contrast_data <- function(model,
         lo <- rbindlist(lo, fill = TRUE)
         hi <- rbindlist(hi, fill = TRUE)
         original <- rbindlist(original, fill = TRUE)
-        ter <- unlist(ter)
-        lab <- unlist(lab)
-        lo[, "term" := ter]
-        hi[, "term" := ter]
-        original[, "term" := ter]
-        lo[, "contrast" := lab]
-        hi[, "contrast" := lab]
-        original[, "contrast" := lab]
+        # long names to avoid user-supplied colname conflict
+        marginaleffects_ter <- unlist(ter, use.names = FALSE)
+        marginaleffects_lab <- unlist(lab, use.names = FALSE)
+        lo[, "term" := marginaleffects_ter]
+        hi[, "term" := marginaleffects_ter]
+        original[, "term" := marginaleffects_ter]
+        lo[, "contrast" := marginaleffects_lab]
+        hi[, "contrast" := marginaleffects_lab]
+        original[, "contrast" := marginaleffects_lab]
 
     # cross contrast
     } else {

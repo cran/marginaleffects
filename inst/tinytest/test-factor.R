@@ -1,8 +1,8 @@
 source("helpers.R")
 using("marginaleffects")
 
-
-
+#
+#
 # factor before fitting or in formula is the same
 tmp <- mtcars
 tmp$cyl <- factor(tmp$cyl)
@@ -47,12 +47,13 @@ test1 <- data.frame(
 mod <- coxph(Surv(time, status) ~ x + strata(sex),
     data = test1,
     ties = "breslow")
+
+nd <- datagrid(sex = 0, newdata = test1)
 mfx <- slopes(mod,
     variables = "x",
-    newdata = datagrid(sex = 0, newdata = test1),
+    newdata = nd,
     type = "lp")
 expect_inherits(mfx, "marginaleffects")
-
 
 
 # Issue #497
@@ -66,3 +67,17 @@ cmp3 <- comparisons(mod, variables = list(cyl = dat$cyl[2:3]))
 expect_inherits(cmp1, "comparisons")
 expect_inherits(cmp2, "comparisons")
 expect_inherits(cmp3, "comparisons")
+
+
+# Issue #658
+dat <- transform(mtcars, cyl = factor(cyl))
+mod <- lm(mpg ~ cyl, mtcars)
+cmp <- comparisons(
+    mod,
+    variables = list(cyl = "minmax"),
+    transform_post = function(x) x / 3)
+expect_inherits(cmp, "comparisons")
+
+
+
+rm(list = ls())

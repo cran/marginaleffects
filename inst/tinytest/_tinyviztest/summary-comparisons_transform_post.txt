@@ -1,9 +1,7 @@
 
  Term Contrast Estimate Pr(>|z|) 2.5 % 97.5 %
-   hp       +1     2.71   <2e-16  2.69   2.72
+   hp       +1     2.71   <0.001  2.69   2.72
 
 Prediction type:  response 
-Pre-transformation:  function(hi, lo) hi/lo 
-Post-transformation:  exp 
 Columns: type, term, contrast, estimate, p.value, conf.low, conf.high 
 

@@ -16,6 +16,7 @@ inferences(x, method, R = 1000, conf_type = "perc", ...)
 \item "fwb": fractional weighted bootstrap
 \item "rsample" package
 \item "simulation" from a multivariate normal distribution (Krinsky & Robb, 1986)
+\item "mi" multiple imputation for missing data
 }}
 
 \item{R}{Number of resamples or simulations.}
@@ -70,16 +71,22 @@ library(magrittr)
 set.seed(1024)
 mod <- lm(Sepal.Length ~ Sepal.Width * Species, data = iris)
 
+# bootstrap
 avg_predictions(mod, by = "Species") \%>\%
   inferences(method = "boot")
 
-slopes(mod) \%>\%
-  inferences(method = "simulation") \%>\%
-  head()
+avg_predictions(mod, by = "Species") \%>\%
+  inferences(method = "rsample")
 
+# Fractional (bayesian) bootstrap
 avg_slopes(mod, by = "Species") \%>\%
   inferences(method = "fwb") \%>\%
   posterior_draws("rvar") \%>\%
   data.frame()
+
+# Simulation-based inference
+slopes(mod) \%>\%
+  inferences(method = "simulation") \%>\%
+  head()
 }
 }

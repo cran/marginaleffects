@@ -6,8 +6,6 @@ mod <- glm(vs ~ mpg + hp, data = mtcars, family = binomial)
 nd <- datagrid(model = mod)
 cmp0 <- slopes(mod, variables = "mpg", newdata = nd)
 cmp1 <- slopes(mod, variables = "mpg", newdata = nd, eps = 1)
-cmp2 <- comparisons(mod, newdata = nd, variables = "mpg", contrast_numeric = c(nd$mpg, nd$mpg + 1))
-expect_true(all(cmp1$estimate == cmp2$estimate))
 expect_true(all(cmp0$estimate != cmp1$estimate))
 
 # adaptive eps should matter for logit but not ols
@@ -29,3 +27,5 @@ expect_equivalent(m2$estimate, m3$estimate)
 
 # errors and warnings
 expect_error(slopes(mod, eps = 0))
+
+rm(list = ls())

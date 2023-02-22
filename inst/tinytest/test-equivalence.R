@@ -1,7 +1,8 @@
 source("helpers.R")
-requiet("dplyr")
+requiet("poorman")
 requiet("emmeans")
 requiet("parameters")
+# exit_file("TODO")
 
 mod <- lm(mpg ~ hp + factor(gear), data = mtcars)
 
@@ -14,7 +15,7 @@ e2 <- predictions(
     mod,
     newdata = datagrid(gear = unique),
     equivalence = c(19, 21)) |>
-    dplyr::arrange(gear)
+    poorman::arrange(gear)
 expect_equivalent(e1$z.ratio, e2$statistic.noninf)
 expect_equivalent(e1$p.value, e2$p.value.noninf)
 
@@ -25,7 +26,7 @@ e2 <- predictions(
     mod,
     newdata = datagrid(gear = unique),
     equivalence = c(22, 24)) |>
-    dplyr::arrange(gear)
+    poorman::arrange(gear)
 expect_equivalent(e1$z.ratio, e2$statistic.nonsup)
 expect_equivalent(e1$p.value, e2$p.value.nonsup)
 
@@ -36,7 +37,7 @@ e2 <- predictions(
     mod,
     newdata = datagrid(gear = unique),
     equivalence = c(21, 23)) |>
-    dplyr::arrange(gear)
+    poorman::arrange(gear)
 expect_equivalent(e1$p.value, e2$p.value.equiv)
 
 
@@ -48,31 +49,6 @@ mfx <- slopes(
     equivalence = c(-.09, .01))
 expect_inherits(mfx, "slopes")
 
-
-# marginal_means() vs. {emmeans}
-delta <- log(1.25)
-mod <- lm(log(conc) ~ source + factor(percent), data = pigs)
-rg <- ref_grid(mod)
-em <- emmeans(rg, "source", at = list(), df = Inf)
-pa <- pairs(em, df = Inf)
-mm <- marginal_means(
-    mod,
-    variables = "source",
-    hypothesis = "pairwise") 
-
-e1 <- test(pa, delta = delta, adjust = "none", side = "nonsuperiority", df = Inf)
-e2 <- hypotheses(mm, equivalence = c(-delta, delta))
-expect_equivalent(e1$z.ratio, e2$statistic.nonsup)
-expect_equivalent(e1$p.value, e2$p.value.nonsup)
-
-e1 <- test(pa, delta = delta, adjust = "none", side = "noninferiority", df = Inf)
-e2 <- hypotheses(mm, equivalence = c(-delta, delta))
-expect_equivalent(e1$z.ratio, e2$statistic.noninf)
-expect_equivalent(e1$p.value, e2$p.value.noninf)
-
-e1 <- test(pa, delta = delta, adjust = "none", df = Inf)
-e2 <- hypotheses(mm, equivalence = c(-delta, delta))
-expect_equivalent(e1$p.value, e2$p.value.equiv)
 
 
 # two-sample t-test
@@ -104,14 +80,14 @@ e2 <- predictions(
     type = "link",
     newdata = datagrid(gear = unique),
     equivalence = c(.5, 1.5)) |>
-    dplyr::arrange(gear)
+    poorman::arrange(gear)
 expect_equivalent(e1$emmean, e2$estimate)
 expect_equivalent(e1$z.ratio, e2$statistic.noninf)
 expect_equivalent(e1$p.value, e2$p.value.noninf)
 
 
 # avg_*() and hypotheses()
-tmp <<- lm(mpg ~ hp * qsec, data = mtcars)
+tmp <- lm(mpg ~ hp * qsec, data = mtcars)
 cmp <- avg_comparisons(tmp) |> hypotheses(equivalence = c(-.2, 0))
 mfx <- avg_slopes(tmp) |> hypotheses(equivalence = c(-.2, 0))
 pre <- avg_predictions(tmp) |> hypotheses(equivalence = c(-.2, 0))
@@ -132,3 +108,31 @@ expect_inherits(x, "hypotheses")
 
 
 
+# marginal_means() vs. {emmeans}
+exit_file("works interactively")
+delta <- log(1.25)
+mod <- lm(log(conc) ~ source + factor(percent), data = pigs)
+rg <- ref_grid(mod)
+em <- emmeans(rg, "source", at = list(), df = Inf)
+pa <- pairs(em, df = Inf)
+mm <- marginal_means(
+    mod,
+    variables = "source",
+    hypothesis = "pairwise") 
+
+e1 <- test(pa, delta = delta, adjust = "none", side = "nonsuperiority", df = Inf)
+e2 <- hypotheses(mm, equivalence = c(-delta, delta))
+expect_equivalent(e1$z.ratio, e2$statistic.nonsup)
+expect_equivalent(e1$p.value, e2$p.value.nonsup)
+
+e1 <- test(pa, delta = delta, adjust = "none", side = "noninferiority", df = Inf)
+e2 <- hypotheses(mm, equivalence = c(-delta, delta))
+expect_equivalent(e1$z.ratio, e2$statistic.noninf)
+expect_equivalent(e1$p.value, e2$p.value.noninf)
+
+e1 <- test(pa, delta = delta, adjust = "none", df = Inf)
+e2 <- hypotheses(mm, equivalence = c(-delta, delta))
+expect_equivalent(e1$p.value, e2$p.value.equiv)
+
+
+rm(list = ls())

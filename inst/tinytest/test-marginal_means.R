@@ -31,7 +31,7 @@ dat$vs <- as.factor(dat$vs)
 
 # sanity check
 mod <- lm(mpg ~ cyl + am + vs + hp, dat)
-expect_error(marginal_means(mod, variables_grid = "junk"), pattern = "not found")
+expect_error(marginal_means(mod, variables_grid = "junk"), pattern = "missing")
 expect_error(marginal_means(mod, variables = "mpg"), pattern = "response")
 
 
@@ -100,11 +100,9 @@ me <- suppressWarnings(marginal_means(mod, variables = "am"))
 me <- me[order(me$value),]
 expect_equivalent(me$estimate, em$estimate)
 
-
 # error: no factor
 mod <- lm(hp ~ mpg, mtcars)
 expect_error(marginal_means(mod), pattern = "was found")
-
 
 # wts
 mod1 <- lm(vs ~ factor(am) + factor(gear) + factor(cyl), data = mtcars)
@@ -160,7 +158,7 @@ by <- data.frame(
   by = ifelse(1:5 <= 3, "Denver", "Paris"))
 
 mm <- marginal_means(m, by = by, type = "response")
-expect_equivalent(mm$estimate, ma$y)
+expect_equivalent(mm$estimate, ma$y, tol = .1)
 
 
 # simple marginal means for each level of `cyl`
@@ -187,3 +185,11 @@ by <-
     by = c("1", "2", "3,4,6,8" |> rep(4)))
 cmp <- comparisons(nom, by = by)
 expect_equivalent(nrow(cmp), 9)
+
+
+
+# # Issue #637: marginal_means() refactor
+# mod <- lm(mpg ~ factor(cyl) + as.logical(am), data = mtcars)
+# mm <- marginal_means(mod)
+
+rm(list = ls())

@@ -29,7 +29,7 @@ cmp <- comparisons(mod,
     variables = "angle",
     newdata = "marginalmeans")
 em <- emmeans(mod, ~angle)
-em <- contrast(em, method = "trt.vs.ctrl1")
+em <- emmeans::contrast(em, method = "trt.vs.ctrl1")
 em <- data.frame(em)
 expect_equal(cmp$estimate, em$estimate)
 expect_equal(cmp$std.error, em$SE)
@@ -55,3 +55,7 @@ em <- data.frame(emmeans(mod, ~ phase))
 mm <- marginal_means(mod, "phase")
 expect_equivalent(mm$estimate, em$emmean)
 expect_equivalent(mm$std.error, em$SE)
+
+
+
+rm(list = ls())

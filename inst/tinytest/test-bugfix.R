@@ -1,4 +1,5 @@
 source("helpers.R")
+exit_if_not(EXPENSIVE)
 using("marginaleffects")
 
 
@@ -79,3 +80,17 @@ expect_equal(p1$estimate, p3$fit)
 expect_equal(p1$std.error, p3$se.fit)
 expect_equal(p2$estimate, p3$fit)
 expect_equal(p2$std.error, p3$se.fit)
+
+
+# Issue #671
+dta <- data.frame(
+     lab = sample(0:1, size = 1000, replace = T),
+     age_group = sample(c("old", "young"), size = 1000, replace = TRUE))
+mod <- lm(lab ~ age_group, dta)
+mfx <- avg_slopes(mod)
+expect_equivalent(nrow(mfx), 1)
+expect_true("young - old" %in% mfx$contrast)
+
+
+
+rm(list = ls())

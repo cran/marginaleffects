@@ -40,9 +40,9 @@ avg_slopes(
 \arguments{
 \item{model}{Model object}
 
-\item{newdata}{\code{NULL}, data frame, string, or \code{datagrid()} call. Determines the predictor values for which to compute slopes.
+\item{newdata}{Grid of predictor values at which we evaluate the slopes.
 \itemize{
-\item \code{NULL} (default): Unit-level slopes each observed value in the original dataset.
+\item \code{NULL} (default): Unit-level slopes for each observed value in the original dataset.
 \item data frame: Unit-level slopes for each row of the \code{newdata} data frame.
 \item \code{\link[=datagrid]{datagrid()}} call to specify a custom grid of regressors. For example:
 \itemize{
@@ -59,9 +59,9 @@ avg_slopes(
 }
 }}
 
-\item{variables}{\code{NULL} or character vector. The subset of variables for which to compute slopes.
+\item{variables}{Focal variables
 \itemize{
-\item \code{NULL}: compute contrasts for all the variables in the model object (can be slow).
+\item \code{NULL}: compute slopes or comparisons for all the variables in the model object (can be slow).
 \item Character vector: subset of variables (usually faster).
 }}
 
@@ -168,6 +168,8 @@ A \code{data.frame} with one row per observation (per term/group) and several co
 \item \code{dydx}: slope of the outcome with respect to the term, for a given combination of predictor values
 \item \code{std.error}: standard errors computed by via the delta method.
 }
+
+See \code{?print.marginaleffects} for printing options.
 }
 \description{
 Partial derivative of the regression equation with respect to a regressor of interest.
@@ -192,22 +194,36 @@ including non-linear models with transformations (e.g., polynomials).
 Uncertainty estimates are computed using the delta method.
 
 Numerical derivatives for the \code{slopes} function are calculated
-using a simple epsilon difference approach: \eqn{\partial Y / \partial X = (f(X + \varepsilon) - f(X)) / \varepsilon}{dY/dX = (f(X + e) - f(X)) / e},
+using a simple epsilon difference approach: \eqn{\partial Y / \partial X = (f(X + \varepsilon/2) - f(X+\varepsilon/2)) / \varepsilon}{dY/dX = (f(X + e/2) - f(X-e/2)) / e},
 where f is the \code{predict()} method associated with the model class, and
 \eqn{\varepsilon}{e} is determined by the \code{eps} argument.
-
-Warning: Some models are particularly sensitive to \code{eps}, so it is good
-practice to try different values of this argument.
-
-Standard errors for the slopes are obtained using the Delta
-method. See the "Standard Errors" vignette on the package website for
-details (link above).
 }
 \section{Functions}{
 \itemize{
 \item \code{avg_slopes()}: Average slopes
 
 }}
+\section{Standard errors using the delta method}{
+
+
+Standard errors for all quantities estimated by \code{marginaleffects} can be obtained via the delta method. This requires differentiating a function with respect to the coefficients in the model using a finite difference approach. In some models, the delta method standard errors can be sensitive to various aspects of the numeric differentiation strategy, including the step size. By default, the step size is set to \code{1e-8}, or to \code{1e-4} times the smallest absolute model coefficient, whichever is largest.
+
+\code{marginaleffects} can delegate numeric differentiation to the \code{numDeriv} package, which allows more flexibility. To do this, users can pass arguments to the \code{numDeriv::jacobian} function through a global option. For example:
+\itemize{
+\item \code{options(marginaleffects_numDeriv = list(method = "simple", method.args = list(eps = 1e-6)))}
+\item \code{options(marginaleffects_numDeriv = list(method = "Richardson", method.args = list(eps = 1e-5)))}
+\item \code{options(marginaleffects_numDeriv = NULL)}
+}
+
+See the "Standard Errors and Confidence Intervals" vignette on the \code{marginaleffects} website for more details on the computation of standard errors:
+
+https://vincentarelbundock.github.io/marginaleffects/articles/uncertainty.html
+
+Note that the \code{inferences()} function can be used to compute uncertainty estimates using a bootstrap or simulation-based inference. See the vignette:
+
+https://vincentarelbundock.github.io/marginaleffects/articles/bootstrap.html
+}
+
 \section{Model-Specific Arguments}{
 
 
@@ -225,6 +241,7 @@ marginal effects, predictions, marginal means, and contrasts.\tabular{llll}{
    \code{mgcv} \tab \code{bam} \tab \code{exclude} \tab \link[mgcv:predict.bam]{mgcv::predict.bam} \cr
    \code{robustlmm} \tab \code{rlmerMod} \tab \code{re.form} \tab \link[robustlmm:rlmerMod-class]{robustlmm::predict.rlmerMod} \cr
     \tab  \tab \code{allow.new.levels} \tab \link[robustlmm:rlmerMod-class]{robustlmm::predict.rlmerMod} \cr
+   \code{MCMCglmm} \tab \code{MCMCglmm} \tab \code{ndraws} \tab  \cr
 }
 }
 

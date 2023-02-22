@@ -8,7 +8,7 @@ exit_if_not(requiet("margins"))
 
 # vs. emmeans vs. margins
 dat <- read.csv(testing_path("stata/databases/lme4_02.csv"))
-mod <- lmer(y ~ x1 * x2 + (1 | clus), data = dat)
+mod <-lme4::lmer(y ~ x1 * x2 + (1 | clus), data = dat)
 
 # no validity
 expect_slopes(mod)
@@ -41,13 +41,16 @@ expect_inherits(predictions(mod,
                        newdata = datagrid(Chick = NA,
                                           Diet = 1:4,
                                           Time = 0:21),
-                       include_random = FALSE),
+                       re.form = NA),
            "predictions")
 
 expect_inherits(
     predictions(mod,
         newdata = datagrid(Diet = 1:4,
                            Time = 0:21),
-        include_random = TRUE),
+        re.form = NA),
     "predictions")
 
+
+
+rm(list = ls())

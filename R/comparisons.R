@@ -6,21 +6,21 @@
 #' ratio, or some other function. `comparisons()` can return many quantities of
 #' interest, such as contrasts, differences, risk ratios, changes in log odds,
 #' slopes, elasticities, etc.
-#' 
+#'
 #' * `comparisons()`: unit-level (conditional) estimates.
 #' * `avg_comparisons()`: average (marginal) estimates.
-#' 
+#'
 #' The `newdata` argument and the `datagrid()` function can be used to control where statistics are evaluated in the predictor space: "at observed values", "at the mean", "at representative values", etc.
-#' 
+#'
 #' See the comparisons vignette and package website for worked examples and case studies:
-#' 
+#'
 #' * <https://vincentarelbundock.github.io/marginaleffects/articles/comparisons.html>
 #' * <https://vincentarelbundock.github.io/marginaleffects/>
 #'
 #' @inheritParams slopes
 #' @inheritParams predictions
-#' @param variables `NULL`, character vector, or named list. The subset of variables for which to compute contrasts.
-#' * `NULL`: compute contrasts for all the variables in the model object (can be slow).
+#' @param variables Focal variables
+#' * `NULL`: compute comparisons for all the variables in the model object (can be slow).
 #' * Character vector: subset of variables (usually faster).
 #' * Named list: names identify the subset of variables of interest, and values define the type of contrast to compute. Acceptable values depend on the variable type:
 #'   - Factor or character variables:
@@ -28,6 +28,7 @@
 #'     * "all": All combinations of observed levels
 #'     * "sequential": Each factor level is compared to the previous factor level
 #'     * "pairwise": Each factor level is compared to all other levels
+#'     * "minmax": The highest and lowest levels of a factor.
 #'     * Vector of length 2 with the two values to compare.
 #'   - Logical variables:
 #'     * NULL: contrast between TRUE and FALSE
@@ -43,8 +44,8 @@
 #'     + `variables = list(gear = "pairwise", hp = 10)`
 #'     + `variables = list(gear = "sequential", hp = c(100, 120))`
 #'     + See the Examples section below for more.
-#' @param newdata `NULL`, data frame, string, or `datagrid()` call. Determines the predictor values for which to compute contrasts.
-#' + `NULL` (default): Unit-level contrasts for each observed value in the original dataset.
+#' @param newdata Grid of predictor values at which we evaluate the comparisons.
+#' + `NULL` (default): Unit-level contrasts for each observed value in the original dataset (empirical distribution).
 #' + data frame: Unit-level contrasts for each row of the `newdata` data frame.
 #' + string:
 #'   - "mean": Contrasts at the Mean. Contrasts when each predictor is held at its mean or mode.
@@ -72,9 +73,20 @@
 #' @param cross TRUE or FALSE
 #' * `FALSE`: Contrasts represent the change in adjusted predictions when one predictor changes and all other variables are held constant.
 #' * `TRUE`: Contrasts represent the changes in adjusted predictions when all the predictors specified in the `variables` argument are manipulated simultaneously (a "cross-contrast").
+#' @template deltamethod
 #' @template model_specific_arguments
 #' @template transform_pre_functions
 #' @template bayesian
+#'
+#' @return A `data.frame` with one row per observation (per term/group) and several columns:
+#' * `rowid`: row number of the `newdata` data frame
+#' * `type`: prediction type, as defined by the `type` argument
+#' * `group`: (optional) value of the grouped outcome (e.g., categorical outcome models)
+#' * `term`: the variable whose marginal effect is computed
+#' * `dydx`: slope of the outcome with respect to the term, for a given combination of predictor values
+#' * `std.error`: standard errors computed by via the delta method.
+#'
+#' See `?print.marginaleffects` for printing options.
 #'
 #' @examples
 #'
@@ -215,14 +227,7 @@ comparisons <- function(model,
         # insert `model` should probably not be nested too deeply in the call
         # stack since we eval.parent() (not sure about this)
         scall <- substitute(newdata)
-        if (is.call(scall) && as.character(scall)[1] %in% c("datagrid", "datagridcf", "typical", "counterfactual")) {
-            lcall <- as.list(scall)
-            if (!any(c("model", "data") %in% names(lcall))) {
-                lcall <- c(lcall, list("model" = model))
-                newdata <- eval.parent(as.call(lcall))
-            }
-
-        }
+        newdata <- sanitize_newdata_call(scall, newdata, model)
 
         model <- sanitize_model(
             model = model,
@@ -232,7 +237,7 @@ comparisons <- function(model,
             calling_function = "comparisons",
             ...)
         cross <- sanitize_cross(cross, variables, model)
-        type <- sanitize_type(model = model, type = type, calling_function = "marginaleffects")
+        type <- sanitize_type(model = model, type = type)
 
     # internal call from `slopes()`
     } else {
@@ -240,6 +245,33 @@ comparisons <- function(model,
         cross <- FALSE
     }
 
+    # build call: match.call() doesn't work well in *apply()
+    call_attr <- c(list(
+        name = "comparisons",
+        model = model,
+        newdata = newdata,
+        variables = variables,
+        type = type,
+        vcov = vcov,
+        by = by,
+        conf_level = conf_level,
+        transform_pre = transform_pre,
+        transform_post = transform_post,
+        cross = cross,
+        wts = wts,
+        hypothesis = hypothesis,
+        df = df),
+        list(...))
+    call_attr <- do.call("call", call_attr)
+    
+    # multiple imputation
+    if (inherits(model, "mira")) {
+        out <- process_imputation(model, call_attr)
+        return(out)
+    }
+    
+    # more sanity chekcs
+    
     conf_level <- sanitize_conf_level(conf_level, ...)
     sanity_dots(model, ...)
     checkmate::assert_number(eps, lower = 1e-10, null.ok = TRUE)
@@ -260,32 +292,39 @@ comparisons <- function(model,
         transform_post_label <- names(transform_post)
     }
 
-
-    # used by `marginaleffects` to hard-code preference
-    # deprecated as user-level arguments
-    if ("contrast_factor" %in% names(dots)) {
-        contrast_factor <- dots[["contrast_factor"]]
-        dots[["contrast_factor"]] <- NULL
-    } else {
-        contrast_factor <- "reference"
-    }
-    if ("contrast_numeric" %in% names(dots)) {
-        contrast_numeric <- dots[["contrast_numeric"]]
-        dots[["contrast_numeric"]] <- NULL
-    } else {
-        contrast_numeric <- 1
-    }
-
     marginalmeans <- isTRUE(checkmate::check_choice(newdata, choices = "marginalmeans"))
 
     # before sanitize_variables
-    modeldata <- get_modeldata(model)
+    if (isTRUE(checkmate::check_character(by))) {
+        addvar <- by
+    } else if (isTRUE(checkmate::check_data_frame(by))) {
+        addvar <- colnames(by)
+    } else {
+        addvar <- FALSE
+    }
+    
+    # extracting modeldata repeatedly is slow.
+    # checking dots allows cheap multiple imputation
+    dots <- list(...)
+    if ("modeldata" %in% names(dots)) {
+        modeldata <- dots[["modeldata"]]
+    } else {
+        if (isTRUE(checkmate::check_character(by))) {
+            addvar <- by
+        } else if (isTRUE(checkmate::check_data_frame(by))) {
+            addvar <- colnames(by)
+        } else {
+            addvar <- FALSE
+        }
+        modeldata <- get_modeldata(model, additional_variables = addvar)
+    }
+    
     newdata <- sanitize_newdata(
         model = model,
         newdata = newdata,
         by = by,
         modeldata = modeldata)
-
+    
     # weights: before sanitize_variables
     sanity_wts(wts, newdata) # after sanity_newdata
     if (!is.null(wts) && isTRUE(checkmate::check_string(wts))) {
@@ -298,12 +337,12 @@ comparisons <- function(model,
     variables_list <- sanitize_variables(
         model = model,
         newdata = newdata,
+        modeldata = modeldata,
         variables = variables,
         cross = cross,
         by = by,
-        contrast_numeric = contrast_numeric,
-        contrast_factor = contrast_factor,
-        transform_pre = transform_pre)
+        transform_pre = transform_pre,
+        eps = eps)
 
     tmp <- sanitize_hypothesis(hypothesis, ...)
     hypothesis <- tmp$hypothesis
@@ -356,8 +395,8 @@ comparisons <- function(model,
                  variables = predictors,
                  cross = cross,
                  marginalmeans = marginalmeans,
-                 eps = eps,
                  modeldata = modeldata)
+    dots[["modeldata"]] <- NULL # dont' pass twice
     args <- c(args, dots)
     contrast_data <- do.call("get_contrast_data", args)
 
@@ -372,7 +411,8 @@ comparisons <- function(model,
                  by = by,
                  marginalmeans = marginalmeans,
                  cross = cross,
-                 hypothesis = hypothesis)
+                 hypothesis = hypothesis,
+                 modeldata = modeldata)
     args <- c(args, dots)
     mfx <- do.call("get_contrasts", args)
 
@@ -398,12 +438,13 @@ comparisons <- function(model,
                      lo = contrast_data$lo,
                      original = contrast_data$original,
                      by = by,
-                     cross = cross,
-                     eps = 1e-4)
+                     eps = eps,
+                     cross = cross)
         args <- c(args, dots)
         se <- do.call("get_se_delta", args)
-        mfx$std.error <- as.numeric(se)
         J <- attr(se, "jacobian")
+        attr(se, "jacobian") <- NULL
+        mfx$std.error <- as.numeric(se)
         draws <- NULL
 
     # no standard error
@@ -419,8 +460,8 @@ comparisons <- function(model,
             tmp <- contrast_data$original[, ..idx, drop = FALSE]
             # contrast_data is duplicated to compute contrasts for different terms or pairs
             bycols <- intersect(colnames(tmp), colnames(mfx))
-            idx <- do.call(paste, c(tmp[, ..bycols], sep = "|"))
-            tmp <- tmp[!duplicated(idx), , drop = FALSE]
+            idx <- duplicated(tmp, by = bycols)
+            tmp <- tmp[!idx]
             mfx <- merge(mfx, tmp, all.x = TRUE, by = bycols, sort = FALSE)
         # HACK: relies on NO sorting at ANY point
         } else {
@@ -448,10 +489,17 @@ comparisons <- function(model,
     }
 
 
-    # clean columns
+    # clean rows and columns
     if (is.null(bycols) && isTRUE(checkmate::check_character(by))) {
         bycols <- by
     }
+
+    if (is.null(draws) && !"rowid" %in% colnames(mfx)) {
+        idx <- c("term", grep("^term$|^contrast$|^contrast_", colnames(mfx), value = TRUE), bycols)
+        idx <- intersect(idx, colnames(mfx))
+        if (length(idx) > 0) data.table::setorderv(mfx, cols = idx)
+    }
+
     stubcols <- c(
         "rowid", "rowidcf", "type", "group", "term", "hypothesis", "by",
         grep("^contrast", colnames(mfx), value = TRUE),
@@ -460,8 +508,11 @@ comparisons <- function(model,
         "conf.high", "df", "predicted", "predicted_hi", "predicted_lo")
     cols <- intersect(stubcols, colnames(mfx))
     cols <- unique(c(cols, colnames(mfx)))
-    mfx <- mfx[, ..cols, drop = FALSE]
+    if (length(setdiff(names(mfx), cols)) > 0L) {
+      mfx[, setdiff(names(mfx), cols) := NULL]
+    }
     mfx <- sort_columns(mfx, stubcols)
+
 
     # bayesian draws
     attr(mfx, "posterior_draws") <- draws
@@ -482,20 +533,25 @@ comparisons <- function(model,
 
     out <- mfx
 
-    if ("marginaleffects_eps" %in% colnames(out)) {
-        out[, "marginaleffects_eps" := NULL]
-    }
-
     if (!isTRUE(internal_call)) {
-        setDF(out)
+        data.table::setDF(out)
     }
 
     out <- set_marginaleffects_attributes(
         out,
-        get_marginaleffects_attributes(newdata, include_regex = "^newdata"))
-    attr(out, "model") <- model
+        get_marginaleffects_attributes(newdata, include_regex = "^newdata.*class|explicit|matrix|levels"))
+
+
+    # save newdata and model for use in recall()
+    if (!"newdata" %in% names(call_attr) || is.null(call_attr[["newdata"]])) {
+        attr(out, "newdata") <- newdata
+    }
+
+    # other attributes
+    attr(out, "call") <- call_attr
     attr(out, "type") <- type
     attr(out, "model_type") <- class(model)[1]
+    attr(out, "model") <- model
     attr(out, "variables") <- predictors
     attr(out, "jacobian") <- J
     attr(out, "vcov") <- vcov
@@ -507,9 +563,6 @@ comparisons <- function(model,
     attr(out, "transform_post_label") <- transform_post_label
     attr(out, "conf_level") <- conf_level
     attr(out, "by") <- by
-    attr(out, "call") <- match.call()
-    # save newdata for use in recall()
-    attr(out, "newdata") <- newdata
 
     if (inherits(model, "brmsfit")) {
         insight::check_if_installed("brms")
@@ -550,21 +603,7 @@ avg_comparisons <- function(model,
     # order of the first few paragraphs is important
     # if `newdata` is a call to `typical` or `counterfactual`, insert `model`
     scall <- substitute(newdata)
-    if (is.call(scall)) {
-        lcall <- as.list(scall)
-        fun_name <- as.character(scall)[1]
-        if (fun_name %in% c("datagrid", "datagridcf", "typical", "counterfactual")) {
-            if (!any(c("model", "newdata") %in% names(lcall))) {
-                lcall <- c(lcall, list("model" = model))
-                newdata <- eval.parent(as.call(lcall))
-            }
-        } else if (fun_name == "visualisation_matrix") {
-            if (!"x" %in% names(lcall)) {
-                lcall <- c(lcall, list("x" = get_modeldata))
-                newdata <- eval.parent(as.call(lcall))
-            }
-        }
-    }
+    newdata <- sanitize_newdata_call(scall, newdata, model)
 
     # Bootstrap
     out <- inferences_dispatch(
@@ -592,9 +631,6 @@ avg_comparisons <- function(model,
         df = df,
         eps = eps,
         ...)
-
-    # overwrite call because otherwise we get the symbosl sent to comparisons()
-    attr(out, "call") <- match.call()
 
     return(out)
 }

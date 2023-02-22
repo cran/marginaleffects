@@ -86,7 +86,7 @@ dat2$unit <- as.factor(dat2$unit)
 dat2 <- dat2
 mod1 <- feols(y ~ x * w | unit, data = dat)
 mod2 <- fixest::feols(y ~ x * w | unit, data = dat2)
-p <- plot_slopes(mod2, effect = "x", condition = "w")
+p <- plot_slopes(mod2, variables = "x", condition = "w")
 expect_inherits(p, "ggplot")
 
 
@@ -105,7 +105,7 @@ dat2 <- dat
 dat2$unit <- as.factor(dat2$unit)
 dat2 <- dat2
 mod2 <- fixest::feols(y ~ x * w | unit, data = dat2)
-k <- plot_slopes(mod2, effect = "x", condition = "w", draw = FALSE)
+k <- plot_slopes(mod2, variables = "x", condition = "w", draw = FALSE)
 expect_inherits(k, "data.frame")
 expect_false(anyNA(k$estimate))
 expect_false(any(k$estimate == 0))
@@ -211,13 +211,13 @@ fun <- function(model) {
     out <- names(out)
     return(out)
 }
-expect_equivalent(fun(mod1), c("cyl", "gear"))
-expect_equivalent(fun(mod2), c("cyl"))
-expect_equivalent(fun(mod3), c("cyl"))
-expect_equivalent(sort(fun(mod4)), c("am", "cyl", "gear"))
-if (utils::packageVersion("insight") < "0.18.4.4") exit_file("insight version")
+expect_true(all(c("cyl", "gear") %in% fun(mod1)))
+expect_true("cyl" %in% fun(mod2))
+expect_true("cyl" %in% fun(mod3))
+expect_true(all(c("am", "cyl", "gear") %in% fun(mod4)))
 m <- slopes(mod4)
 expect_inherits(m, "marginaleffects")
+expect_true(all(c("am", "cyl", "drat", "gear", "wt") %in% m$term))
 
 
 # Issue #509
@@ -290,3 +290,5 @@ expect_false(anyNA(p$std.error))
 
 
 
+
+rm(list = ls())

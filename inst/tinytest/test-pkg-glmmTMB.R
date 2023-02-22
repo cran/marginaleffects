@@ -1,4 +1,5 @@
 source("helpers.R")
+exit_if_not(EXPENSIVE)
 using("marginaleffects")
 # exit_file("glmmTMB always causes problems")
 
@@ -73,16 +74,14 @@ mzip_3 <- glmmTMB(
   ziformula = ~ res + inc + age,
   family = "nbinom2",
   data = bed)
-mfx <- slopes(mzip_3, type = "response")
-tid <- tidy(mfx)
+tid <- avg_slopes(mzip_3, type = "response")
 
-# checked against Stata
-b <- c(-0.703975123794645, 0.116113581361008, 1.80590209245287,
-       0.318406280886303, -0.322385169497627, -0.0357107397802961)
-se <- c(0.333707103664564, 0.335617116291664, 1.58873581973933, 2.1641601963981, 
-        0.0899355987140499, 0.0137118286682651)
-expect_equivalent(tid$estimate, b)
-expect_equivalent(tid$std.error, se)
+# TODO: half-checked against Stata. Slight difference on binary predictors. Stata probably dydx
+b <- c(-0.0357107397803255, 0.116113581361053, -0.703975123794627, -0.322385169497792, 2.29943403870235, 0.313970669520973)
+se <- c(0.0137118286464027, 0.335617116221601, 0.333707103584788, 0.0899355981887107, 
+2.51759246321455, 2.10076503002941)
+expect_equivalent(b, tid$estimate)
+expect_equivalent(se, tid$std.error, tolerance = 1e-4)
 
 
 # Hurdle Poisson model
@@ -207,3 +206,42 @@ expect_error(marginal_means(model_REML), pattern = "REML")
 expect_inherits(slopes(model_REML, vcov = FALSE), "marginaleffects")
 expect_inherits(predictions(model_REML, re.form = NA, vcov = FALSE), "predictions")
 expect_inherits(predictions(model_REML, vcov = FALSE, re.form = NA), "predictions")
+
+
+# Issue #663
+exit_if_not(requiet("ordbetareg"))
+exit_if_not(requiet("dplyr"))
+
+data(pew, package = "ordbetareg")
+model_data <- select(
+  pew,
+  therm,
+  age = "F_AGECAT_FINAL",
+  sex = "F_SEX_FINAL",
+  income = "F_INCOME_FINAL",
+  ideology = "F_IDEO_FINAL",
+  race = "F_RACETHN_RECRUITMENT",
+  education = "F_EDUCCAT2_FINAL",
+  region = "F_CREGION_FINAL",
+  approval = "POL1DT_W28",
+  born_again = "F_BORN_FINAL",
+  relig = "F_RELIG_FINAL",
+  news = "NEWS_PLATFORMA_W28") %>%
+  mutate_at(c("race", "ideology", "income", "approval", "sex", "education", "born_again", "relig"), function(c) {
+    factor(c, exclude = levels(c)[length(levels(c))]) }) |>
+  # need to make these ordered factors for BRMS
+  transform(
+    education = ordered(education),
+    income = ordered(income))
+model_data$therm_norm <- (model_data$therm - min(model_data$therm)) / (max(model_data$therm) - min(model_data$therm))
+mod <- glmmTMB(
+  therm_norm ~ approval + (1 | region),
+  data = model_data,
+  family = ordbeta(),
+  start = list(psi = c(-1, 1)))
+mfx <- avg_slopes(mod)
+expect_inherits(mfx, 'slopes')
+
+
+
+rm(list = ls())

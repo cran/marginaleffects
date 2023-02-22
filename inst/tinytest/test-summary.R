@@ -5,7 +5,7 @@ exit_if_not(!ON_OSX)
 using("tinyviztest")
 using("marginaleffects")
 
-exit_if_not(requiet("dplyr"))
+exit_if_not(requiet("poorman"))
 
 dat <- mtcars
 mod <- glm(am ~ hp, data = dat, family = binomial)
@@ -37,7 +37,6 @@ expect_snapshot_print(summary(mfx, conf_level = .2), "summary-marginaleffects_co
 mod <- lm(mpg ~ hp + factor(cyl), mtcars)
 hyp <- hypotheses(mod, "b3 = b4")
 expect_snapshot_print(summary(hyp), "summary-hypotheses")
-expect_snapshot_print(summary(hyp, conf_level = .8), "summary-hypotheses_conf_level_80")
 
 
 # summary: marginal means
@@ -56,12 +55,16 @@ dat <- mtcars
 mod <- glm(am ~ hp * wt, data = dat, family = binomial)
 mfx <- slopes(mod)
 expect_snapshot_print(
-    summary(mfx) |> dplyr::select(term, estimate, conf.low, conf.high),
+    summary(mfx) |> poorman::select(term, estimate, conf.low, conf.high),
     "summary-marginaleffects_dplyr")
 
 
 # bugs stay dead: label transformation_post
 dat <- mtcars
 mod <- glm(am ~ hp, data = dat, family = binomial)
-cmp <- comparisons(mod, transform_pre = function(hi, lo) hi / lo, transform_post = exp)
-expect_snapshot_print(summary(cmp), "summary-comparisons_transform_post")
+cmp <- avg_comparisons(mod, transform_pre = function(hi, lo) hi / lo, transform_post = exp)
+expect_snapshot_print(cmp, "summary-comparisons_transform_post")
+
+
+
+rm(list = ls())

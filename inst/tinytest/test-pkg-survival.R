@@ -35,7 +35,7 @@ test1 <<- data.frame(time = c(4, 3, 1, 1, 2, 2, 3),
 mod <- coxph(Surv(time, status) ~ x + strata(sex),
              data = test1,
              ties = "breslow")
-mfx <- merge(tidy(slopes(mod, type = "lp")), stata)
+mfx <- merge(avg_slopes(mod, type = "lp"), stata)
 expect_slopes(mod, type = "risk", n_unique = 4)
 expect_equivalent(mfx$estimate, mfx$dydxstata)
 expect_equivalent(mfx$std.error, mfx$std.errorstata)
@@ -60,12 +60,12 @@ expect_slopes(mod, type = "risk", n_unique = 2)
 
 
 # bugs stay dead: conf.level forces get_predicted which doesn't process 'type'
-test1 <<- data.frame(time = c(4, 3, 1, 1, 2, 2, 3),
+test3 <<- data.frame(time = c(4, 3, 1, 1, 2, 2, 3),
                      status = c(1, 1, 1, 0, 1, 1, 0),
                      x = c(0, 2, 1, 1, 1, 0, 0),
                      sex = factor(c(0, 0, 0, 0, 1, 1, 1)))
 mod <- coxph(Surv(time, status) ~ x + strata(sex),
-             data = test1,
+             data = test3,
              ties = "breslow")
 p1 <- predictions(mod, type = "lp")
 p2 <- predictions(mod, type = "risk")
@@ -76,22 +76,29 @@ expect_true(all(p1$estimate != p2$estimate))
 # bugs stay dead: numeric vs factor strata
 #skip_if_not_installed("insight", minimum_version = "0.17.0")
 stata <- readRDS(testing_path("stata/stata.rds"))$survival_coxph_01
-tmp1 <<- data.frame(time = c(4, 3, 1, 1, 2, 2, 3),
+test4 <<- data.frame(time = c(4, 3, 1, 1, 2, 2, 3),
                      status = c(1, 1, 1, 0, 1, 1, 0),
                      x = c(0, 2, 1, 1, 1, 0, 0),
                      sex = factor(c(0, 0, 0, 0, 1, 1, 1)))
-tmp2 <<- data.frame(time = c(4, 3, 1, 1, 2, 2, 3),
+test5 <<- data.frame(time = c(4, 3, 1, 1, 2, 2, 3),
                      status = c(1, 1, 1, 0, 1, 1, 0),
                      x = c(0, 2, 1, 1, 1, 0, 0),
                      sex = c(0, 0, 0, 0, 1, 1, 1))
 mod1 <- coxph(Surv(time, status) ~ x + strata(sex),
-              data = tmp1,
+              data = test4,
               ties = "breslow")
 mod2 <- coxph(Surv(time, status) ~ x + strata(sex),
-              data = tmp2,
+              data = test5,
               ties = "breslow")
-mfx1 <- merge(tidy(slopes(mod1, type = "lp")), stata)
-mfx2 <- merge(tidy(slopes(mod2, type = "lp")), stata)
+
+mfx1 <- merge(avg_slopes(mod1, type = "lp"), stata)
+mfx2 <- merge(avg_slopes(mod2, type = "lp"), stata)
 expect_equivalent(mfx1$estimate, mfx2$estimate)
 
 
+
+
+
+source("helpers.R")
+suppressWarnings(rm(list = paste0("test", 1:5), .GlobalEnv))
+rm(list = ls())

@@ -108,3 +108,9 @@ mm <- tidy(mm)
 em <- broom::tidy(emmeans::emmeans(mod, "Pclass", type = "response"))
 expect_equivalent(mm$estimate, em$response)
 expect_equivalent(mm$std.error, em$std.error, tolerance = 0.01)
+
+
+
+
+source("helpers.R")
+rm(list = ls())

@@ -9,7 +9,7 @@ exit_if_not(requiet("fixest"))
 expect_error(datagrid(Petal.Length = 4.6), pattern = "inside")
 
 # numeric clusters no longer produce a warning; selects mode
-mod <- lmer(mpg ~ hp + (1 + drat | cyl), data = mtcars)
+mod <-lme4::lmer(mpg ~ hp + (1 + drat | cyl), data = mtcars)
 expect_true(datagrid(model = mod)$cyl == 8)
 
 # functions
@@ -38,6 +38,6 @@ cmp <- comparisons(mod, newdata = datagrid(am = unique, gear = max))
 expect_equivalent(nrow(cmp), 4)
 
 
-# error
-mod <- lm(mpg ~ hp, mtcars)
-expect_error(predictions(mod, newdata = datagridcf()), pattern = "values")
+
+source("helpers.R")
+rm(list = ls())

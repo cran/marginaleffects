@@ -40,42 +40,7 @@ avg_predictions(
 \arguments{
 \item{model}{Model object}
 
-\item{newdata}{\code{NULL}, data frame, string, or \code{datagrid()} call. Determines the predictor values for which to compute slopes.
-\itemize{
-\item \code{NULL} (default): Unit-level slopes each observed value in the original dataset.
-\item data frame: Unit-level slopes for each row of the \code{newdata} data frame.
-\item \code{\link[=datagrid]{datagrid()}} call to specify a custom grid of regressors. For example:
-\itemize{
-\item \code{newdata = datagrid(cyl = c(4, 6))}: \code{cyl} variable equal to 4 and 6 and other regressors fixed at their means or modes.
-\item See the Examples section and the \code{\link[=datagrid]{datagrid()}} documentation.
-}
-\item string:
-\itemize{
-\item "mean": Marginal Effects at the Mean. Slopes when each predictor is held at its mean or mode.
-\item "median": Marginal Effects at the Median. Slopes when each predictor is held at its median or mode.
-\item "marginalmeans": Marginal Effects at Marginal Means. See Details section below.
-\item "tukey": Marginal Effects at Tukey's 5 numbers.
-\item "grid": Marginal Effects on a grid of representative numbers (Tukey's 5 numbers and unique values of categorical predictors).
-}
-}}
-
-\item{variables}{\code{NULL}, character vector, or named list. The subset of variables to use for creating a counterfactual grid of predictions. The entire dataset replicated for each unique combination of the variables in this list. See the Examples section below.
-\itemize{
-\item Warning: This can use a lot of memory if there are many variables and values, and when the dataset is large.
-\item \code{NULL}: computes one prediction per row of \code{newdata}
-\item Named list: names identify the subset of variables of interest and their values. For numeric variables, the \code{variables} argument supports functions and string shortcuts:
-\itemize{
-\item A function which returns a numeric value
-\item Numeric vector: Contrast between the 2nd element and the 1st element of the \code{x} vector.
-\item "iqr": Contrast across the interquartile range of the regressor.
-\item "sd": Contrast across one standard deviation around the regressor mean.
-\item "2sd": Contrast across two standard deviations around the regressor mean.
-\item "minmax": Contrast between the maximum and the minimum values of the regressor.
-\item "threenum": mean and 1 standard deviation on both sides
-\item "fivenum": Tukey's five numbers
-#' @param newdata \code{NULL}, data frame, string, or \code{datagrid()} call. Determines the grid of predictors on which we make predictions.
-}
-}
+\item{newdata}{Grid of predictor values at which we evaluate predictions.
 \itemize{
 \item \code{NULL} (default): Predictions for each observed value in the original dataset.
 \item data frame: Predictions for each row of the \code{newdata} data frame.
@@ -91,6 +56,33 @@ avg_predictions(
 \itemize{
 \item \code{newdata = datagrid(cyl = c(4, 6))}: \code{cyl} variable equal to 4 and 6 and other regressors fixed at their means or modes.
 \item See the Examples section and the \code{\link[=datagrid]{datagrid()}} documentation.
+}
+}}
+
+\item{variables}{Counterfactual variables.
+\itemize{
+\item Output:
+\itemize{
+\item \code{predictions()}: The entire dataset is replicated once for each unique combination of \code{variables}, and predictions are made.
+\item \code{avg_predictions()}: The entire dataset is replicated, predictions are made, and they are marginalized by \code{variables} categories.
+\item Warning: This can be expensive in large datasets.
+\item Warning: Users who need "conditional" predictions should use the \code{newdata} argument instead of \code{variables}.
+}
+\item Input:
+\itemize{
+\item \code{NULL}: computes one prediction per row of \code{newdata}
+\item Character vector: the dataset is replicated once of every combination of unique values of the variables identified in \code{variables}.
+\item Named list: names identify the subset of variables of interest and their values. For numeric variables, the \code{variables} argument supports functions and string shortcuts:
+\itemize{
+\item A function which returns a numeric value
+\item Numeric vector: Contrast between the 2nd element and the 1st element of the \code{x} vector.
+\item "iqr": Contrast across the interquartile range of the regressor.
+\item "sd": Contrast across one standard deviation around the regressor mean.
+\item "2sd": Contrast across two standard deviations around the regressor mean.
+\item "minmax": Contrast between the maximum and the minimum values of the regressor.
+\item "threenum": mean and 1 standard deviation on both sides
+\item "fivenum": Tukey's five numbers
+}
 }
 }}
 
@@ -118,7 +110,7 @@ type, but will typically be a string such as: "response", "link", "probs",
 or "zero". When an unsupported string is entered, the model-specific list of
 acceptable values is returned in an error message. When \code{type} is \code{NULL}, the
 default value is used. This default is the first model-related row in
-the \code{marginaleffects:::type_dictionary} dataframe.}
+the \code{marginaleffects:::type_dictionary} dataframe. See the details section for a note on backtransformation.}
 
 \item{by}{Aggregate unit-level estimates (aka, marginalize, average over). Valid inputs:
 \itemize{
@@ -144,7 +136,7 @@ contrasts or slopes. These weights only affect the averaging in
 \item numeric: vector of length equal to the number of rows in the original data or in \code{newdata} (if supplied).
 }}
 
-\item{transform_post}{(experimental) A function applied to unit-level adjusted predictions and confidence intervals just before the function returns results. For bayesian models, this function is applied to individual draws from the posterior distribution, before computing summaries.}
+\item{transform_post}{A function applied to unit-level adjusted predictions and confidence intervals just before the function returns results. For bayesian models, this function is applied to individual draws from the posterior distribution, before computing summaries.}
 
 \item{hypothesis}{specify a hypothesis test or custom contrast using a numeric value, vector, or matrix, a string, or a string formula.
 \itemize{
@@ -188,10 +180,12 @@ A \code{data.frame} with one row per observation and several columns:
 \item \code{type}: prediction type, as defined by the \code{type} argument
 \item \code{group}: (optional) value of the grouped outcome (e.g., categorical outcome models)
 \item \code{estimate}: predicted outcome
-\item \code{std.error}: standard errors computed by the \code{insight::get_predicted} function or, if unavailable, via \code{marginaleffects} delta method functionality.
+\item \code{std.error}: standard errors computed using the delta method.
 \item \code{conf.low}: lower bound of the confidence interval (or equal-tailed interval for bayesian models)
 \item \code{conf.high}: upper bound of the confidence interval (or equal-tailed interval for bayesian models)
 }
+
+See \code{?print.marginaleffects} for printing options.
 }
 \description{
 Outcome predicted by a fitted model on a specified scale for a given combination of values of the predictor variables, such as their observed values, their means, or factor levels (a.k.a. "reference grid").
@@ -216,20 +210,34 @@ The \code{newdata} argument, the \code{tidy()} function, and \code{datagrid()} f
 \item Predictions at User-Specified values (aka Predictions at Representative values).
 }
 
-When possible, \code{predictions()} delegates the computation of confidence
-intervals to the \code{insight::get_predicted()} function, which uses back
-transformation to produce adequate confidence intervals on the scale
-specified by the \code{type} argument. When this is not possible, \code{predictions()}
-uses the Delta Method to compute standard errors around adjusted
-predictions, and builds symmetric confidence intervals. These naive symmetric
-intervals may not always be appropriate. For instance, they may stretch beyond
-the bounds of a binary response variables.
+For \code{glm()} or \code{gam::gam()} models with \code{type=NULL} (the default), \code{predictions()} first predicts on the link scale, and then backtransforms the estimates and confidence intervals. This implies that the \code{estimate} produced by \code{avg_predictions()} will not be exactly equal to the average of the \code{estimate} column produced by \code{predictions()}. Users can circumvent this behavior and average predictions directly on the response scale by setting \code{type="response"} explicitly. With \code{type="response"}, the intervals are symmetric and may have undesirable properties (e.g., stretching beyond the \verb{[0,1]} bounds for a binary outcome regression).
 }
 \section{Functions}{
 \itemize{
 \item \code{avg_predictions()}: Average predictions
 
 }}
+\section{Standard errors using the delta method}{
+
+
+Standard errors for all quantities estimated by \code{marginaleffects} can be obtained via the delta method. This requires differentiating a function with respect to the coefficients in the model using a finite difference approach. In some models, the delta method standard errors can be sensitive to various aspects of the numeric differentiation strategy, including the step size. By default, the step size is set to \code{1e-8}, or to \code{1e-4} times the smallest absolute model coefficient, whichever is largest.
+
+\code{marginaleffects} can delegate numeric differentiation to the \code{numDeriv} package, which allows more flexibility. To do this, users can pass arguments to the \code{numDeriv::jacobian} function through a global option. For example:
+\itemize{
+\item \code{options(marginaleffects_numDeriv = list(method = "simple", method.args = list(eps = 1e-6)))}
+\item \code{options(marginaleffects_numDeriv = list(method = "Richardson", method.args = list(eps = 1e-5)))}
+\item \code{options(marginaleffects_numDeriv = NULL)}
+}
+
+See the "Standard Errors and Confidence Intervals" vignette on the \code{marginaleffects} website for more details on the computation of standard errors:
+
+https://vincentarelbundock.github.io/marginaleffects/articles/uncertainty.html
+
+Note that the \code{inferences()} function can be used to compute uncertainty estimates using a bootstrap or simulation-based inference. See the vignette:
+
+https://vincentarelbundock.github.io/marginaleffects/articles/bootstrap.html
+}
+
 \section{Model-Specific Arguments}{
 
 
@@ -247,6 +255,7 @@ marginal effects, predictions, marginal means, and contrasts.\tabular{llll}{
    \code{mgcv} \tab \code{bam} \tab \code{exclude} \tab \link[mgcv:predict.bam]{mgcv::predict.bam} \cr
    \code{robustlmm} \tab \code{rlmerMod} \tab \code{re.form} \tab \link[robustlmm:rlmerMod-class]{robustlmm::predict.rlmerMod} \cr
     \tab  \tab \code{allow.new.levels} \tab \link[robustlmm:rlmerMod-class]{robustlmm::predict.rlmerMod} \cr
+   \code{MCMCglmm} \tab \code{MCMCglmm} \tab \code{ndraws} \tab  \cr
 }
 }
 
@@ -309,6 +318,9 @@ p <- predictions(mod)
 head(p)
 nrow(p)
 
+# average counterfactual predictions
+avg_predictions(mod, variables = "am")
+
 # counterfactual predictions obtained by replicating the entire for different
 # values of the predictors
 p <- predictions(mod, variables = list(hp = c(90, 110)))
@@ -348,7 +360,7 @@ predictions(
 
 # `by` argument
 mod <- lm(mpg ~ hp * am * vs, data = mtcars)
-predictions(mod, by = c("am", "vs")) 
+predictions(mod, by = c("am", "vs"))
 
 library(nnet)
 nom <- multinom(factor(gear) ~ mpg + am * vs, data = mtcars, trace = FALSE)

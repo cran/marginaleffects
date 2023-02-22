@@ -9,6 +9,7 @@
 #' 
 #' @param x An object produced by one of the [`marginaleffects`] package functions.
 #' @param digits The number of digits to display.
+#' @param p_eps p values smaller than this number are printed in "<0.001" style.
 #' @param topn The number of rows to be printed from the beginning and end of tables with more than `nrows` rows.
 #' @param nrows The number of rows which will be printed before truncation.
 #' @param ncols The maximum number of column names to display at the bottom of the printed output.
@@ -28,7 +29,8 @@
 #' data.frame(p)
 #'
 print.marginaleffects <- function(x,
-                                  digits = max(3L, getOption("digits") - 3L),
+                                  digits = getOption("marginaleffects_print_digits", default = 3),
+                                  p_eps = getOption("marginaleffects_print_p_eps", default = 0.001),
                                   topn = getOption("marginaleffects_print_topn", default = 5),
                                   nrows = getOption("marginaleffects_print_nrows", default = 30),
                                   ncols = getOption("marginaleffects_print_ncols", default = 30),
@@ -41,7 +43,6 @@ print.marginaleffects <- function(x,
     checkmate::assert_number(nrows)
     checkmate::assert_choice(style, choices = c("data.frame", "summary"))
 
-
     if (isTRUE(style == "data.frame")) {
         print(as.data.frame(x))
         return(invisible(x))
@@ -51,22 +52,27 @@ print.marginaleffects <- function(x,
 
     nrows <- max(nrows, 2 * topn)
 
-
     if ("group" %in% colnames(out) &&
         all(out$group == "main_marginaleffects")) {
         out$group <- NULL
     }
-
-    # round and replace NAs
-    for (col in c("estimate", "std.error", "statistic", "conf.low", "conf.high")) {
-        if (col %in% colnames(out)) {
-            out[[col]] <- format(out[[col]], digits = digits)
-        }
+    
+    # subset before rounding so that digits match top and bottom rows
+    if (nrow(out) > nrows) {
+        out <- rbind(utils::head(out, topn), utils::tail(out, topn))
+        splitprint <- TRUE
+    } else {
+        splitprint <- FALSE
     }
 
-    for (p in c("p.value", "p.value.sup", "p.value.inf", "p.value.equ")) {
-        if (p %in% colnames(out)) {
-            out[[p]] <- format.pval(out[[p]])
+    # round and replace NAs
+    ps <- c("p.value", "p.value.nonsup", "p.value.noninf", "p.value.equiv")
+
+    for (i in seq_along(out)) {
+        if (colnames(out)[i] %in% ps) {
+            out[[i]] <- format.pval(out[[i]], digits = digits, eps = p_eps)
+        } else {
+            out[[i]] <- format(out[[i]], digits = digits)
         }
     }
 
@@ -102,10 +108,15 @@ print.marginaleffects <- function(x,
         "conf.high" = ifelse(is.null(alpha),
             "CI high",
             sprintf("%.1f %%", 100 - alpha / 2)),
-        "p.value.nonsup" = "p (Sup)",
-        "p.value.noninf" = "p (Inf)",
-        "p.value.equiv" = "p (Eq)"
+        "p.value.nonsup" = "p (NonSup)",
+        "p.value.noninf" = "p (NonInf)",
+        "p.value.equiv" = "p (Equiv)"
         )
+
+    if (any(out[["df"]] < Inf)) {
+        dict["statistic"] <- "t"
+        dict["p.value"] <- "Pr(>|t|)"
+    }
 
     if (inherits(x, "marginalmeans")) {
         dict["estimate"] <- "Mean"
@@ -114,11 +125,38 @@ print.marginaleffects <- function(x,
     # Subset columns
     idx <- c(
         names(dict),
-        grep("^contrast_", colnames(x), value = TRUE),
-        attr(x, "newdata_variables_datagrid"))
+        grep("^contrast_", colnames(x), value = TRUE))
+
+    # explicitly given by user in `datagrid()` or `by` or `newdata`
+    idx <- c(idx, attr(x, "newdata_variables_datagrid"))
     if (isTRUE(checkmate::check_character(attr(x, "by")))) {
         idx <- c(idx, attr(x, "by"))
     }
+    if (isTRUE(attr(out, "newdata_explicit"))) {
+        idx_nd <- c(tryCatch(colnames(attr(x, "newdata")), error = function(e) NULL),
+                    tryCatch(colnames(attr(x, "call")[["newdata"]]), error = function(e) NULL))
+        idx <- c(idx, idx_nd)
+    }
+
+    # drop useless columns: rowid
+    useless <- "rowid"
+
+    # drop useless columns: dv
+    dv <- tryCatch(
+        unlist(insight::find_response(attr(x, "model"), combine = TRUE), use.names = FALSE),
+        error = function(e) NULL)
+    useless <- c(useless, dv)
+
+    # drop useless columns: comparisons() with a single focal variable
+    if (inherits(x, "comparisons")) {
+        v <- attr(x, "variables")
+        if (isTRUE(checkmate::check_list(v, len = 1, names = "named"))) {
+            useless <- c(useless, names(v)[1])
+        }
+    }
+
+    # drop useless columns
+    idx <- setdiff(unique(idx), useless)
     out <- out[, colnames(out) %in% idx, drop = FALSE]
 
     if (all(out$term == "cross")) {
@@ -147,31 +185,30 @@ print.marginaleffects <- function(x,
 
     # some commands do not generate average contrasts/mfx. E.g., `lnro` with `by`
     cat("\n")
-    if (nrow(out) > nrows) {
+    if (splitprint) {
         print(utils::head(out, n = topn), row.names = FALSE)
         msg <- "--- %s rows omitted. See %s?print.marginaleffects ---"
-        msg <- sprintf(msg, nrow(out) - 2 * topn, rec)
+        msg <- sprintf(msg, nrow(x) - 2 * topn, rec)
         cat(msg, "\n")
         # remove colnames
         tmp <- utils::capture.output(print(utils::tail(out, n = topn), row.names = FALSE))
-        tmp <- paste(utils::tail(tmp, -1), collapse = "\n")
-        cat(tmp, "\n")
-        omitted <- TRUE
+        tmp <- paste(tmp[-1], collapse = "\n")
+        cat(tmp)
     } else {
         print(out, row.names = FALSE)
-        omitted <- FALSE
     }
     cat("\n")
     # cat("Model type: ", attr(x, "model_type"), "\n")
-    if (!inherits(x, "hypotheses.summary")) {
+    if (!inherits(x, "hypotheses.summary") && isTRUE(getOption("marginaleffects_print_type", default = TRUE))) {
         cat("Prediction type: ", attr(x, "type"), "\n")
     }
-    if (!is.null(attr(x, "transform_pre_label"))) {
-        cat("Pre-transformation: ", paste(attr(x, "transform_pre_label"), collapse = ""), "\n")
-    }
-    if (!is.null(attr(x, "transform_post_label"))) {
-        cat("Post-transformation: ", paste(attr(x, "transform_post_label"), collapse = ""), "\n")
-    }
+    ## This is tricky to extract nicely when transform_* are passed from avg_comparisons to comparisons. I could certainly figure it out, but at the same time, I don't think the print method should return information that is immediately visible from the call. This is different from `type`, where users often rely on the default value, which can change from model to model, so printing it is often
+    # if (!is.null(attr(x, "transform_pre_label"))) {
+    #     cat("Pre-transformation: ", paste(attr(x, "transform_pre_label"), collapse = ""), "\n")
+    # }
+    # if (!is.null(attr(x, "transform_post_label"))) {
+    #     cat("Post-transformation: ", paste(attr(x, "transform_post_label"), collapse = ""), "\n")
+    # }
     vg <- attr(x, "variables_grid")
     if (length(vg) > 0) {
         cat(sprintf("Results averaged over levels of: %s",

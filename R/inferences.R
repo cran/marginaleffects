@@ -12,6 +12,7 @@
 #' + "fwb": fractional weighted bootstrap
 #' + "rsample" package
 #' + "simulation" from a multivariate normal distribution (Krinsky & Robb, 1986)
+#' + "mi" multiple imputation for missing data
 #' @param R Number of resamples or simulations.
 #' @param conf_type String: type of bootstrap interval to construct.
 #' + `boot`: "perc", "norm", "basic", or "bca"
@@ -48,17 +49,23 @@
 #' set.seed(1024)
 #' mod <- lm(Sepal.Length ~ Sepal.Width * Species, data = iris)
 #'
+#' # bootstrap
 #' avg_predictions(mod, by = "Species") %>%
 #'   inferences(method = "boot")
 #'
-#' slopes(mod) %>%
-#'   inferences(method = "simulation") %>%
-#'   head()
+#' avg_predictions(mod, by = "Species") %>%
+#'   inferences(method = "rsample")
 #'
+#' # Fractional (bayesian) bootstrap
 #' avg_slopes(mod, by = "Species") %>%
 #'   inferences(method = "fwb") %>%
 #'   posterior_draws("rvar") %>%
 #'   data.frame()
+#'
+#' # Simulation-based inference
+#' slopes(mod) %>%
+#'   inferences(method = "simulation") %>%
+#'   head()
 #' }
 #' @export
 inferences <- function(x, method, R = 1000, conf_type = "perc", ...) {
@@ -73,9 +80,13 @@ inferences <- function(x, method, R = 1000, conf_type = "perc", ...) {
     }
 
     mfx_call <- attr(x, "call")
-    model <- attr(x, "model")
+    model <- mfx_call[["model"]]
 
-    if (method == "boot") {
+    # default standard errors are Delta anyway
+    if (method == "delta") {
+        return(x)
+
+    } else if (method == "boot") {
         insight::check_if_installed("boot")
         attr(model, "inferences_method") <- "boot"
         attr(model, "inferences_dots") <- c(list(R = R), list(...))
@@ -90,7 +101,7 @@ inferences <- function(x, method, R = 1000, conf_type = "perc", ...) {
         attr(model, "inferences_method") <- "fwb"
         attr(model, "inferences_dots") <- c(list(R = R), dots)
         attr(model, "inferences_conf_type") <- conf_type
-        if (isTRUE("wts" %in% names(attr(x, "call")))) {
+        if (isTRUE("wts" %in% names(attr(x, "call"))) && !is.null(attr(x, "call")[["wts"]])) {
             insight::format_error('The `fwb` method is not supported with the `wts` argument.')
         }
 

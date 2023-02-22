@@ -19,9 +19,9 @@ get_contrasts <- function(model,
     # some predict() methods need data frames and will convert data.tables
     # internally, which can be very expensive if done many times. we do it once
     # here.
-    setDF(lo)
-    setDF(hi)
-    setDF(original)
+    data.table::setDF(lo)
+    data.table::setDF(hi)
+    data.table::setDF(original)
 
     # brms models need to be combined to use a single seed when sample_new_levels="gaussian"
     if (inherits(model, "brmsfit")) {
@@ -35,29 +35,34 @@ get_contrasts <- function(model,
         pred_both <- myTryCatch(get_predict(
             model,
             type = type,
-            vcov = FALSE,
             newdata = both,
             ...))[["value"]]
 
-        idx_lo <- 1:(nrow(pred_both) / 2)
-        idx_hi <- (nrow(pred_both) / 2 + 1):nrow(pred_both)
-        pred_lo <- pred_both[idx_lo, , drop = FALSE]
-        pred_hi <- pred_both[idx_hi, , drop = FALSE]
-        attr(pred_lo, "posterior_draws") <- attr(pred_both, "posterior_draws")[idx_lo, , drop = FALSE]
-        attr(pred_hi, "posterior_draws") <- attr(pred_both, "posterior_draws")[idx_hi, , drop = FALSE]
+        data.table::setDT(pred_both)
+        pred_both[, "lo" := seq_len(.N) <= .N / 2, by = "group"]
+
+        pred_lo <- pred_both[pred_both$lo, .(rowid, group, estimate), drop = FALSE]
+        pred_hi <- pred_both[!pred_both$lo, .(rowid, group, estimate), drop = FALSE]
+        data.table::setDF(pred_lo)
+        data.table::setDF(pred_hi)
+
+        draws <- attr(pred_both, "posterior_draws")
+        draws_lo <- draws[pred_both$lo, , drop = FALSE]
+        draws_hi <- draws[!pred_both$lo, , drop = FALSE]
+
+        attr(pred_lo, "posterior_draws") <- draws_lo
+        attr(pred_hi, "posterior_draws") <- draws_hi
 
     } else {
         pred_lo <- myTryCatch(get_predict(
             model,
             type = type,
-            vcov = FALSE,
             newdata = lo,
             ...))[["value"]]
 
         pred_hi <- myTryCatch(get_predict(
             model,
             type = type,
-            vcov = FALSE,
             newdata = hi,
             ...))[["value"]]
     }
@@ -83,7 +88,6 @@ get_contrasts <- function(model,
         pred_or <- myTryCatch(get_predict(
             model,
             type = type,
-            vcov = FALSE,
             newdata = original,
             ...))[["value"]]
     } else {
@@ -91,7 +95,7 @@ get_contrasts <- function(model,
     }
 
     # lots of indexing later requires a data.table
-    setDT(original)
+    data.table::setDT(original)
 
     if (!inherits(pred_hi, "data.frame") || !inherits(pred_lo, "data.frame") || !inherits(pred_or, c("data.frame", "NULL"))) {
         insight::format_error("Unable to compute predicted values with this model. You can try to supply a different dataset to the `newdata` argument. If this does not work, you can file a report on the Github Issue Tracker: https://github.com/vincentarelbundock/marginaleffects/issues")
@@ -99,16 +103,15 @@ get_contrasts <- function(model,
 
     # output data.frame
     out <- pred_lo
-    setDT(out)
+    data.table::setDT(out)
 
     # univariate outcome:
     # original is the "composite" data that we constructed by binding terms and
     # compute predictions. It includes a term column, which we need to
     # replicate for each group.
-    out[, "marginaleffects_eps" := NA_real_] # default (probably almost always overwritten)
     out[, "marginaleffects_wts_internal" := NA_real_] # default (probably almost always overwritten)
     mult <- nrow(out) / nrow(original)
-    regex <- "^term$|^group$|^contrast|^marginaleffects_eps$|^marginaleffects_wts_internal$"
+    regex <- "^term$|^group$|^contrast|^marginaleffects_wts_internal$"
     if (isTRUE(mult == 1)) {
         for (v in grep(regex, colnames(original), value = TRUE)) {
             out[, (v) := original[[v]]]
@@ -124,7 +127,7 @@ get_contrasts <- function(model,
     } else {
         out <- merge(out, newdata, by = "rowid", all.x = TRUE)
         if (isTRUE(nrow(out) == nrow(lo))) {
-            tmp <- data.table(lo)[, .SD, .SDcols = patterns("^contrast|marginaleffects_eps|marginaleffects_wts_internal")]
+            tmp <- data.table(lo)[, .SD, .SDcols = patterns("^contrast|marginaleffects_wts_internal")]
             out <- cbind(out, tmp)
             idx <- c("rowid", grep("^contrast", colnames(out), value = TRUE), colnames(out))
             idx <- unique(idx)
@@ -140,7 +143,7 @@ get_contrasts <- function(model,
     # by
     if (isTRUE(checkmate::check_data_frame(by))) {
         bycols <- "by"
-        setDT(by)
+        data.table::setDT(by)
         tmp <- setdiff(intersect(colnames(out), colnames(by)), "by")
 
         if (length(tmp) == 0) {
@@ -185,7 +188,7 @@ get_contrasts <- function(model,
     elasticities <- lapply(elasticities, function(x) x$name)
     if (length(elasticities) > 0) {
         for (v in names(elasticities)) {
-            idx2 <- c("rowid", "term", "type", "group", grep("^contrast", colnames(out), value = TRUE))
+            idx2 <- unique(c("rowid", "term", "type", "group", by, grep("^contrast", colnames(out), value = TRUE)))
             idx2 <- intersect(idx2, colnames(out))
             # discard other terms to get right length vector
             idx2 <- out[term == v, ..idx2]
@@ -196,7 +199,7 @@ get_contrasts <- function(model,
                 idx1 <- original[, ..idx1]
                 setnames(idx1, old = v, new = "elast")
                 on_cols <- intersect(colnames(idx1), colnames(idx2))
-                idx2[idx1, elast := elast, on = on_cols]
+                unique(idx2[idx1, elast := elast, on = on_cols])
             }
             elasticities[[v]] <- idx2$elast
         }
@@ -215,10 +218,13 @@ get_contrasts <- function(model,
         draws_or <- attr(pred_or, "posterior_draws")
     }
 
+    data.table::setDT(pred_hi)
+
     out[, predicted_lo := pred_lo[["estimate"]]]
     out[, predicted_hi := pred_hi[["estimate"]]]
 
     if (!is.null(pred_or)) {
+        data.table::setDT(pred_or)
         out[, predicted := pred_or[["estimate"]]]
     } else {
         out[, predicted := NA_real_]
@@ -242,7 +248,6 @@ get_contrasts <- function(model,
     }
 
     # we feed these columns to safefun(), even if they are useless for categoricals
-    if (!"marginaleffects_eps" %in% colnames(out)) out[, "marginaleffects_eps" := NA]
     if (!"marginaleffects_wts_internal" %in% colnames(out))  out[, "marginaleffects_wts_internal" := NA]
 
     if (isTRUE(marginalmeans)) {
@@ -250,7 +255,6 @@ get_contrasts <- function(model,
             predicted_lo = mean(predicted_lo),
             predicted_hi = mean(predicted_hi),
             predicted = mean(predicted),
-            marginaleffects_eps = mean(marginaleffects_eps),
             marginaleffects_wts_internal = mean(marginaleffects_wts_internal)),
         by = idx]
     }
@@ -259,22 +263,32 @@ get_contrasts <- function(model,
     # unknown arguments
     # singleton vs vector
     # different terms use different functions
-    safefun <- function(hi, lo, y, n, term, cross, eps, wts) {
+    safefun <- function(hi, lo, y, n, term, cross, wts, tmp_idx) {
+        tn <- term[1]
+        eps <- variables[[tn]]$eps
         # when cross=TRUE, sanitize_transform_pre enforces a single function
         if (isTRUE(cross)) {
             fun <- fun_list[[1]]
         } else {
-            fun <- fun_list[[term[1]]]
+            fun <- fun_list[[tn]]
         }
         args <- list(
             "hi" = hi,
             "lo" = lo,
             "y" = y,
             "eps" = eps,
-            "w" = wts,
-            "x" = elasticities[[term[1]]])
+            "w" = wts)
+
+        # sometimes x is exactly the same length, but not always
+        if (length(elasticities[[tn]]) > nrow(out)) {
+            args[["x"]] <- elasticities[[tn]][tmp_idx]
+        } else {
+            args[["x"]] <- elasticities[[tn]]
+        }
+
         args <- args[names(args) %in% names(formals(fun))]
         con <- try(do.call("fun", args), silent = TRUE)
+
         if (!isTRUE(checkmate::check_numeric(con, len = n)) && !isTRUE(checkmate::check_numeric(con, len = 1))) {
             msg <- sprintf("The function supplied to the `transform_pre` argument must accept two numeric vectors of predicted probabilities of length %s, and return a single numeric value or a numeric vector of length %s, with no missing value.", n, n) #nolint
             insight::format_error(msg)
@@ -286,12 +300,16 @@ get_contrasts <- function(model,
         return(con)
     }
 
-    # drop missing otherwise get_averages() fails when trying to take a simple mean
-    idx_na <- !is.na(out$predicted_lo)
-    out <- out[idx_na, , drop = FALSE]
+    # need a temp index for group-by operations when elasticities is a vector of length equal to full rows of `out`
+    out[, tmp_idx := 1:.N]
 
     # bayesian
     if (!is.null(draws)) {
+        # drop missing otherwise get_averages() fails when trying to take a
+        # simple mean
+        idx_na <- !is.na(out$predicted_lo)
+        out <- stats::na.omit(out, cols = "predicted_lo")
+
         # TODO: performance is probably terrrrrible here, but splitting is
         # tricky because grouping rows are not always contiguous, and the order
         # of rows is **extremely** important because draws don't have the
@@ -305,7 +323,7 @@ get_contrasts <- function(model,
             by_idx <- out$term
         }
 
-        # loop over columns (draws) and term names because different terms could use different functions 
+        # loop over columns (draws) and term names because different terms could use different functions
         for (tn in unique(by_idx)) {
             for (i in seq_len(ncol(draws))) {
                 idx <- by_idx == tn
@@ -317,7 +335,7 @@ get_contrasts <- function(model,
                     term = out$term[idx],
                     cross = cross,
                     wts = out$marginaleffects_wts_internal[idx],
-                    eps = out$marginaleffects_eps[idx])
+                    tmp_idx = out$tmp_idx)
             }
         }
 
@@ -340,6 +358,7 @@ get_contrasts <- function(model,
 
     # frequentist
     } else {
+        out <- stats::na.omit(out, cols = "predicted_lo")
         # We want to write the "estimate" column in-place because it safer
         # than group-merge; there were several bugs related to this in the past.
         # safefun() returns 1 value and NAs when the function retunrs a
@@ -353,18 +372,19 @@ get_contrasts <- function(model,
             term = term,
             cross = cross,
             wts = marginaleffects_wts_internal,
-            eps = marginaleffects_eps),
+            tmp_idx = tmp_idx),
         by = idx]
+        out[, tmp_idx := NULL]
 
         # if transform_pre returns a single value, then we padded with NA. That
         # also means we don't want `rowid` otherwise we will merge and have
         # useless duplicates.
-        if (any(is.na(out$estimate))) {
+        if (anyNA(out$estimate)) {
             if (settings_equal("marginaleffects_safefun_return1", TRUE)) {
                 out[, "rowid" := NULL]
             }
         }
-        out <- out[!is.na(estimate)]
+        out <- stats::na.omit(out, cols = "estimate")
     }
 
 
@@ -373,7 +393,7 @@ get_contrasts <- function(model,
     # if `by` is a column name, then we have merged-in a data frame earlier
     if (nrow(out) > 1 && !(is.null(by) || isFALSE(by)) &&
         any(grepl("^contrast[_]?", colnames(out))) &&
-        !any(grepl("^mean\\(", out$contrast))) {
+        !any(grepl("^mean\\(", unique(out$contrast)))) {
         out <- get_by(
             out,
             draws = draws,

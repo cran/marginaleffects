@@ -27,8 +27,6 @@ get_coef.brmsfit <- function(model, ...) {
 #' @export
 get_predict.brmsfit <- function(model,
                                 newdata = insight::get_data(model),
-                                vcov = FALSE,
-                                conf_level = 0.95,
                                 type = "response",
                                 ...) {
 
@@ -68,6 +66,14 @@ get_predict.brmsfit <- function(model,
     } else {
         idx <- 1:nrow(newdata)
     }
+
+    # resp_subset sometimes causes dimension mismatch 
+    if (length(dim(draws)) == 2 && nrow(newdata) != ncol(draws)) {
+        msg <- sprintf("Dimension mismatch: There are %s parameters in the posterior draws but %s observations in `newdata` (or the original dataset).",
+                       ncol(draws), nrow(newdata))
+        insight::format_error(msg)
+    }
+
 
     # 1d outcome
     if (length(dim(draws)) == 2) {

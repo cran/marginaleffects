@@ -4,12 +4,8 @@
 #' @export
 get_predict.bife <- function(model,
                              newdata = insight::get_data(model),
-                             vcov = FALSE,
-                             conf_level = 0.95,
                              type = "response",
                              ...) {
-
-    type <- sanitize_type(model, type)
 
     pred <- stats::predict(model,
                            X_new = newdata,

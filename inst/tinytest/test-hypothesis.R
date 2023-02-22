@@ -9,6 +9,8 @@ dat$cyl <- factor(dat$cyl)
 mod <- lm(mpg ~ carb + cyl, dat)
 
 
+
+
 # informative errors and warnings
 tmp <- lm(mpg ~ drat + wt, data = mtcars)
 expect_error(slopes(tmp, hypothesis = "drat = wt"), pattern = "newdata")
@@ -125,7 +127,7 @@ expect_equivalent(p3$term, c("Contrast A", "Contrast B"))
 # marginalmeans: hypothesis complex
 lc <- c(-2, 1, 1, 0, -1, 1)
 em <- emmeans(mod, "carb") 
-em <- contrast(em, method = data.frame(custom_contrast = lc))
+em <- emmeans::contrast(em, method = data.frame(custom_contrast = lc))
 em <- data.frame(em)
 mm <- marginal_means(mod, variables = "carb", hypothesis = lc)
 expect_equivalent(mm$estimate, em$estimate)
@@ -230,6 +232,21 @@ dm <- hypotheses(mod, hypothesis = H)
 expect_equivalent(dm$term, c("H1", "H2"))
 
 
+# Informative error on row mismatch
+mod <- lm(mpg ~ hp + drat, data = mtcars)
+expect_error(
+    predictions(mod, newdata = "mean", hypothesis = "b1=b2"),
+    pattern = "hypothesis testing")
+
+# Issue #661: remove redundant labels in pairwise comparisons
+exit_if_not(requiet("tinyviztest"))
+using("tinyviztest")
+set.seed(123)
+dat <- transform(iris, dummy = as.factor(rbinom(nrow(iris), 1, prob = c(0.4, 0.6))))
+m <- lm(Sepal.Width ~ Sepal.Length * Species + dummy, data = dat)
+mfx <- slopes(m, variables = "Sepal.Length", by = c("Species", "dummy"), hypothesis = "pairwise")
+expect_true("setosa, 0 - setosa, 1" %in% mfx$term)
+
 
 # # Issue #568
 # # TODO: p-value computed before transform_post; null on the pre-transform scale
@@ -256,3 +273,6 @@ expect_equivalent(dm$term, c("H1", "H2"))
 # predictions(mod, newdata = "mean", hypothesis = .75)
 
 # slopes(mod, newdata = "mean", hypothesis = .75)
+
+
+rm(list = ls())

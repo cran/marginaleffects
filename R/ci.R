@@ -28,8 +28,25 @@ get_ci <- function(
     if (!"df" %in% colnames(x)) {
         if (identical(df, Inf)) {
             normal <- TRUE
-        } else {
+
+        # 1 or matching length
+        } else if (length(df) %in% c(1, nrow(x))) {
             x[["df"]] <- df
+            normal <- FALSE
+
+        # multiple, such as rbind() contrast terms
+        } else if (length(df) < nrow(x) && "rowid" %in% colnames(x)) {
+            rowids <- unique(x$rowid)
+            if (length(rowids) == length(df)) {
+                rowids <- data.table(rowid = rowids, df = df)
+                x <- merge(x, rowids, all.x = TRUE, by = "rowid", sort = FALSE)
+            } else {
+                insight::format_error("The degrees of freedom argument was ignored.")
+            }
+
+        # mismatch
+        } else {
+            insight::format_error("Satterthwaite and Kenward-Roger corrections are not supported in this command.")
         }
     }
 
@@ -56,8 +73,6 @@ get_ci <- function(
         }
     }
 
-    # `get_predicted()` can be smarter than symmetric intervals
-    # sometimes get_predicted fails on SE but succeeds on CI (e.g., betareg)
     if (ci_overwrite) {
         alpha <- 1 - conf_level
         if (normal) {

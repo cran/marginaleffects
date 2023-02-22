@@ -31,16 +31,8 @@ sanitize_model_specific.mblogit <- function(model, calling_function = "marginale
 #' @export
 get_predict.mblogit <- function(model,
                                 newdata = insight::get_data(model),
-                                vcov = FALSE,
-                                conf_level = 0.95,
                                 type = "response",
                                 ...) {
-
-    if (!isTRUE(checkmate::check_flag(vcov, null.ok = TRUE)) &&
-        isTRUE(list(...)$calling_function == "predictions")) {
-        stop("The `vcov` argument is not supported for this model class.", call. = FALSE)
-    }
-
     out <- suppressMessages(
         get_predict.multinom(model = model,
                              newdata = newdata,

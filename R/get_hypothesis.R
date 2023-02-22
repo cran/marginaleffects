@@ -149,6 +149,13 @@ get_hypothesis <- function(x, hypothesis, column, by = NULL) {
         # row indices: `hypotheses` includes them, but `term` does not
         if (isTRUE(grepl("\\bb\\d+\\b", hypothesis)) && !any(grepl("\\bb\\d+\\b", x[["term"]]))) {
             lab <- hypothesis
+            bmax <- regmatches(lab, gregexpr("\\bb\\d+\\b", lab))[[1]]
+            bmax <- tryCatch(max(as.numeric(gsub("b", "", bmax))), error = function(e) 0)
+            if (bmax > nrow(x)) {
+                msg <- "%s cannot be used in `hypothesis` because the call produced just %s estimate(s). Try executing the exact same command without the `hypothesis` argument to see which estimates are available for hypothesis testing."
+                msg <- sprintf(msg, paste0("b", bmax), nrow(x))
+                insight::format_error(msg)
+            }
             for (i in seq_len(nrow(x))) {
                 tmp <- paste0("marginaleffects__", i)
                 hypothesis <- gsub(paste0("b", i), tmp, hypothesis)
@@ -249,7 +256,13 @@ get_hypothesis_row_labels <- function(x, by = NULL) {
     if (length(lab) == 0) {
         lab <- NULL
     } else {
-        lab <- apply(data.frame(x)[, lab, drop = FALSE], 1, paste, collapse = ",")
+        lab_df <- data.frame(x)[, lab, drop = FALSE]
+        idx <- vapply(lab_df, FUN = function(x) length(unique(x)) > 1, FUN.VALUE = logical(1))
+        if (sum(idx) > 0) {
+            lab <- apply(lab_df[, idx, drop = FALSE], 1, paste, collapse = ", ")
+        } else {
+            lab <- apply(lab_df, 1, paste, collapse = ", ")
+        }
     }
 
     # wrap in parentheses to avoid a-b-c-d != (a-b)-(c-d)

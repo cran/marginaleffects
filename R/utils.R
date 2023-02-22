@@ -28,6 +28,44 @@ sort_columns <- function(x, first = NULL, alpha = FALSE) {
     return(out)
 }
 
+
+get_unique_index <- function(x, term_only = FALSE) {
+    idx <- c("term", "contrast", grep("^contrast_", colnames(x), value = TRUE))
+    
+    if (!term_only) {
+        by <- attr(x, "by")
+        if (isTRUE(checkmate::check_data_frame(by))) {
+            idx <- c(idx, colnames(by))
+        } else {
+            idx <- c(idx, by)
+        }
+        explicit <- attr(x, "newdata_explicit")
+        if (isTRUE(checkmate::check_character(explicit))) {
+            idx <- explicit
+        }
+    }
+    
+    idx <- intersect(unique(idx), colnames(x))
+    
+    if (length(idx) == 0) {
+        return(NULL)
+    } else if (length(idx) == 1) {
+        return(x[[idx]])
+    }
+
+    out <- x[, idx, drop = FALSE]
+
+    for (i in ncol(out):2) {
+        if (length(unique(out[[i]])) == 1) {
+            out[[i]] <- NULL
+        }
+    }
+    
+    out <- apply(out, 1, paste, collapse = ", ")
+    return(out)
+}
+
+
 get_marginaleffects_attributes <- function(x, exclude = NULL, include = NULL, include_regex = NULL) {
     out <- list()
     attr_names <- names(attributes(x))
@@ -63,4 +101,18 @@ warn_once <- function(msg, id) {
 # Source: https://github.com/Rdatatable/data.table/issues/1717#issuecomment-545758165
 cjdt <- function(dtlist) {
     Reduce(function(DT1, DT2) cbind(DT1, DT2[rep(1:.N, each = nrow(DT1))]), dtlist)
+}
+
+
+
+# recurse up. mostly useful for `tinytest`
+# this is dumb, but it's late and i don't feel like thinking about this
+evalup <- function(xcall) {
+    out <- hush(eval(xcall))
+    for (i in 1:10) {
+        if (is.null(out)) {
+          out <- hush(eval(xcall, parent.frame(i)))
+        }
+    }
+    return(out)
 }

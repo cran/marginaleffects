@@ -41,10 +41,18 @@ cmp <- comparisons(mod, newdata = "marginalmeans", variables = "gear")
 cmp <- tidy(cmp)
 
 emm <- emmeans(mod, specs = "gear")
-emm <- data.frame(contrast(emm, method = "trt.vs.ctrl1"))
+emm <- data.frame(emmeans::contrast(emm, method = "trt.vs.ctrl1"))
 
 expect_equivalent(cmp$estimate, emm$estimate)
 expect_equivalent(cmp$std.error, emm$SE)
+
+
+
+# Issue #624: reserved "group" word in `by` and `newdata` but not in model.
+dat <- transform(mtcars, group = cyl)
+mod <- lm(mpg ~ hp, data = dat)
+expect_error(slopes(mod, newdata = dat, by = "group"), pattern = "forbidden")
+expect_inherits(slopes(mod, newdata = dat, by = "cyl"), "slopes")
 
 
 
@@ -62,10 +70,13 @@ expect_equivalent(cmp$std.error, emm$SE)
 #     variables = list(species = "pairwise", island = "pairwise"))
 
 # emm <- emmeans(mod, specs = c("species", "island"))
-# emm <- data.frame(contrast(emm, method = "trt.vs.ctrl1"))
+# emm <- data.frame(emmeans::contrast(emm, method = "trt.vs.ctrl1"))
 
 # # hack: not sure if they are well aligned
 # expect_equivalent(sort(cmp$estimate), sort(emm$estimate))
 # expect_equivalent(sort(cmp$std.error), sort(emm$SE))
 
 
+
+
+rm(list = ls())

@@ -16,6 +16,7 @@ expect_inherits(mfx, "data.frame")
 expect_false(any(mfx$estimate == 0 | is.na(mfx$estimate)))
 expect_false(any(mfx$std.error == 0 | is.na(mfx$std.error)))
 # emtrends
+nd <- datagrid(newdata = dat, Time = 1)
 mfx <- slopes(model,
     variables = "Time",
     type = "link",
@@ -47,3 +48,8 @@ mm <- marginal_means(mod, variables = "categ")
 expect_marginal_means(mm)
 expect_equivalent(mm$estimate, em$estimate)
 expect_equivalent(mm$std.error, em$std.error)
+
+
+
+source("helpers.R")
+rm(list = ls())

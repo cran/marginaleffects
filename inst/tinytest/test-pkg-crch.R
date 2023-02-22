@@ -56,3 +56,8 @@ model <- crch(sqrt(rain) ~ sqrtensmean + sqrtenssd + categ,
 mm <- marginal_means(model)
 expect_marginal_means(mm, n_row = 5)
 
+
+
+
+source("helpers.R")
+rm(list = ls())

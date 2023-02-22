@@ -2,8 +2,6 @@
 #' @export
 get_predict.glimML <- function(model,
                                newdata = insight::get_data(model),
-                               vcov = FALSE,
-                               conf_level = 0.95,
                                type = "response",
                                ...) {
 
@@ -43,7 +41,7 @@ get_vcov.glimML <- function(model, vcov = NULL, ...) {
 
 #' @rdname sanitize_model_specific
 sanitize_model_specific.glimML <- function(model, ...) {
-    mdat <- get_modeldata(model)
+    mdat <- get_modeldata(model, additional_variables = FALSE)
     if (isTRUE("character" %in% attr(mdat, "marginaleffects_variable_class"))) {
         insight::format_error("This function does not support character predictors. Please convert them to factors before fitting the model.")
     }

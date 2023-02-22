@@ -31,7 +31,7 @@ y <- p2[p2$am_fct == 1 & p2$mpg == 10.4, "estimate"]
 expect_equivalent(x, y)
 
 # threenum
-threenum <- c(
+threenum <<- c(
     mean(dat$mpg) - sd(dat$mpg),
     mean(dat$mpg),
     mean(dat$mpg) + sd(dat$mpg))
@@ -57,13 +57,13 @@ dat[["log_y"]] <- log(y)
 model <- lm(log(y) ~ 1 + log(x), data = dat)
 p <- plot_predictions(model, condition = "x", draw = FALSE)
 expect_false(any(is.na(p$estimate)))
-expect_equal(nrow(p), 25)
+expect_equal(nrow(p), 50)
 
 
-
-######################################
-######################################
-
+# points: alpha
+mod <- lm(mpg ~ hp * wt * am, data = mtcars)
+p <- plot_predictions(mod, condition = list("hp", "wt" = "threenum"), points = .5)
+expect_snapshot_plot(p, "plot_predictions-alpha")
 
 
 # two conditions
@@ -71,7 +71,10 @@ mod <- lm(mpg ~ hp * wt * am, data = mtcars)
 p <- plot_predictions(mod, condition = c("hp", "wt"))
 expect_snapshot_plot(p, "plot_predictions")
 
-
+# gray scale
+mod <- lm(mpg ~ hp * wt * am, data = mtcars)
+p <- plot_predictions(mod, condition = c("hp", "wt"), gray = TRUE)
+expect_snapshot_plot(p, "plot_predictions-gray")
 
 # continuous vs. categorical x-axis
 mod <- lm(mpg ~ hp * wt * factor(cyl), mtcars)
@@ -129,8 +132,8 @@ expect_true(all(mfx2$conf.low != mfx3$conf.low))
 # multinomial
 mod <- nnet::multinom(factor(gear) ~ mpg * wt + am, data = mtcars, trace = FALSE)
 p1 <- plot_predictions(mod, condition = c("mpg", "group"), type = "probs")
-p2 <- plot_comparisons(mod, effect = "mpg", condition = c("wt", "group"), type = "probs")
-p3 <- plot_slopes(mod, effect = "mpg", condition = c("wt", "group"), type = "probs")
+p2 <- plot_comparisons(mod, variables = "mpg", condition = c("wt", "group"), type = "probs")
+p3 <- plot_slopes(mod, variables = "mpg", condition = c("wt", "group"), type = "probs")
 expect_inherits(p1, "gg")
 expect_inherits(p2, "gg")
 expect_inherits(p3, "gg")
@@ -173,7 +176,11 @@ expect_inherits(p, "gg")
 
 p <- plot_predictions(mod, condition = list("hp", "qsec" = "minmax", "gear"), draw = FALSE)
 expect_true("qsec" %in% colnames(p))
-p <- plot_comparisons(mod, effect = "hp", condition = list("qsec" = "minmax", "gear"), draw = FALSE)
+p <- plot_comparisons(mod, variables = "hp", condition = list("qsec" = "minmax", "gear"), draw = FALSE)
 expect_true("qsec" %in% colnames(p))
-p <- plot_slopes(mod, effect = "hp", condition = list("qsec" = "minmax", "gear"), draw = FALSE)
+p <- plot_slopes(mod, variables = "hp", condition = list("qsec" = "minmax", "gear"), draw = FALSE)
 expect_true("qsec" %in% colnames(p))
+
+
+suppressWarnings(rm("threenum", .GlobalEnv))
+rm(list = ls())

@@ -1,6 +1,6 @@
 #' Data grids
-#' 
-#' @description 
+#'
+#' @description
 #' Generate a data grid of user-specified values for use in the `newdata` argument of the `predictions()`, `comparisons()`, and `slopes()` functions. This is useful to define where in the predictor space we want to evaluate the quantities of interest. Ex: the predicted outcome or slope for a 37 year old college graduate.
 #'
 #' * `datagrid()` generates data frames with combinations of "typical" or user-supplied predictor values.
@@ -23,7 +23,7 @@
 #' @param FUN_other the function to be applied to other variable types.
 #' @details
 #' If `datagrid` is used in a `predictions()`, `comparisons()`, or `slopes()` call as the
-#' `newdata` argument, the model is automatically inserted in the `model` argument of `datagrid()` 
+#' `newdata` argument, the model is automatically inserted in the `model` argument of `datagrid()`
 #' call, and users do not need to specify either the `model` or `newdata` arguments.
 #'
 #' If users supply a model, the data used to fit that model is retrieved using
@@ -83,7 +83,7 @@ datagrid <- function(
     checkmate::assert_function(FUN_logical)
     checkmate::assert_function(FUN_numeric)
     checkmate::assert_function(FUN_other)
-
+    
     if (grid_type == "typical") {
         args <- list( # cleaned for backward compatibility
             model = model,
@@ -105,7 +105,7 @@ datagrid <- function(
     }
 
     # better to assume "standard" class as output
-    setDF(out)
+    data.table::setDF(out)
 
     attr(out, "variables_datagrid") <- names(dots)
 
@@ -116,7 +116,7 @@ datagrid <- function(
 #' Counterfactual data grid
 #' @describeIn datagrid Counterfactual data grid
 #' @export
-#' 
+#'
 datagridcf <- function(
     ...,
     model = NULL,
@@ -137,7 +137,7 @@ datagridcf <- function(
     attr(out, "variables_datagrid") <- names(out)
 
     return(out)
-        
+
 }
 
 
@@ -162,8 +162,10 @@ counterfactual <- function(..., model = NULL, newdata = NULL) {
     if (length(variables_automatic) > 0) {
         idx <- intersect(variables_automatic, colnames(dat))
         dat_automatic <- dat[, ..idx, drop = FALSE]
-        dat_automatic <- cbind(rowid, dat_automatic)
-        out <- merge(dat_automatic, at, all = TRUE)
+        dat_automatic[, rowidcf := rowid$rowidcf]
+        setcolorder(dat_automatic, c("rowidcf", setdiff(names(dat_automatic), "rowidcf")))
+        # cross-join 2 data.tables, faster than merging two dataframes
+        out <- cjdt(list(dat_automatic, at))
     }  else {
         out <- merge(rowid, at, all = TRUE)
     }
@@ -208,7 +210,7 @@ typical <- function(
         # na.omit destroys attributes, and we need the "factor" attribute
         # created by insight::get_data
         for (n in names(dat_automatic)) {
-            if (get_variable_class(dat, n, "factor") || n %in% tmp[["cluster"]]) {
+            if (get_variable_class(dat, n, c("factor", "strata", "cluster")) || n %in% tmp[["cluster"]]) {
                 out[[n]] <- FUN_factor(dat_automatic[[n]])
             } else if (get_variable_class(dat, n, "logical")) {
                 out[[n]] <- FUN_logical(dat_automatic[[n]])
@@ -263,6 +265,15 @@ prep_datagrid <- function(..., model = NULL, newdata = NULL) {
     checkmate::assert_data_frame(newdata, null.ok = TRUE)
 
     at <- list(...)
+    
+    # e.g., mlogit vignette we plot by group, but group is of length 0 because
+    # we don't know how many groups there are until we make the first
+    # prediction.
+    for (i in seq_along(at)) {
+        if (length(at[[i]]) == 0) {
+            at[[i]] <- NULL
+        }
+    }
 
     # if (!is.null(model) & !is.null(newdata)) {
     #     msg <- "One of the `model` or `newdata` arguments must be `NULL`."
@@ -291,7 +302,19 @@ prep_datagrid <- function(..., model = NULL, newdata = NULL) {
 
     # fill in missing data after sanity checks
     if (is.null(newdata)) {
-        newdata <- get_modeldata(model)
+        newdata <- get_modeldata(model, additional_variables = FALSE)
+    }
+    
+    attr_variable_classes <- attr(newdata, "marginaleffects_variable_class")
+
+    # subset columns, otherwise it can be ultra expensive to compute summaries for every variable
+    if (!is.null(model)) {
+        variables_sub <- tryCatch(insight::find_variables(model, flatten = TRUE), error = function(e) NULL)
+        variables_sub <- c(variables_sub, variables_manual)
+        variables_sub <- intersect(colnames(newdata), variables_sub)
+        if (length(variables_sub) > 0) {
+            newdata <- subset(newdata, select = variables_sub)
+        }
     }
 
     # check `at` names
@@ -309,7 +332,6 @@ prep_datagrid <- function(..., model = NULL, newdata = NULL) {
         }
         newdata <- newdata[, !idx, drop = FALSE]
     }
-
 
     # check `at` elements and convert them to factor as needed
     for (n in names(at)) {
@@ -339,7 +361,7 @@ prep_datagrid <- function(..., model = NULL, newdata = NULL) {
             }
         }
     }
-
+    
     # cluster identifiers will eventually be treated as factors
     if (!is.null(model)) {
         v <- insight::find_variables(model)
@@ -349,7 +371,9 @@ prep_datagrid <- function(..., model = NULL, newdata = NULL) {
         variables_cluster <- NULL
     }
 
-    setDT(newdata)
+    data.table::setDT(newdata)
+    
+    attr(newdata, "marginaleffects_variable_class") <- attr_variable_classes
 
     out <- list("newdata" = newdata,
                 "at" = at,

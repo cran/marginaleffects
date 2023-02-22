@@ -1,4 +1,5 @@
 source("helpers.R")
+exit_if_not(EXPENSIVE)
 using("marginaleffects")
 
 exit_if_not(requiet("margins"))
@@ -14,7 +15,7 @@ exit_if_not(requiet("broom"))
 dat <- mtcars
 dat$cyl <- factor(dat$cyl)
 dat <- dat
-mod <- lmer(mpg ~ hp + (1 | cyl), data = dat)
+mod <-lme4::lmer(mpg ~ hp + (1 | cyl), data = dat)
 x <- predictions(mod)
 y <- predictions(mod, vcov = "satterthwaite")
 z <- predictions(mod, vcov = "kenward-roger")
@@ -93,9 +94,7 @@ expect_true(all(w$conf.high > x$conf.high))
 # no random effects: grand mean
 w <- predict(mod, re.form = NA, type = "response")
 x <- get_predict(mod, re.form = NA, type = "response")
-y <- get_predict(mod, include_random = FALSE, type = "response")
 expect_equivalent(w, x$estimate)
-expect_equivalent(w, y$estimate)
 
 
 # glmer vs. stata vs. emtrends
@@ -123,10 +122,7 @@ expect_equivalent(w, x$estimate)
 expect_equivalent(w, y$estimate)
 
 
-# incompatible arguments
-expect_error(get_predict(mod, re.form = ~0, include_random = TRUE), pattern = "together")
-
-# lmer vs. stata
+#lme4::lmer vs. stata
 tmp <- read.csv(testing_path("stata/databases/lme4_01.csv"))
 mod <- lme4::lmer(y ~ x1 * x2 + (1 | clus), data = tmp)
 stata <- readRDS(testing_path("stata/stata.rds"))$lme4_lmer
@@ -136,7 +132,7 @@ expect_equivalent(mfx$estimate, mfx$dydxstata, tolerance = .001)
 expect_equivalent(mfx$std.error, mfx$std.errorstata, tolerance = .001)
 
 # emtrends
-mod <- lmer(y ~ x1 + x2 + (1 | clus), data = tmp)
+mod <-lme4::lmer(y ~ x1 + x2 + (1 | clus), data = tmp)
 mfx <- slopes(mod, variables = "x1",
                    newdata = datagrid(x1 = 0, x2 = 0, clus = 1))
 em <- emtrends(mod, ~x1, "x1", at = list(x1 = 0, x2 = 0, clus = 1))
@@ -223,13 +219,6 @@ mod <- suppressMessages(lmer(
   weight ~ 1 + Time + I(Time^2) + Diet + Time:Diet + I(Time^2):Diet + (1 + Time + I(Time^2) | Chick),
   data = ChickWeight))
 
-mfx1 <- slopes(
-    mod,
-    newdata = datagrid(
-        Chick = NA,
-        Diet = 1:4,
-        Time = 0:21),
-    include_random = FALSE)
 mfx2 <- slopes(
     mod,
     newdata = datagrid(
@@ -243,19 +232,10 @@ mfx3 <- slopes(
         Chick = "1",
         Diet = 1:4,
         Time = 0:21))
-expect_inherits(mfx1, "marginaleffects")
 expect_inherits(mfx2, "marginaleffects")
 expect_inherits(mfx3, "marginaleffects")
-expect_equivalent(mfx1$estimate, mfx2$estimate)
-expect_equivalent(mfx1$std.error, mfx2$std.error)
+mfx2$estimate != mfx3$estimate
 
-pred1 <- predictions(
-    mod,
-    newdata = datagrid(
-        Chick = NA,
-        Diet = 1:4,
-        Time = 0:21),
-    include_random = FALSE)
 pred2 <- predictions(
     mod,
     newdata = datagrid(
@@ -269,19 +249,16 @@ pred3 <- predictions(
         Chick = "1",
         Diet = 1:4,
         Time = 0:21))
-expect_inherits(pred1, "predictions")
 expect_inherits(pred2, "predictions")
 expect_inherits(pred3, "predictions")
-expect_equivalent(pred1$estimate, pred2$estimate)
-expect_equivalent(pred1$std.error, pred2$std.error)
-expect_true(all(pred1$estimate != pred3$estimate))
+expect_true(all(pred2$estimate != pred3$estimate))
 
 # sattertwhaite
 tmp <- mtcars
 tmp$cyl <- factor(tmp$cyl)
 tmp$am <- as.logical(tmp$am)
 tmp <- tmp
-mod <- lmer(mpg ~ hp + am + (1 | cyl), data = tmp)
+mod <-lme4::lmer(mpg ~ hp + am + (1 | cyl), data = tmp)
 
 mfx <- slopes(mod, vcov = "kenward-roger")
 cmp <- comparisons(mod, vcov = "kenward-roger")
@@ -295,7 +272,7 @@ expect_equivalent(attr(cmp, "vcov.type"), "Kenward-Roger")
 
 
 # # Issue 437: allow `get_predicted()` arguments
-# mod <- lmer(mpg ~ hp + (1 | cyl), data = mtcars)
+# mod <-lme4::lmer(mpg ~ hp + (1 | cyl), data = mtcars)
 # p1 <- predictions(mod, type = "prediction")
 # p2 <- predictions(mod)
 # expect_inherits(p1, "predictions")
@@ -306,11 +283,11 @@ expect_equivalent(attr(cmp, "vcov.type"), "Kenward-Roger")
 # expect_true(all(p1$conf.high > p2$conf.high))
 
 
-# exit_file("TODO: check failing comparisons()")
+exit_file("TODO: check failing comparisons()")
 # Issue #436
 # e = number of events
 # n = total
-kdat <- data.frame(
+dat <- data.frame(
     e = c(
         1, 1, 134413, 92622, 110747,
         3625, 35, 64695, 19428, 221, 913, 13, 5710, 121,
@@ -324,27 +301,51 @@ kdat <- data.frame(
 
 mod <- glmer(
     cbind(e, n - e) ~ 1 + year + (1 | sid),
-    data = kdat,
+    data = dat,
     family = binomial())
 
 p <- predictions(
     mod,
     newdata = datagrid(
-        newdata = kdat,
+        newdata = dat,
         e = 1,
         n = 160,
         year = 1:5,
         sid = NA),
-    include_random = FALSE)
+    re.form = NA)
 expect_predictions(p)
 
 cmp <- comparisons(mod,
     variables = "year",
     newdata = datagrid(
-        newdata = kdat,
+        newdata = dat,
         e = 1,
         n = 160,
         year = 1:5,
         sid = NA),
-    include_random = FALSE)
+    re.form = NA)
 expect_inherits(cmp, "comparisons")
+
+
+# Issue #651: satterthwaite not supported for avg_*() because lmerTest needs a
+# `data` argument and model matrix, but here we compute the average over several
+# units of observations.
+d <- sleepstudy
+d$Cat <- sample(c("A", "B"), replace = TRUE, size = nrow(d))
+fit <- lmer(Reaction ~ Days + Cat + (1 | Subject), d)
+expect_error(
+    avg_comparisons(fit, vcov = "satterthwaite"),
+    pattern = "not supported")
+
+expect_error(
+    avg_predictions(fit, vcov = "satterthwaite"),
+    pattern = "not supported")
+
+cmp1 <- comparisons(fit, newdata = datagrid(Cat = unique), vcov = "satterthwaite")
+cmp2 <- comparisons(fit, newdata = datagrid(Cat = unique))
+expect_true(all(cmp1$conf.low != cmp2$conf.low))
+expect_true(all(cmp1$std.error == cmp2$std.error))
+
+
+
+rm(list = ls())

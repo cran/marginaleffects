@@ -2,8 +2,6 @@
 #' @export
 get_predict.clm <- function(model,
                             newdata = insight::get_data(model),
-                            vcov = FALSE,
-                            conf_level = 0.95,
                             type = "response",
                             ...) {
 
@@ -18,7 +16,7 @@ get_predict.clm <- function(model,
     resp <- insight::find_response(model)
 
     # otherwise `predict.clm` does not see some columns (mystery)
-    setDF(newdata)
+    data.table::setDF(newdata)
 
     newdata <- newdata[, setdiff(colnames(newdata), resp), drop = FALSE]
 

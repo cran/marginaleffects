@@ -1,4 +1,30 @@
-sanitize_newdata <- function(model, newdata, by = NULL, modeldata = NULL) {
+sanitize_newdata_call <- function(scall, newdata = NULL, model) {
+    if (is.call(scall)) {
+        out <- NULL
+        lcall <- as.list(scall)
+        fun_name <- as.character(scall)[1]
+        if (fun_name %in% c("datagrid", "datagridcf", "typical", "counterfactual")) {
+            if (!"model" %in% names(lcall)) {
+                lcall <- c(lcall, list("model" = model))
+                out <- evalup(as.call(lcall))
+            }
+        } else if (fun_name == "visualisation_matrix") {
+            if (!"x" %in% names(lcall)) {
+                lcall <- c(lcall, list("x" = get_modeldata))
+                out <- evalup(as.call(lcall))
+            }
+        }
+        if (is.null(out)) {
+            out <- evalup(scall)
+        }
+    } else {
+        out <- newdata
+    }
+    return(out)
+}
+
+
+sanitize_newdata <- function(model, newdata, by, modeldata) {
 
     checkmate::assert(
         checkmate::check_data_frame(newdata, null.ok = TRUE),
@@ -16,17 +42,11 @@ sanitize_newdata <- function(model, newdata, by = NULL, modeldata = NULL) {
         args[[b]] <- unique
     }
 
-    # we always need this to extract attributes
-    if (is.null(modeldata)) {
-        modeldata <- get_modeldata(model)
-        # cannot extract data on unsupported custom models (e.g., numpyro)
-        if (is.null(modeldata)) {
-            modeldata <- newdata
-        }
-    }
+    newdata_explicit <- TRUE
 
     if (is.null(newdata)) {
         newdata <- modeldata
+        newdata_explicit <- FALSE
 
     } else if (identical(newdata, "mean")) {
         newdata <- do.call("datagrid", args)
@@ -57,18 +77,22 @@ sanitize_newdata <- function(model, newdata, by = NULL, modeldata = NULL) {
     }
 
     if (!inherits(newdata, "data.frame")) {
-        msg <- "Unable to extract the data from model of class `%s`. This can happen in a variety of cases, such as when a `marginaleffects` package function is called from inside a user-defined function. Please supply a data frame explicitly via the `newdata` argument."
+        msg <- "Unable to extract the data from model of class `%s`. This can happen in a variety of cases, such as when a `marginaleffects` package function is called from inside a user-defined function, or using an `*apply()`-style operation on a list. Please supply a data frame explicitly via the `newdata` argument."
         msg <- sprintf(msg, class(model)[1])
         insight::format_error(msg)
     }
 
-    # column subsets later and predict
-    setDF(modeldata)
+    # otherwise we get a warning in setDT()
+    if (inherits(model, "mlogit") && isTRUE(inherits(modeldata[["idx"]], "idx"))) {
+        modeldata$idx <- NULL
+    }
+
+    data.table::setDT(modeldata)
 
     # column attributes
     mc <- Filter(function(x) is.matrix(modeldata[[x]]), colnames(modeldata))
     cl <- Filter(function(x) is.character(modeldata[[x]]), colnames(modeldata))
-    cl <- lapply(modeldata[, cl], unique)
+    cl <- lapply(modeldata[, ..cl], unique)
     vc <- attributes(modeldata)$marginaleffects_variable_class
     column_attributes <- list(
         "matrix_columns" = mc,
@@ -125,7 +149,7 @@ sanitize_newdata <- function(model, newdata, by = NULL, modeldata = NULL) {
         newdata$rowid <- seq_len(nrow(newdata))
     }
 
-    # placeholder response; sometimes insight::get_predicted breaks without this
+    # placeholder response
     resp <- insight::find_response(model)
     if (isTRUE(checkmate::check_character(resp, len = 1)) &&
         !resp %in% colnames(newdata)) {
@@ -139,6 +163,8 @@ sanitize_newdata <- function(model, newdata, by = NULL, modeldata = NULL) {
     if (is.null(attr(newdata, "marginaleffects_variable_class"))) {
         newdata <- set_variable_class(newdata, model = model)
     }
+
+    attr(newdata, "newdata_explicit") <- newdata_explicit
 
     return(newdata)
 }

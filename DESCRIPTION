@@ -1,7 +1,7 @@
 Package: marginaleffects
 Title: Predictions, Comparisons, Slopes, Marginal Means, and Hypothesis
         Tests
-Version: 0.9.0
+Version: 0.10.0
 Authors@R: 
     c(person(given = "Vincent",
              family = "Arel-Bundock",
@@ -17,7 +17,11 @@ Authors@R:
              family = "Greifer",
              role = "ctb",
              email = "noah.greifer@gmail.com",
-             comment = c(ORCID = "0000-0003-3067-7154")))
+             comment = c(ORCID = "0000-0003-3067-7154")),
+      person("Etienne", "Bacher",
+             email = "etienne.bacher@protonmail.com",
+             role = "ctb",
+             comment = c(ORCID = "0000-0002-9271-5075")))
 Description: Compute and plot predictions, slopes, marginal means, and comparisons (contrasts, risk ratios, odds, etc.) for over 70 classes of statistical models in R. Conduct linear and non-linear hypothesis tests, or equivalence tests. Calculate uncertainty estimates using the delta method, bootstrapping, or simulation-based inference.
 License: GPL (>= 3)
 Copyright: inst/COPYRIGHTS
@@ -27,21 +31,22 @@ BugReports: https://github.com/vincentarelbundock/marginaleffects/issues
 RoxygenNote: 7.2.3
 Depends: R (>= 3.5.0)
 Imports: checkmate, data.table, generics, insight (>= 0.19.0), methods
-Suggests: AER, afex, aod, bench, betareg, BH, bife, biglm, blme, boot,
-        brglm2, brms, brmsmargins, broom, collapse, conflicted, covr,
-        crch, datawizard, dplyr, emmeans, equivalence, estimatr, fixest
-        (>= 0.10.1), future, future.apply, fwb, gam, gamlss,
-        gamlss.dist, geepack, ggbeeswarm, ggdag, ggdist, ggokabeito,
-        ggplot2, ggrepel, glmmTMB, glmx, haven, here, itsadug, ivreg,
+Suggests: AER, Amelia, afex, aod, bench, betareg, BH, bife, biglm,
+        blme, boot, brglm2, brms, brmsmargins, broom, collapse,
+        conflicted, covr, crch, distributional, dplyr, emmeans,
+        equivalence, estimatr, fixest, future, fwb, gam, gamlss,
+        gamlss.dist, geepack, ggdag, ggdist, ggokabeito, ggplot2,
+        ggrepel, glmmTMB, glmx, haven, here, itsadug, ivreg,
         kableExtra, knitr, lme4, lmerTest, magrittr, margins, MASS,
-        mclogit, mgcv, mhurdle, mice, mlogit, modelbased, modelsummary,
-        nlme, nnet, ordinal, parameters, patchwork, pkgdown, plm,
-        polspline, posterior, prediction, pscl, quantreg, RcppEigen,
-        remotes, rmarkdown, rms, robust, robustbase, robustlmm,
-        rsample, rstanarm, rstantools, sampleSelection, sandwich, scam,
-        speedglm, spelling, survey, survival, systemfonts, tibble,
-        tidymodels, tidyr, tidyverse, tinytest, titanic, truncreg,
-        tsModel, vdiffr, withr
+        mclogit, MCMCglmm, missRanger, mgcv, mhurdle, mice, miceadds,
+        mlogit, modelbased, modelsummary, nlme, nnet, numDeriv,
+        ordinal, ordbetareg, parameters, patchwork, pkgdown, plm,
+        polspline, poorman, posterior, prediction, pscl, purrr,
+        quantreg, Rchoice, remotes, rmarkdown, rms, robust, robustbase,
+        robustlmm, rsample, rstanarm, rstantools, sampleSelection,
+        sandwich, scam, speedglm, spelling, survey, survival, svglite,
+        systemfonts, tibble, tidymodels, tidyr, tidyverse, tinytest,
+        truncreg, tsModel, withr
 Collate: 'backtransform.R' 'bootstrap_boot.R' 'bootstrap_fwb.R'
         'bootstrap_rsample.R' 'broom.R' 'by.R' 'ci.R' 'comparisons.R'
         'complete_levels.R' 'datagrid.R' 'equivalence.R'
@@ -51,8 +56,9 @@ Collate: 'backtransform.R' 'bootstrap_boot.R' 'bootstrap_fwb.R'
         'get_contrasts.R' 'get_group_names.R' 'get_hypothesis.R'
         'get_jacobian.R' 'get_modeldata.R' 'get_predict.R'
         'get_se_delta.R' 'get_vcov.R' 'github_issue.R' 'hush.R'
-        'hypotheses.R' 'inferences.R' 'marginalmeans.R'
-        'mean_or_mode.R' 'set_coef.R' 'methods_MASS.R' 'methods_afex.R'
+        'hypotheses.R' 'imputation.R' 'inferences.R' 'marginal_means.R'
+        'mean_or_mode.R' 'set_coef.R' 'methods_MASS.R'
+        'methods_MCMCglmm.R' 'methods_Rchoice.R' 'methods_afex.R'
         'methods_aod.R' 'methods_betareg.R' 'methods_bife.R'
         'methods_biglm.R' 'methods_nnet.R' 'methods_brglm2.R'
         'sanity_model.R' 'methods_brms.R' 'methods_crch.R'
@@ -65,9 +71,10 @@ Collate: 'backtransform.R' 'bootstrap_boot.R' 'bootstrap_fwb.R'
         'methods_rstanarm.R' 'methods_sampleSelection.R'
         'methods_scam.R' 'methods_stats.R' 'methods_survival.R'
         'methods_tobit1.R' 'modelarchive.R' 'myTryCatch.R' 'package.R'
-        'plot.R' 'plot_comparisons.R' 'plot_predictions.R'
-        'plot_slopes.R' 'posterior_draws.R' 'predictions.R' 'print.R'
-        'recall.R' 'sanitize_conf_level.R' 'sanitize_hypothesis.R'
+        'plot.R' 'plot_build.R' 'plot_comparisons.R'
+        'plot_predictions.R' 'plot_slopes.R' 'posterior_draws.R'
+        'predictions.R' 'print.R' 'recall.R' 'sanitize_condition.R'
+        'sanitize_conf_level.R' 'sanitize_hypothesis.R'
         'sanitize_interaction.R' 'sanitize_newdata.R'
         'sanitize_transform_pre.R' 'sanitize_type.R'
         'sanitize_variables.R' 'sanitize_vcov.R' 'sanity.R'
@@ -76,11 +83,12 @@ Collate: 'backtransform.R' 'bootstrap_boot.R' 'bootstrap_fwb.R'
         'unpack_matrix_cols.R' 'utils.R'
 Language: en-US
 NeedsCompilation: no
-Packaged: 2023-01-31 22:55:49 UTC; vincent
+Packaged: 2023-02-21 22:18:31 UTC; vincent
 Author: Vincent Arel-Bundock [aut, cre, cph]
     (<https://orcid.org/0000-0003-2042-7063>),
   Marcio Augusto Diniz [ctb] (<https://orcid.org/0000-0002-2427-7843>),
-  Noah Greifer [ctb] (<https://orcid.org/0000-0003-3067-7154>)
+  Noah Greifer [ctb] (<https://orcid.org/0000-0003-3067-7154>),
+  Etienne Bacher [ctb] (<https://orcid.org/0000-0002-9271-5075>)
 Maintainer: Vincent Arel-Bundock <vincent.arel-bundock@umontreal.ca>
 Repository: CRAN
-Date/Publication: 2023-02-01 08:20:02 UTC
+Date/Publication: 2023-02-22 09:00:02 UTC

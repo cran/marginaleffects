@@ -49,8 +49,8 @@ tmp$cat <- as.factor(sample(1:5, size = 180, replace = TRUE))
 tmp$Reaction_d <-
   ifelse(tmp$Reaction < median(tmp$Reaction), 0, 1)
 tmp <- tmp |>
-  dplyr::group_by(grp) |>
-  dplyr::mutate(subgrp = sample(1:15, size = dplyr::n(), replace = TRUE))
+  poorman::group_by(grp) |>
+  poorman::mutate(subgrp = sample(1:15, size = poorman::n(), replace = TRUE))
 void <- capture.output(suppressMessages(
     brms_mixed_3 <- brm(Reaction ~ Days + (1 | grp / subgrp) + (1 | Subject), data = tmp)
 ))
@@ -325,8 +325,6 @@ expect_error(comparisons(brms_monotonic_factor), pattern = "cannot be used")
 contr1 <- tidy(comparisons(brms_monotonic))
 known <- c("mean(+1)", sprintf("mean(%s) - mean(1)", c(2:4, 6, 8)))
 expect_equivalent(contr1$contrast, known)
-contr2 <- tidy(comparisons(brms_monotonic, contrast_factor = "pairwise", variables = "carb"))
-expect_equivalent(nrow(contr2), 15)
 
 
 
@@ -600,8 +598,9 @@ expect_equivalent(sum(p1$estimate[3:4]), p3$estimate[2], tolerance = 0.1)
 
 
 # Issue #500
+# TODO
 N <- 1250
-n <- sample(10:100, size = N, replace = T)
+n <- sample(10:100, size = N, replace = TRUE)
 x <- rbinom(N, 1, 0.5)
 w <- rbinom(N, 1, 0.5)
 z <- rbinom(N, 1, 0.5)
@@ -622,7 +621,7 @@ expect_inherits(p, "gg")
 # Issue #504: integrate out random effects
 set.seed(1024)
 
-K <- 100
+K <<- 100
 
 cmp <- comparisons(
     brms_logit_re,
@@ -678,3 +677,30 @@ cmp <- comparisons(mod, by = "cyl")
 expect_equal(nrow(cmp), 3)
 cmp <- comparisons(mod, by = "am")
 expect_equal(nrow(cmp), 2)
+
+
+# Issue #639
+dat <- structure(list(y = structure(c(1L, 1L, 2L, 2L, 3L, 3L, 4L, 4L, 
+5L, 5L), levels = c("1", "2", "3", "4", "5"), class = c("ordered", 
+"factor")), x = structure(c(1L, 2L, 1L, 2L, 1L, 2L, 1L, 2L, 1L, 
+2L), levels = c("0", "1"), class = "factor"), n = c(102L, 50L, 
+97L, 84L, 9L, 11L, 89L, 130L, 38L, 59L)), class = "data.frame", row.names = c(NA, 
+-10L))
+dat <- transform(dat, x = factor(x), y = ordered(y))
+void <- capture.output(suppressMessages(
+    m <- brms::brm(
+        y | weights(n) ~ x,
+        data = dat,
+        family = "cumulative")
+))
+pre <- avg_predictions(m)
+cmp <- avg_comparisons(m)
+expect_inherits(pre, "predictions")
+expect_inherits(cmp, "comparisons")
+expect_equivalent(nrow(pre), 5)
+expect_equivalent(nrow(cmp), 5)
+
+
+
+source("helpers.R")
+rm(list = ls())
