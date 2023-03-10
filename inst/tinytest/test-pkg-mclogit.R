@@ -1,11 +1,11 @@
 source("helpers.R")
 using("marginaleffects")
 
-exit_if_not(requiet("mclogit"))
-exit_if_not(requiet("MASS"))
-exit_if_not(requiet("emmeans"))
-exit_if_not(requiet("broom"))
-exit_if_not(requiet("splines"))
+requiet("mclogit")
+requiet("MASS")
+requiet("emmeans")
+requiet("broom")
+requiet("splines")
 
 # mclogit: no validity
 data(Transport, package = "mclogit")
@@ -65,12 +65,14 @@ p1 <- predict(mod, type = "response", se.fit = TRUE)
 p2 <- predictions(mod)
 expect_equivalent(p1$fit[160,], p2[p2$rowid == 160, "estimate"])
 expect_equivalent(p1$se.fit[160,], p2[p2$rowid == 160, "std.error"], tolerance = .01)
+expect_equivalent(names(p1$fit[160,]), p2[p2$rowid == 160, "group"])
 
 # link
 p1 <- predict(mod, type = "link", se.fit = TRUE)
 p2 <- predictions(mod, type = "link")
 expect_equivalent(p1$fit[160,], p2[p2$rowid == 160, "estimate"])
 expect_equivalent(p1$se.fit[160,], p2[p2$rowid == 160, "std.error"], tolerance = .001)
+expect_equivalent(names(p1$fit[160,]), p2[p2$rowid == 160, "group"])
 
 # latent
 p2 <- predictions(mod, type = "latent")
@@ -82,6 +84,7 @@ p3 <- data.frame(
     level = 0.95))
 expect_equivalent(p3$emmean, p2[p2$rowid == 160, "estimate"])
 expect_equivalent(p3$SE, p2[p2$rowid == 160, "std.error"])
+expect_equivalent(as.character(p3$variant), p2[p2$rowid == 160, "group"])
 
 
 

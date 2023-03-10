@@ -1,9 +1,8 @@
 source("helpers.R")
 using("marginaleffects")
-exit_if_not(!ON_OSX)
-exit_if_not(require("tinyviztest"))
-
-using("tinyviztest")
+if (!requiet("tinysnapshot")) exit_file("tinysnapshot")
+# if (ON_WINDOWS || ON_OSX) exit_file("linux only")
+using("tinysnapshot")
 
 # character predictors
 dat <- read.csv("https://vincentarelbundock.github.io/Rdatasets/csv/palmerpenguins/penguins.csv")
@@ -56,7 +55,7 @@ expect_snapshot_plot(p, "plot_slopes_continuous")
 # two conditions
 mod <- lm(mpg ~ hp * wt * am, data = mtcars)
 p <- plot_slopes(mod, variables = "hp", condition = c("wt", "am"))
-expect_snapshot_plot(p, "plot_slopes_two_conditions")
+expect_snapshot_plot(p, "plot_slopes_two_conditions", tol = 500)
 
 
 

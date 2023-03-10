@@ -18,7 +18,7 @@
 #' @param x Object produced by the `predictions()`, `comparisons()`, or `slopes()` functions.
 #' @param by Character vector of variable names over which to compute group-wise average estimates. When `by=NULL`, the global average (per term) is reported.
 #' @param ... All additional arguments are passed to the original fitting
-#' function to override the original call options: `conf_level`, `transform_post`,
+#' function to override the original call options: `conf_level`, `transform`,
 #' etc. See `?predictions`, `?comparisons`, `?slopes`.
 #' @return A `data.frame` of estimates and uncertainty estimates
 #' @details
@@ -81,7 +81,7 @@ get_averages.predictions <- function(x, by = TRUE, byfun = NULL, ...) {
     out <- recall(x, by = by, byfun = byfun, ...)
 
     # sort and subset columns
-    cols <- c("type", "group", "term", "contrast",
+    cols <- c("group", "term", "contrast",
               attr(x, "by"),
               "by",
               grep("^contrast_\\w+", colnames(out), value = TRUE),
@@ -123,7 +123,7 @@ get_averages.comparisons <- function(x, by = TRUE, ...) {
     out <- recall(x, by = by, ...)
 
     # sort and subset columns
-    cols <- c("type", "group", "term", "contrast",
+    cols <- c("group", "term", "contrast",
               "by",
               attr(x, "by"),
               grep("^contrast_\\w+", colnames(out), value = TRUE),

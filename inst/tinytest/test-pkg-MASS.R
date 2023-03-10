@@ -2,10 +2,10 @@
 using("marginaleffects")
 source("helpers.R")
 
-exit_if_not(requiet("margins"))
-exit_if_not(requiet("MASS"))
-exit_if_not(requiet("broom"))
-exit_if_not(requiet("emmeans"))
+requiet("margins")
+requiet("MASS")
+requiet("broom")
+requiet("emmeans")
 tol <- 0.0001
 tol_se <- 0.001
 
@@ -123,7 +123,7 @@ mod <- MASS::polr(factor(gear) ~ mpg + factor(cyl), data = mtcars, Hess = TRUE)
 pred <- suppressMessages(predictions(mod, type = "probs"))
 expect_predictions(pred)
 # bugs stay dead
-expect_true(all(c("rowid", "type", "estimate", "std.error", "group") %in% colnames(pred)))
+expect_true(all(c("rowid", "estimate", "std.error", "group") %in% colnames(pred)))
 
 
 # glm.nb: predictions: no validity
@@ -173,7 +173,7 @@ expect_equivalent(ti$std.error, em$std.error)
 # glmmPQL
 
 # glmmPQL: no validity
-exit_if_not(requiet("lme4")) # glmmPQL fails when lme4 is not installed
+requiet("lme4") # glmmPQL fails when lme4 is not installed
 tmp <- bacteria
 tmp$week_bin <- tmp$week > 2
 mod <- glmmPQL(

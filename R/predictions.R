@@ -15,12 +15,6 @@
 #'
 #' @rdname predictions
 #' @details
-#' The `newdata` argument, the `tidy()` function, and `datagrid()` function can be used to control the kind of predictions to report:
-#'
-#' * Average Predictions
-#' * Predictions at the Mean
-#' * Predictions at User-Specified values (aka Predictions at Representative values).
-#'
 #' For `glm()` or `gam::gam()` models with `type=NULL` (the default), `predictions()` first predicts on the link scale, and then backtransforms the estimates and confidence intervals. This implies that the `estimate` produced by `avg_predictions()` will not be exactly equal to the average of the `estimate` column produced by `predictions()`. Users can circumvent this behavior and average predictions directly on the response scale by setting `type="response"` explicitly. With `type="response"`, the intervals are symmetric and may have undesirable properties (e.g., stretching beyond the `[0,1]` bounds for a binary outcome regression).
 #' 
 #' @param model Model object
@@ -67,11 +61,12 @@
 #' acceptable values is returned in an error message. When `type` is `NULL`, the
 #' default value is used. This default is the first model-related row in
 #' the `marginaleffects:::type_dictionary` dataframe. See the details section for a note on backtransformation.
-#' @param transform_post A function applied to unit-level adjusted predictions and confidence intervals just before the function returns results. For bayesian models, this function is applied to individual draws from the posterior distribution, before computing summaries.
+#' @param transform A function applied to unit-level adjusted predictions and confidence intervals just before the function returns results. For bayesian models, this function is applied to individual draws from the posterior distribution, before computing summaries.
 #'
 #' @template deltamethod
 #' @template model_specific_arguments
 #' @template bayesian
+#' @template equivalence
 #'
 #' @return A `data.frame` with one row per observation and several columns:
 #' * `rowid`: row number of the `newdata` data frame
@@ -193,16 +188,37 @@ predictions <- function(model,
                         by = FALSE,
                         byfun = NULL,
                         wts = NULL,
-                        transform_post = NULL,
+                        transform = NULL,
                         hypothesis = NULL,
+                        equivalence = NULL,
+                        p_adjust = NULL,
                         df = Inf,
                         ...) {
 
+
+    dots <- list(...)
+    
+    # backward compatibility
+    if ("transform_post" %in% names(dots)) transform <- dots[["transform_post"]]
 
     # order of the first few paragraphs is important
     # if `newdata` is a call to `typical` or `counterfactual`, insert `model`
     scall <- substitute(newdata)
     newdata <- sanitize_newdata_call(scall, newdata, model)
+
+    if (!is.null(equivalence) && !is.null(p_adjust)) {
+        insight::format_error("The `equivalence` and `p_adjust` arguments cannot be used together.")
+    }
+    
+    
+    # is the model supported?
+    model <- sanitize_model(
+        model = model,
+        newdata = newdata,
+        wts = wts,
+        vcov = vcov,
+        calling_function = "predictions",
+        ...)
 
     # build call: match.call() doesn't work well in *apply()
     call_attr <- c(list(
@@ -216,7 +232,7 @@ predictions <- function(model,
         by = by,
         byfun = byfun,
         wts = wts,
-        transform_post = transform_post,
+        transform = transform,
         hypothesis = hypothesis,
         df = df),
         list(...))
@@ -230,7 +246,6 @@ predictions <- function(model,
 
     # extracting modeldata repeatedly is slow.
     # checking dots allows marginalmeans to pass modeldata to predictions.
-    dots <- list(...)
     if ("modeldata" %in% names(dots)) {
         modeldata <- dots[["modeldata"]]
     } else {
@@ -245,13 +260,13 @@ predictions <- function(model,
     }
 
     # if type is NULL, we backtransform if relevant
-    if ((is.null(type)) && is.null(transform_post) && isTRUE(class(model)[1] %in% c("glm", "Gam"))) {
+    if ((is.null(type)) && is.null(transform) && isTRUE(class(model)[1] %in% c("glm", "Gam"))) {
         dict <- subset(type_dictionary, class == class(model)[1])$type
         type <- sanitize_type(model = model, type = type)
         linv <- tryCatch(insight::link_inverse(model), error = function(e) NULL)
         if (isTRUE(type == "response") && isTRUE("link" %in% dict) && is.function(linv)) {
             type <- "link"
-            transform_post <- linv
+            transform <- linv
         } else {
             type <- sanitize_type(model = model, type = type)
         }
@@ -265,7 +280,7 @@ predictions <- function(model,
     # input sanity checks
     checkmate::assert_number(df, lower = 1)
 
-    transform_post <- sanitize_transform_post(transform_post)
+    transform <- sanitize_transform(transform)
     sanity_dots(model = model, ...)
     model <- sanitize_model_specific(
         model = model,
@@ -287,6 +302,25 @@ predictions <- function(model,
 
     # after sanitize_newdata
     sanity_by(by, newdata)
+
+    # after sanity_by
+    newdata <- dedup_newdata(
+        model = model,
+        newdata = newdata,
+        wts = wts,
+        by = by,
+        byfun = byfun)
+    if (is.null(wts) && "marginaleffects_wts_internal" %in% colnames(newdata)) {
+        wts <- "marginaleffects_wts_internal"
+    }
+
+    # weights: after sanitize_newdata; before sanitize_variables
+    sanity_wts(wts, newdata) # after sanity_newdata
+    if (!is.null(wts) && isTRUE(checkmate::check_string(wts))) {
+        newdata[["marginaleffects_wts_internal"]] <- newdata[[wts]]
+    } else {
+        newdata[["marginaleffects_wts_internal"]] <- wts
+    }
 
     # analogous to comparisons(variables=list(...))
     if (!is.null(variables)) {
@@ -310,14 +344,6 @@ predictions <- function(model,
     }
 
     character_levels <- attr(newdata, "newdata_character_levels")
-
-    # weights
-    sanity_wts(wts, newdata) # after sanity_newdata
-    if (!is.null(wts) && isTRUE(checkmate::check_string(wts))) {
-        newdata[["marginaleffects_wts_internal"]] <- newdata[[wts]]
-    } else {
-        newdata[["marginaleffects_wts_internal"]] <- wts
-    }
 
 
     # trust newdata$rowid
@@ -361,10 +387,14 @@ predictions <- function(model,
         FUN = predictions,
         model = model, newdata = newdata, vcov = vcov, variables = variables, type = type, by = by,
         conf_level = conf_level,
-        byfun = byfun, wts = wts, transform_post = transform_post, hypothesis = hypothesis, ...)
+        byfun = byfun, wts = wts, transform = transform, hypothesis = hypothesis, ...)
     if (!is.null(out)) {
         return(out)
     }
+    
+
+    # pre-building the model matrix can speed up repeated predictions
+    newdata <- get_model_matrix_attribute(model, newdata)
 
 
     # main estimation
@@ -373,6 +403,7 @@ predictions <- function(model,
         newdata = newdata,
         type = type,
         hypothesis = hypothesis,
+        wts = wts,
         by = by,
         byfun = byfun)
 
@@ -388,18 +419,10 @@ predictions <- function(model,
                  skip_absent = TRUE)
     } else {
         tmp <- data.frame(newdata$rowid, type, tmp)
-        colnames(tmp) <- c("rowid", "type", "estimate")
+        colnames(tmp) <- c("rowid", "estimate")
         if ("rowidcf" %in% colnames(newdata)) {
             tmp[["rowidcf"]] <- newdata[["rowidcf"]]
         }
-    }
-
-    # default type column is the `predict()` method
-    if (!is.na(type)) {
-        tmp$type <- type
-    # alternative type is the `insight` name
-    } else {
-        tmp$type <- names(type)
     }
 
     if (!"rowid" %in% colnames(tmp) && nrow(tmp) == nrow(newdata)) {
@@ -416,7 +439,6 @@ predictions <- function(model,
             tmp$df <- df
         }
     }
-
 
     # bayesian posterior draws
     draws <- attr(tmp, "posterior_draws")
@@ -436,7 +458,7 @@ predictions <- function(model,
             if (isTRUE(checkmate::check_matrix(V))) {
                 # vcov = FALSE to speed things up
                 fun <- function(...) {
-                    get_predictions(..., verbose = FALSE)$estimate
+                    get_predictions(..., wts = wts, verbose = FALSE)$estimate
                 }
                 args <- list(
                     model,
@@ -467,10 +489,17 @@ predictions <- function(model,
             null_hypothesis = hypothesis_null,
             df = df,
             model = model,
+            p_adjust = p_adjust,
             ...)
     }
 
-    out <- data.frame(tmp)
+    out <- data.table::data.table(tmp)
+    data.table::setDT(newdata)
+
+    # expensive: only do this inside jacobian if necessary
+    if (!inherits(model, "mclogit")) { # weird case. probably a cleaner way but lazy now...
+        out <- merge_by_rowid(out, newdata)
+    }
 
     # save weights as attribute and not column
     marginaleffects_wts_internal <- out[["marginaleffects_wts_internal"]]
@@ -484,23 +513,24 @@ predictions <- function(model,
     }
 
     stubcols <- c(
-        "rowid", "rowidcf", "type", "term", "group", "hypothesis",
+        "rowid", "rowidcf", "term", "group", "hypothesis",
         bycols,
         "estimate", "std.error", "statistic", "p.value", "conf.low",
         "conf.high", "marginaleffects_wts",
         sort(grep("^predicted", colnames(newdata), value = TRUE)))
     cols <- intersect(stubcols, colnames(out))
     cols <- unique(c(cols, colnames(out)))
-    out <- out[, cols, drop = FALSE]
+    out <- out[, ..cols]
 
     attr(out, "posterior_draws") <- draws
 
     # equivalence tests
-    out <- equivalence(out, df = df, ...)
+    out <- equivalence(out, equivalence = equivalence, df = df, ...)
 
     # after rename to estimate / after assign draws
-    out <- backtransform(out, transform_post = transform_post)
+    out <- backtransform(out, transform = transform)
 
+    data.table::setDF(out)
     class(out) <- c("predictions", class(out))
     out <- set_marginaleffects_attributes(out, attr_cache = newdata_attr_cache)
     attr(out, "model") <- model
@@ -514,8 +544,8 @@ predictions <- function(model,
     attr(out, "conf_level") <- conf_level
     attr(out, "by") <- by
     attr(out, "call") <- call_attr
-    attr(out, "transform_post_label") <- names(transform_post)[1]
-    attr(out, "transform_post") <- transform_post[[1]]
+    attr(out, "transform_label") <- names(transform)[1]
+    attr(out, "transform") <- transform[[1]]
     # save newdata for use in recall()
     attr(out, "newdata") <- newdata
 
@@ -545,6 +575,7 @@ get_predictions <- function(model,
                             byfun = byfun,
                             hypothesis = NULL,
                             verbose = TRUE,
+                            wts = NULL,
                             ...) {
 
 
@@ -587,24 +618,11 @@ get_predictions <- function(model,
         draws <- draws[idx, , drop = FALSE]
     }
 
-    # return data
-    # very import to avoid sorting, otherwise bayesian draws won't fit predictions
-    # merge only with rowid; not available for hypothesis
-    mergein <- setdiff(colnames(newdata), colnames(out))
-    if ("rowid" %in% colnames(out) && "rowid" %in% colnames(newdata) && length(mergein) > 0) {
-        idx <- c("rowid", mergein)
-
-        if (!data.table::is.data.table(newdata)) {
-          tmp <- data.table::data.table(newdata)[, ..idx]
-        } else {
-          tmp <- newdata[, ..idx]
-        }
-        # TODO: this breaks in mclogit. maybe there's a more robust merge
-        # solution for weird grouped data. But it seems fine because
-        # `predictions()` output does include the original predictors.
-        out <- tryCatch(
-            merge(out, tmp, by = "rowid", sort = FALSE),
-            error = function(e) out)
+    # expensive: only do this inside the jacobian if necessary
+    if (!is.null(wts) ||
+        !isTRUE(checkmate::check_flag(by, null.ok = TRUE)) ||
+        inherits(model, "mclogit")) { # not sure why sorting is so finicky here
+        out <- merge_by_rowid(out, newdata)
     }
 
     # averaging by groups
@@ -640,8 +658,10 @@ avg_predictions <- function(model,
                             by = TRUE,
                             byfun = NULL,
                             wts = NULL,
-                            transform_post = NULL,
+                            transform = NULL,
                             hypothesis = NULL,
+                            equivalence = NULL,
+                            p_adjust = NULL,
                             df = Inf,
                             ...) {
 
@@ -664,7 +684,7 @@ avg_predictions <- function(model,
         FUN = avg_predictions,
         model = model, newdata = newdata, vcov = vcov, variables = variables, type = type, by = by,
         conf_level = conf_level,
-        byfun = byfun, wts = wts, transform_post = transform_post, hypothesis = hypothesis, ...)
+        byfun = byfun, wts = wts, transform = transform, hypothesis = hypothesis, ...)
     if (!is.null(out)) {
         return(out)
     }
@@ -679,8 +699,10 @@ avg_predictions <- function(model,
         by = by,
         byfun = byfun,
         wts = wts,
-        transform_post = transform_post,
+        transform = transform,
         hypothesis = hypothesis,
+        equivalence = equivalence,
+        p_adjust = p_adjust,
         df = df,
         ...)
 

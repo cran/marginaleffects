@@ -1,9 +1,9 @@
 source("helpers.R")
-exit_if_not(requiet("marginaleffects"))
+requiet("emmeans")
+requiet("marginaleffects")
 using("marginaleffects")
-exit_if_not(requiet("emmeans"))
 
-# TODO: rename dat to df to make sure there's no class with the internal keyword
+# TODO: rename dat to df to make sure there's no clash with the internal keyword
 
 dat <- mtcars
 dat$cyl <- as.factor(dat$cyl)
@@ -44,9 +44,10 @@ expect_true(all(pre29$p.value > preInf$p.value))
 expect_true(all(pre29$conf.low < preInf$conf.low))
 
 
-
 # Issue #627: print t instead of z in column names
-exit_if_not(requiet("tinyviztest"))
+if (!requiet("tinysnapshot")) exit_file("tinysnapshot")
+using("tinysnapshot")
+
 mod <- lm(mpg ~ hp, mtcars)
 expect_snapshot_print(avg_comparisons(mod), "df-z")
 expect_snapshot_print(avg_comparisons(mod, df = 30), "df-t")

@@ -1,3 +1,40 @@
+# marginaleffects 0.11.0
+
+Breaking changes:
+
+* `type` column is replaced by `type` attribute.
+* `predictions()` only works with officially supported model types (same list as `comparisons()` and `slopes()`).
+
+Renamed arguments (backward compatibility is preserved):
+
+* `transform_pre` -> `comparison`
+* `transform_post` -> `transform`
+
+New:
+
+* `p_adjust` argument: Adjust p-values for multiple comparisons. 
+* `equivalence` argument available everywhere.
+
+Performance:
+
+* Much faster results in `avg_*()` functions for models with only categorical predictors and many rows of data, using deduplication and weights instead of unit-level estimates.
+* Faster predictions in `lm()` and `glm()` models using `RcppEigen`.
+* Bayesian models with many rows. Thanks to Etienne Bacher. #694 
+* Faster predictions, especially with standard errors and large datasets.
+
+Bugs:
+
+* Multiple imputation with `mira` objects was not pooling all datasets. Thanks to  @Generalized for report #711.
+* Support for more models with offsets. Thanks to @mariofiorini for report #705.
+* Error on `predictions()` with `by` and `wts`. Thanks to Noah Greifer for report #695.
+* `afex`: some models generated errors. Thanks to  Daniel Lüdecke for report #696.
+* `group` column name is always forbidden. Thanks to Daniel Lüdecke for report #697.
+* Blank graphs in `plot_comparisons()` with a list in `variables`.
+* `type="link"` produced an error with some categorical `brms` models. Thanks to @shirdekel for report #703.
+* Error on `predictions(variables = ...)` for `glmmTMB` models. Thanks to Daniel Lüdecke for report #707.
+* `by` with user-specified function in `comparison` and factor predictor did not aggregate correctly. Thanks to @joaotedde for report #715.
+* `ordinal::clm`: Support `cum.prob` and `linear.predictor` prediction types. Thanks to @MrJerryTAO for report #717.
+
 # marginaleffects 0.10.0
 
 Performance:

@@ -10,7 +10,7 @@
 #' * `comparisons()`: unit-level (conditional) estimates.
 #' * `avg_comparisons()`: average (marginal) estimates.
 #'
-#' The `newdata` argument and the `datagrid()` function can be used to control where statistics are evaluated in the predictor space: "at observed values", "at the mean", "at representative values", etc.
+#' `variables` identifies the focal regressors whose "effect" we are interested in. `comparison` determines how predictions with different regressor values are compared (difference, ratio, odds, etc.). The `newdata` argument and the `datagrid()` function control where statistics are evaluated in the predictor space: "at observed values", "at the mean", "at representative values", etc.
 #'
 #' See the comparisons vignette and package website for worked examples and case studies:
 #'
@@ -57,26 +57,28 @@
 #'   - `newdata = datagrid(cyl = c(4, 6))`: `cyl` variable equal to 4 and 6 and other regressors fixed at their means or modes.
 #'   - `newdata = datagrid(mpg = fivenum)`: `mpg` variable held at Tukey's five numbers (using the `fivenum` function), and other regressors fixed at their means or modes.
 #'   - See the Examples section and the [datagrid] documentation.
-#' @param transform_pre string or function. How should pairs of adjusted predictions be contrasted?
+#' @param comparison How should pairs of predictions be compared? Difference, ratio, odds ratio, or user-defined functions.
 #' * string: shortcuts to common contrast functions.
-#'   - Supported shortcuts strings: `r paste(names(marginaleffects:::transform_pre_function_dict), collapse = ", ")`
-#'   - See the Transformations section below for definitions of each transformation.
+#'   - Supported shortcuts strings: `r paste(names(marginaleffects:::comparison_function_dict), collapse = ", ")`
+#'   - See the Comparisons section below for definitions of each transformation.
 #' * function: accept two equal-length numeric vectors of adjusted predictions (`hi` and `lo`) and returns a vector of contrasts of the same length, or a unique numeric value.
 #'   - See the Transformations section below for examples of valid functions.
-#' @param transform_post string or function. Transformation applied to unit-level estimates and confidence intervals just before the function returns results. Functions must accept a vector and return a vector of the same length. Support string shortcuts: "exp", "ln"
+#' @param transform string or function. Transformation applied to unit-level estimates and confidence intervals just before the function returns results. Functions must accept a vector and return a vector of the same length. Support string shortcuts: "exp", "ln"
+#' @param equivalence Numeric vector of length 2: bounds used for the two-one-sided test (TOST) of equivalence, and for the non-inferiority and non-superiority tests. See Details section below.
 #' @param by Aggregate unit-level estimates (aka, marginalize, average over). Valid inputs:
 #'   - `FALSE`: return the original unit-level estimates.
 #'   - `TRUE`: aggregate estimates for each term.
 #'   - Character vector of column names in `newdata` or in the data frame produced by calling the function without the `by` argument.
 #'   - Data frame with a `by` column of group labels, and merging columns shared by `newdata` or the data frame produced by calling the same function without the `by` argument.
 #'   - See examples below.
-#' @param cross TRUE or FALSE
+#' @param cross
 #' * `FALSE`: Contrasts represent the change in adjusted predictions when one predictor changes and all other variables are held constant.
 #' * `TRUE`: Contrasts represent the changes in adjusted predictions when all the predictors specified in the `variables` argument are manipulated simultaneously (a "cross-contrast").
 #' @template deltamethod
 #' @template model_specific_arguments
-#' @template transform_pre_functions
+#' @template comparison_functions
 #' @template bayesian
+#' @template equivalence
 #'
 #' @return A `data.frame` with one row per observation (per term/group) and several columns:
 #' * `rowid`: row number of the `newdata` data frame
@@ -96,14 +98,14 @@
 #' tmp <- mtcars
 #' tmp$am <- as.logical(tmp$am)
 #' mod <- lm(mpg ~ am + factor(cyl), tmp)
-#' comparisons(mod, variables = list(cyl = "reference")) |> tidy()
-#' comparisons(mod, variables = list(cyl = "sequential")) |> tidy()
-#' comparisons(mod, variables = list(cyl = "pairwise")) |> tidy()
+#' avg_comparisons(mod, variables = list(cyl = "reference"))
+#' avg_comparisons(mod, variables = list(cyl = "sequential"))
+#' avg_comparisons(mod, variables = list(cyl = "pairwise"))
 #'
 #' # GLM with different scale types
 #' mod <- glm(am ~ factor(gear), data = mtcars)
-#' comparisons(mod, type = "response") |> tidy()
-#' comparisons(mod, type = "link") |> tidy()
+#' avg_comparisons(mod, type = "response")
+#' avg_comparisons(mod, type = "link")
 #'
 #' # Contrasts at the mean
 #' comparisons(mod, newdata = "mean")
@@ -118,15 +120,14 @@
 #' m <- lm(mpg ~ hp + drat + factor(cyl) + factor(am), data = mtcars)
 #' comparisons(m, variables = "hp", newdata = datagrid(FUN_factor = unique, FUN_numeric = median))
 #'
-#'
 #' # Numeric contrasts
 #' mod <- lm(mpg ~ hp, data = mtcars)
-#' comparisons(mod, variables = list(hp = 1)) |> tidy()
-#' comparisons(mod, variables = list(hp = 5)) |> tidy()
-#' comparisons(mod, variables = list(hp = c(90, 100))) |> tidy()
-#' comparisons(mod, variables = list(hp = "iqr")) |> tidy()
-#' comparisons(mod, variables = list(hp = "sd")) |> tidy()
-#' comparisons(mod, variables = list(hp = "minmax")) |> tidy()
+#' avg_comparisons(mod, variables = list(hp = 1))
+#' avg_comparisons(mod, variables = list(hp = 5))
+#' avg_comparisons(mod, variables = list(hp = c(90, 100)))
+#' avg_comparisons(mod, variables = list(hp = "iqr"))
+#' avg_comparisons(mod, variables = list(hp = "sd"))
+#' avg_comparisons(mod, variables = list(hp = "minmax"))
 #'
 #' # using a function to specify a custom difference in one regressor
 #' dat <- mtcars
@@ -137,13 +138,13 @@
 #'
 #' # Adjusted Risk Ratio: see the contrasts vignette
 #' mod <- glm(vs ~ mpg, data = mtcars, family = binomial)
-#' avg_comparisons(mod, transform_pre = "lnratioavg", transform_post = exp)
+#' avg_comparisons(mod, comparison = "lnratioavg", transform = exp)
 #'
-#' # Adjusted Risk Ratio: Manual specification of the `transform_pre`
+#' # Adjusted Risk Ratio: Manual specification of the `comparison`
 #' avg_comparisons(
 #'      mod,
-#'      transform_pre = function(hi, lo) log(mean(hi) / mean(lo)),
-#'      transform_post = exp)
+#'      comparison = function(hi, lo) log(mean(hi) / mean(lo)),
+#'      transform = exp)
 #
 #' # cross contrasts
 #' mod <- lm(mpg ~ factor(cyl) * factor(gear) + hp, data = mtcars)
@@ -201,24 +202,34 @@
 comparisons <- function(model,
                         newdata = NULL,
                         variables = NULL,
+                        comparison = "difference",
                         type = NULL,
                         vcov = TRUE,
                         by = FALSE,
                         conf_level = 0.95,
-                        transform_pre = "difference",
-                        transform_post = NULL,
+                        transform = NULL,
                         cross = FALSE,
                         wts = NULL,
                         hypothesis = NULL,
+                        equivalence = NULL,
+                        p_adjust = NULL,
                         df = Inf,
                         eps = NULL,
                         ...) {
 
 
     dots <- list(...)
+    
+    # backward compatibility
+    if ("transform_post" %in% names(dots)) transform <- dots[["transform_post"]]
+    if ("transform_pre" %in% names(dots)) comparison <- dots[["transform_pre"]]
 
     # required by stubcols later, but might be overwritten
     bycols <- NULL
+
+    if (!is.null(equivalence) && !is.null(p_adjust)) {
+        insight::format_error("The `equivalence` and `p_adjust` arguments cannot be used together.")
+    }
 
     # slopes()` **must** run its own sanity checks and hardcode valid arguments
     internal_call <- dots[["internal_call"]]
@@ -255,8 +266,8 @@ comparisons <- function(model,
         vcov = vcov,
         by = by,
         conf_level = conf_level,
-        transform_pre = transform_pre,
-        transform_post = transform_post,
+        comparison = comparison,
+        transform = transform,
         cross = cross,
         wts = wts,
         hypothesis = hypothesis,
@@ -278,18 +289,18 @@ comparisons <- function(model,
     checkmate::assert_number(df, lower = 1)
 
     # transforms
-    sanity_transform_pre(transform_pre)
-    transform_pre_label <- transform_post_label <- NULL
-    if (is.function(transform_pre)) {
-        transform_pre_label <- deparse(substitute(transform_pre))
+    sanity_comparison(comparison)
+    comparison_label <- transform_label <- NULL
+    if (is.function(comparison)) {
+        comparison_label <- deparse(substitute(comparison))
     }
-    if (is.function(transform_post)) {
-        transform_post_label <- deparse(substitute(transform_post))
-        transform_post <- sanitize_transform_post(transform_post)
-        names(transform_post) <- transform_post_label
+    if (is.function(transform)) {
+        transform_label <- deparse(substitute(transform))
+        transform <- sanitize_transform(transform)
+        names(transform) <- transform_label
     } else {
-        transform_post <- sanitize_transform_post(transform_post)
-        transform_post_label <- names(transform_post)
+        transform <- sanitize_transform(transform)
+        transform_label <- names(transform)
     }
 
     marginalmeans <- isTRUE(checkmate::check_choice(newdata, choices = "marginalmeans"))
@@ -341,7 +352,7 @@ comparisons <- function(model,
         variables = variables,
         cross = cross,
         by = by,
-        transform_pre = transform_pre,
+        comparison = comparison,
         eps = eps)
 
     tmp <- sanitize_hypothesis(hypothesis, ...)
@@ -351,6 +362,11 @@ comparisons <- function(model,
     # after sanitize_newdata
     sanity_by(by, newdata)
 
+    # after sanity_by
+    newdata <- dedup_newdata(model = model, newdata = newdata, wts = wts, by = by, cross = cross, comparison = comparison)
+    if (is.null(wts) && "marginaleffects_wts_internal" %in% colnames(newdata)) {
+        wts <- "marginaleffects_wts_internal"
+    }
 
     # get dof before transforming the vcov arg
     # get_df() produces a weird warning on non lmerMod. We can skip them
@@ -383,7 +399,7 @@ comparisons <- function(model,
         FUN = comparisons,
         model = model, newdata = newdata, vcov = vcov, variables = variables, type = type, by = by,
         conf_level = conf_level,
-        transform_pre = transform_pre, transform_post = transform_post, wts = wts, hypothesis = hypothesis, eps = eps, ...)
+        comparison = comparison, transform = transform, wts = wts, hypothesis = hypothesis, eps = eps, ...)
     if (!is.null(out)) {
         return(out)
     }
@@ -423,7 +439,7 @@ comparisons <- function(model,
 
     # standard errors via delta method
     } else if (!vcov_false && isTRUE(checkmate::check_matrix(vcov))) {
-        idx <- intersect(colnames(mfx), c("type", "group", "term", "contrast"))
+        idx <- intersect(colnames(mfx), c("group", "term", "contrast"))
         idx <- mfx[, (idx), drop = FALSE]
         args <- list(model,
                      vcov = vcov,
@@ -471,8 +487,6 @@ comparisons <- function(model,
     }
 
     # meta info
-    mfx[["type"]] <- type
-
     mfx <- get_ci(
         mfx,
         conf_level = conf_level,
@@ -480,6 +494,7 @@ comparisons <- function(model,
         draws = draws,
         estimate = "estimate",
         null_hypothesis = hypothesis_null,
+        p_adjust = p_adjust,
         model = model)
 
 
@@ -501,7 +516,7 @@ comparisons <- function(model,
     }
 
     stubcols <- c(
-        "rowid", "rowidcf", "type", "group", "term", "hypothesis", "by",
+        "rowid", "rowidcf", "group", "term", "hypothesis", "by",
         grep("^contrast", colnames(mfx), value = TRUE),
         bycols,
         "estimate", "std.error", "statistic", "p.value", "conf.low",
@@ -518,10 +533,10 @@ comparisons <- function(model,
     attr(mfx, "posterior_draws") <- draws
 
     # equivalence tests
-    mfx <- equivalence(mfx, df = df, ...)
+    mfx <- equivalence(mfx, equivalence = equivalence, df = df, ...)
 
     # after draws attribute
-    mfx <- backtransform(mfx, transform_post)
+    mfx <- backtransform(mfx, transform)
 
     # save as attribute and not column
     if (any(!is.na(mfx[["marginaleffects_wts_internal"]]))) {
@@ -557,10 +572,10 @@ comparisons <- function(model,
     attr(out, "vcov") <- vcov
     attr(out, "vcov.type") <- vcov.type
     attr(out, "weights") <- marginaleffects_wts_internal
-    attr(out, "transform_pre") <- transform_pre
-    attr(out, "transform_post") <- transform_post[[1]]
-    attr(out, "transform_pre_label") <- transform_pre_label
-    attr(out, "transform_post_label") <- transform_post_label
+    attr(out, "comparison") <- comparison
+    attr(out, "transform") <- transform[[1]]
+    attr(out, "comparison_label") <- comparison_label
+    attr(out, "transform_label") <- transform_label
     attr(out, "conf_level") <- conf_level
     attr(out, "by") <- by
 
@@ -591,11 +606,13 @@ avg_comparisons <- function(model,
                             vcov = TRUE,
                             by = TRUE,
                             conf_level = 0.95,
-                            transform_pre = "difference",
-                            transform_post = NULL,
+                            comparison = "difference",
+                            transform = NULL,
                             cross = FALSE,
                             wts = NULL,
                             hypothesis = NULL,
+                            equivalence = NULL,
+                            p_adjust = NULL,
                             df = Inf,
                             eps = NULL,
                             ...) {
@@ -610,7 +627,7 @@ avg_comparisons <- function(model,
         FUN = avg_comparisons,
         model = model, newdata = newdata, vcov = vcov, variables = variables, type = type, by = by,
         conf_level = conf_level,
-        transform_pre = transform_pre, transform_post = transform_post, wts = wts, hypothesis = hypothesis, eps = eps, ...)
+        comparison = comparison, transform = transform, wts = wts, hypothesis = hypothesis, eps = eps, ...)
     if (!is.null(out)) {
         return(out)
     }
@@ -623,11 +640,13 @@ avg_comparisons <- function(model,
         vcov = vcov,
         by = by,
         conf_level = conf_level,
-        transform_pre = transform_pre,
-        transform_post = transform_post,
+        comparison = comparison,
+        transform = transform,
         cross = cross,
         wts = wts,
         hypothesis = hypothesis,
+        equivalence = equivalence,
+        p_adjust = p_adjust,
         df = df,
         eps = eps,
         ...)

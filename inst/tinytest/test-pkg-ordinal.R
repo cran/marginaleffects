@@ -1,11 +1,10 @@
 source("helpers.R")
 using("marginaleffects")
-exit_if_not(EXPENSIVE)
-exit_if_not(!ON_CI)
-exit_if_not(packageVersion("base") >= "4.2.0")
+if (!EXPENSIVE) exit_file("EXPENSIVE")
+if (packageVersion("base") >= "4.2.0") exit_file("dev breaks this")
 
-exit_if_not(requiet("MASS"))
-exit_if_not(requiet("ordinal"))
+requiet("MASS")
+requiet("ordinal")
 
 dat <- read.csv(
     "https://vincentarelbundock.github.io/Rdatasets/csv/MASS/housing.csv",
@@ -45,6 +44,17 @@ expect_equivalent(mfx$estimate, mfx$dydxstata, tolerance = .001)
 expect_equivalent(mfx$std.error, mfx$std.errorstata, tolerance = .001)
 expect_slopes(mod)
 
+
+# Issue 717: no validity
+data("wine", package = "ordinal")
+mod <- clm(rating ~ contact + temp, data = wine)
+p <- predictions(mod, type = "linear.predictor")
+expect_inherits(p, "predictions")
+p <- predictions(mod, type = "cum.prob")
+expect_inherits(p, "predictions")
+expect_error(predictions(mod, type = "junk"), pattern = "Assertion")
+p <- avg_slopes(mod, type = "cum.prob")
+expect_inherits(p, "slopes")
 
 
 # marginaleffects: clm: no validity

@@ -1,13 +1,13 @@
 source("helpers.R")
-exit_if_not(EXPENSIVE)
+if (!EXPENSIVE) exit_file("EXPENSIVE")
 using("marginaleffects")
 
-exit_if_not(requiet("margins"))
-exit_if_not(requiet("haven"))
-exit_if_not(requiet("lme4"))
-exit_if_not(requiet("insight"))
-exit_if_not(requiet("emmeans"))
-exit_if_not(requiet("broom"))
+requiet("margins")
+requiet("haven")
+requiet("lme4")
+requiet("insight")
+requiet("emmeans")
+requiet("broom")
 
 
 # satterthwaite (no validity)
@@ -269,18 +269,6 @@ expect_equivalent(mfx$std.error, cmp$std.error, tolerance = .0001)
 expect_equivalent(attr(mfx, "vcov.type"), "Kenward-Roger")
 expect_equivalent(attr(cmp, "vcov.type"), "Kenward-Roger")
 
-
-
-# # Issue 437: allow `get_predicted()` arguments
-# mod <-lme4::lmer(mpg ~ hp + (1 | cyl), data = mtcars)
-# p1 <- predictions(mod, type = "prediction")
-# p2 <- predictions(mod)
-# expect_inherits(p1, "predictions")
-# expect_inherits(p2, "predictions")
-# expect_true("prediction" %in% p1$type)
-# expect_true("response" %in% p2$type)
-# expect_true(all(p1$conf.low < p2$conf.low))
-# expect_true(all(p1$conf.high > p2$conf.high))
 
 
 exit_file("TODO: check failing comparisons()")

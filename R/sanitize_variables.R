@@ -4,7 +4,7 @@ sanitize_variables <- function(variables,
                                model,
                                newdata,  # need for NumPyro where `find_variables()`` does not work
                                modeldata,
-                               transform_pre = NULL,
+                               comparison = NULL,
                                by = NULL,
                                cross = FALSE,
                                calling_function = "comparisons",
@@ -19,6 +19,9 @@ sanitize_variables <- function(variables,
     # extensions with no `get_data()`
     if (is.null(modeldata) || nrow(modeldata) == 0) {
         modeldata <- set_variable_class(newdata)
+        no_modeldata <- TRUE
+    } else {
+        no_modeldata <- FALSE
     }
 
     # variables is NULL: get all variable names from the model
@@ -53,16 +56,25 @@ sanitize_variables <- function(variables,
     }
     
     # reserved keywords
+    # Issue #697: we used to allow "group", as long as it wasn't in
+    # `variables`, but this created problems with automatic `by=TRUE`. Perhaps
+    # I could loosen this, but there are many interactions, and the lazy way is
+    # just to forbid entirely.
     reserved <- c(
         "rowid", "group", "term", "contrast", "estimate",
         "std.error", "statistic", "conf.low", "conf.high", "p.value",
-        "p.value.nonsup", "p.value.noninf")
-    bad <- intersect(names(predictors), reserved)
+        "p.value.nonsup", "p.value.noninf", "by")
+    # if no modeldata is available, we use `newdata`, but that often has a
+    # `rowid` column. This used to break the extensions.Rmd vignette.
+    if (no_modeldata) {
+        reserved <- setdiff(reserved, "rowid")
+    }
+    bad <- unique(intersect(c(names(predictors), colnames(modeldata)), reserved))
     if (length(bad) > 0) {
         msg <- c(
-            "The following variable name are forbidden to avoid conflicts with the column names of the outputs produced by the `marginaleffects` package:",
+            "These variable names are forbidden to avoid conflicts with the outputs of `marginaleffects`:",
             sprintf("%s", paste(sprintf('"%s"', bad), collapse = ", ")),
-            "Please rename your variables before fitting the model or change the value of the `variables` argument.")
+            "Please rename your variables before fitting the model.")
         insight::format_error(msg)
     }
 
@@ -253,36 +265,36 @@ sanitize_variables <- function(variables,
  
     # goals:
     # allow multiple function types: slopes() uses both difference and dydx
-    # when transform_pre is defined, use that if it works or turn back to defaults
+    # when comparison is defined, use that if it works or turn back to defaults
     # predictors list elements: name, value, function, label
 
-    if (is.null(transform_pre)) {
-        fun_numeric <- fun_categorical <- transform_pre_function_dict[["difference"]]
-        lab_numeric <- lab_categorical <- transform_pre_label_dict[["difference"]]
+    if (is.null(comparison)) {
+        fun_numeric <- fun_categorical <- comparison_function_dict[["difference"]]
+        lab_numeric <- lab_categorical <- comparison_label_dict[["difference"]]
 
-    } else if (is.function(transform_pre)) {
-        fun_numeric <- fun_categorical <- transform_pre
+    } else if (is.function(comparison)) {
+        fun_numeric <- fun_categorical <- comparison
         lab_numeric <- lab_categorical <- "custom"
 
-    } else if (is.character(transform_pre)) {
+    } else if (is.character(comparison)) {
         # switch to the avg version when there is a `by` function
-        if (isTRUE(checkmate::check_character(by)) && !isTRUE(grepl("avg$", transform_pre))) {
-            transform_pre <- paste0(transform_pre, "avg")
+        if (isTRUE(checkmate::check_character(by)) && !isTRUE(grepl("avg$", comparison))) {
+            comparison <- paste0(comparison, "avg")
         }
 
         # weights if user requests `avg` or automatically switched
-        if (isTRUE(grepl("avg$", transform_pre)) && "marginaleffects_wts_internal" %in% colnames(newdata)) {
-            transform_pre <- paste0(transform_pre, "wts")
+        if (isTRUE(grepl("avg$", comparison)) && "marginaleffects_wts_internal" %in% colnames(newdata)) {
+            comparison <- paste0(comparison, "wts")
         }
 
-        fun_numeric <- fun_categorical <- transform_pre_function_dict[[transform_pre]]
-        lab_numeric <- lab_categorical <- transform_pre_label_dict[[transform_pre]]
-        if (isTRUE(grepl("dydxavg|eyexavg|dyexavg|eydxavg", transform_pre))) {
-            fun_categorical <- transform_pre_function_dict[["differenceavg"]]
-            lab_categorical <- transform_pre_label_dict[["differenceavg"]]
-        } else if (isTRUE(grepl("dydx$|eyex$|dyex$|eydx$", transform_pre))) {
-            fun_categorical <- transform_pre_function_dict[["difference"]]
-            lab_categorical <- transform_pre_label_dict[["difference"]]
+        fun_numeric <- fun_categorical <- comparison_function_dict[[comparison]]
+        lab_numeric <- lab_categorical <- comparison_label_dict[[comparison]]
+        if (isTRUE(grepl("dydxavg|eyexavg|dyexavg|eydxavg", comparison))) {
+            fun_categorical <- comparison_function_dict[["differenceavg"]]
+            lab_categorical <- comparison_label_dict[["differenceavg"]]
+        } else if (isTRUE(grepl("dydx$|eyex$|dyex$|eydx$", comparison))) {
+            fun_categorical <- comparison_function_dict[["difference"]]
+            lab_categorical <- comparison_label_dict[["difference"]]
         }
 
     }
@@ -300,7 +312,7 @@ sanitize_variables <- function(variables,
             "function" = fun,
             "label" = lab,
             "value" = predictors[[v]],
-            "transform_pre" = transform_pre)
+            "comparison" = comparison)
     }
     
     # epsilon for finite difference

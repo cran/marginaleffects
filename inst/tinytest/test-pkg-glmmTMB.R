@@ -1,12 +1,12 @@
 source("helpers.R")
-exit_if_not(EXPENSIVE)
+# if (!EXPENSIVE) exit_file("EXPENSIVE")
 using("marginaleffects")
 # exit_file("glmmTMB always causes problems")
 
 if (ON_CI) exit_file("on ci") # install and test fails on Github
-exit_if_not(requiet("glmmTMB"))
-exit_if_not(requiet("emmeans"))
-exit_if_not(requiet("broom"))
+requiet("glmmTMB")
+requiet("emmeans")
+requiet("broom")
 
 data("Owls", package = "glmmTMB")
 
@@ -59,7 +59,7 @@ bug <- glmmTMB(count ~ spp + mined,
   family = "nbinom2",
   data = Salamanders)
 mfx <- slopes(bug)
-tid1 <- comparisons(bug, transform_pre = "dydxavg")
+tid1 <- comparisons(bug, comparison = "dydxavg")
 tid2 <- tidy(slopes(bug))
 
 expect_equivalent(tid1$estimate, tid2$estimate)
@@ -209,8 +209,8 @@ expect_inherits(predictions(model_REML, vcov = FALSE, re.form = NA), "prediction
 
 
 # Issue #663
-exit_if_not(requiet("ordbetareg"))
-exit_if_not(requiet("dplyr"))
+if (!requiet("ordbetareg")) exit_file("ordbetareg")
+requiet("dplyr")
 
 data(pew, package = "ordbetareg")
 model_data <- select(
@@ -243,5 +243,22 @@ mfx <- avg_slopes(mod)
 expect_inherits(mfx, 'slopes')
 
 
+# Issue #707
+set.seed(123)
+n <- 200
+d <- data.frame(
+  outcome = rnorm(n),
+  groups = as.factor(sample(c("treatment", "control"), n, TRUE)),
+  episode = as.factor(sample(1:2, n, TRUE)),
+  ID = as.factor(rep(1:10, n / 10)),
+  wt = abs(rnorm(n, mean = 1, sd = 0.1)),
+  sex = as.factor(sample(c("female", "male"), n, TRUE, prob = c(.4, .6))))
+mod <- glmmTMB(outcome ~ groups * episode + (1 | ID), data = d, weights = wt)
+tmp <<- head(d)
+p <- avg_predictions(mod, variables = "groups", newdata = tmp)
+expect_inherits(p, "predictions")
 
+
+
+source("helpers.R")
 rm(list = ls())

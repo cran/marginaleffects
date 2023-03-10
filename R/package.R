@@ -1,8 +1,12 @@
 # https://stackoverflow.com/questions/9439256/how-can-i-handle-r-cmd-check-no-visible-binding-for-global-variable-notes-when#comment20826625_12429344
 # 2012 hadley says "globalVariables is a hideous hack and I will never use it"
 # 2014 hadley updates his own answer with globalVariables as one of "two solutions"
+#' @importFrom Rcpp evalCpp
+#' @useDynLib marginaleffects
 #' @import data.table
 utils::globalVariables(c(
+"marginaleffects_contrast_hi",
+"marginaleffects_contrast_lo",
 "..bycols",
 "..to_keep",
 "..cols",
@@ -65,7 +69,7 @@ utils::globalVariables(c(
 "term",
 "ticks",
 "tmp_grp",
-"transform_pre_idx",
+"comparison_idx",
 "value",
 "where",
 "wts"))

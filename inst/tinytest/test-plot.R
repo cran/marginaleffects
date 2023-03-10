@@ -1,10 +1,7 @@
 source("helpers.R")
 using("marginaleffects")
-exit_if_not(!ON_OSX)
-exit_if_not(require("tinyviztest"))
-
-library("tinyviztest")
-using("tinyviztest")
+if (!requiet("tinysnapshot")) exit_file("tinysnapshot")
+using("tinysnapshot")
 
 # from marginaleffects objects
 mod <- glm(am ~ hp + wt, data = mtcars)

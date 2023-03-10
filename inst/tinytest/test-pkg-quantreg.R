@@ -1,9 +1,9 @@
 source("helpers.R")
 using("marginaleffects")
 
-exit_if_not(requiet("quantreg"))
-exit_if_not(requiet("emmeans"))
-exit_if_not(requiet("broom"))
+requiet("quantreg")
+requiet("emmeans")
+requiet("broom")
 
 # marginaleffects: rq: Stata
 stata <- readRDS(testing_path("stata/stata.rds"))$quantreg_rq_01
@@ -30,6 +30,8 @@ pred1 <- predictions(model)
 pred2 <- suppressWarnings(predictions(model, newdata = head(mtcars)))
 expect_predictions(pred1, n_row = nrow(mtcars))
 expect_predictions(pred2, n_row = 6)
+expect_equivalent(pred1$estimate, predict(model))
+expect_equivalent(pred2$estimate, predict(model, newdata = head(mtcars)))
 
 
 # marginalmeans: rq: no validity

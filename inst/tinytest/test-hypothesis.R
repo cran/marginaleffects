@@ -1,7 +1,7 @@
 source("helpers.R")
 using("marginaleffects")
 
-exit_if_not(requiet("emmeans"))
+requiet("emmeans")
 
 dat <- mtcars
 dat$carb <- factor(dat$carb)
@@ -239,8 +239,8 @@ expect_error(
     pattern = "hypothesis testing")
 
 # Issue #661: remove redundant labels in pairwise comparisons
-exit_if_not(requiet("tinyviztest"))
-using("tinyviztest")
+if (!requiet("tinysnapshot")) exit_file("tinysnapshot")
+using("tinysnapshot")
 set.seed(123)
 dat <- transform(iris, dummy = as.factor(rbinom(nrow(iris), 1, prob = c(0.4, 0.6))))
 m <- lm(Sepal.Width ~ Sepal.Length * Species + dummy, data = dat)
@@ -249,21 +249,21 @@ expect_true("setosa, 0 - setosa, 1" %in% mfx$term)
 
 
 # # Issue #568
-# # TODO: p-value computed before transform_post; null on the pre-transform scale
+# # TODO: p-value computed before transform; null on the pre-transform scale
 # mod <- glm(vs ~ hp, data = mtcars, family = binomial)
 
 # comparisons(mod,
 #     newdata = "mean",
-#     transform_pre = "ratio")
+#     comparison = "ratio")
 
 # comparisons(mod,
 #     newdata = "mean",
-#     transform_pre = "ratio",
+#     comparison = "ratio",
 #     hypothesis = 0)
 
 # comparisons(mod,
 #     newdata = "mean",
-#     transform_pre = "ratio",
+#     comparison = "ratio",
 #     hypothesis = 1)
 
 # marginaleffects

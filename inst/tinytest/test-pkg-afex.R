@@ -1,8 +1,8 @@
 source("helpers.R")
 using("marginaleffects")
 
-exit_if_not(requiet("afex"))
-exit_if_not(requiet("emmeans"))
+requiet("afex")
+requiet("emmeans")
 
 data(md_12.1, package = "afex")
 mod <- aov_ez("id", "rt", md_12.1, within = c("angle", "noise"))
@@ -55,6 +55,24 @@ em <- data.frame(emmeans(mod, ~ phase))
 mm <- marginal_means(mod, "phase")
 expect_equivalent(mm$estimate, em$emmean)
 expect_equivalent(mm$std.error, em$SE)
+
+
+
+# data from https://github.com/mattansb/Analysis-of-Factorial-Designs-foR-Psychologists/03 Main and simple effects analysis
+Phobia <- readRDS("stata/databases/Phobia.rds")
+mod <- suppressMessages(aov_ez(
+  id = "ID", dv = "BehavioralAvoidance",
+  between = c("Condition", "Gender"),
+  data = Phobia,
+  anova_table = list(es = "pes")))
+
+pre <- predictions(mod)
+mfx <- slopes(mod)
+expect_inherits(pre, "predictions")
+expect_inherits(cmp, "comparisons")
+expect_false(anyNA(pre$std.error))
+expect_false(anyNA(cmp$std.error))
+
 
 
 

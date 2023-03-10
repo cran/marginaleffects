@@ -3,15 +3,15 @@
 # https://github.com/vincentarelbundock/marginaleffects/issues/240
 source("helpers.R")
 using("marginaleffects")
-exit_if_not(EXPENSIVE)
+if (!EXPENSIVE) exit_file("EXPENSIVE")
 if (ON_WINDOWS) exit_file("on windows")
 if (!minver("base", "4.1.0")) exit_file("R 4.1.0")
 options("marginaleffects_posterior_interval" = "hdi")
-exit_if_not(requiet("brms"))
-exit_if_not(requiet("emmeans"))
-exit_if_not(requiet("broom"))
-exit_if_not(requiet("posterior"))
-exit_if_not(requiet("brmsmargins"))
+requiet("brms")
+requiet("emmeans")
+requiet("broom")
+requiet("posterior")
+requiet("brmsmargins")
 tol <- 0.0001
 tol_se <- 0.001
 
@@ -178,7 +178,7 @@ mfx <- slopes(brms_factor, newdata = dat)
 ti <- tidy(mfx)
 expect_inherits(ti, "data.frame")
 expect_true(nrow(ti) == 3)
-expect_true(ncol(ti) > 5)
+expect_true(ncol(ti) >= 5)
 expect_true(all(c("term", "estimate", "conf.low") %in% colnames(ti)))
 
 
@@ -213,7 +213,7 @@ expect_false(p1$conf.high == p2$conf.high)
 
 
 # predictions vs. emmeans
-exit_if_not(requiet("emmeans"))
+requiet("emmeans")
 em <- emmeans::emmeans(brms_numeric, ~hp, "hp", at = list(hp = c(100, 120)))
 em <- data.frame(em)
 pred <- predictions(brms_numeric, newdata = datagrid(hp = c(100, 120)), type = "link")
@@ -224,8 +224,8 @@ expect_equivalent(pred$conf.high, em$upper.HPD)
 
 
 # marginalmeans vs. emmeans
-exit_if_not(requiet("emmeans"))
-exit_if_not(requiet("broom"))
+requiet("emmeans")
+requiet("broom")
 expect_error(marginal_means(brms_factor, variables = "cyl_fac", type = "link"), pattern = "github.*issues")
 # emmeans::emmeans(brms_factor, specs = ~cyl_fac)
 
@@ -246,7 +246,7 @@ expect_equivalent(nrow(attr(tmp, "posterior_draws")), nrow(tmp))
 
 
 # marginaleffects vs. emmeans
-exit_if_not(requiet("emmeans"))
+requiet("emmeans")
 
 # # known frequentist example to compare syntax
 # brms_numeric_freq <- glm(am ~ hp, data = mtcars, family = binomial)
@@ -400,7 +400,7 @@ expect_warning(slopes(brms_numeric, vcov = "HC3"),
 p1 <- predictions(
     brms_lognormal_hurdle,
     newdata = datagrid(lifeExp = seq(30, 80, 10)),
-    transform_post = exp,
+    transform = exp,
     dpar = "mu")
 p2 <- predictions(
     brms_lognormal_hurdle,
@@ -413,13 +413,13 @@ cmp1 <- comparisons(
     brms_lognormal_hurdle,
     variables = list(lifeExp = eps),
     newdata = datagrid(lifeExp = seq(30, 80, 10)),
-    transform_pre = function(hi, lo) (exp(hi) - exp(lo)) / exp(eps),
+    comparison = function(hi, lo) (exp(hi) - exp(lo)) / exp(eps),
     dpar = "mu")
 cmp2 <- comparisons(
     brms_lognormal_hurdle,
     variables = list(lifeExp = eps),
     newdata = datagrid(lifeExp = seq(30, 80, 10)),
-    transform_pre = function(hi, lo) exp((hi - lo) / eps),
+    comparison = function(hi, lo) exp((hi - lo) / eps),
     dpar = "mu")
 expect_true(all(cmp1$estimate != cmp2$estimate))
 
@@ -427,7 +427,7 @@ cmp <- comparisons(
     brms_lognormal_hurdle2,
     dpar = "mu",
     datagrid(disp = c(150, 300, 450)),
-    transform_pre = "expdydx")
+    comparison = "expdydx")
 
 expect_equivalent(cmp$estimate, 
     c(-0.0464610297239711, -0.0338017059188856, -0.0245881481374242),
@@ -439,11 +439,11 @@ expect_equivalent(cmp$estimate,
 #     regrid = "response", tran = "log", type = "response",
     # at = list(disp = c(150, 300, 450)))
 
-# Issue #432: bayes support for transform_pre with output of length 1
-cmp1 <- comparisons(brms_numeric2, transform_pre = "difference")
-cmp2 <- comparisons(brms_numeric2, transform_pre = "differenceavg")
-cmp3 <- comparisons(brms_numeric2, transform_pre = "ratio")
-cmp4 <- comparisons(brms_numeric2, transform_pre = "ratioavg")
+# Issue #432: bayes support for comparison with output of length 1
+cmp1 <- comparisons(brms_numeric2, comparison = "difference")
+cmp2 <- comparisons(brms_numeric2, comparison = "differenceavg")
+cmp3 <- comparisons(brms_numeric2, comparison = "ratio")
+cmp4 <- comparisons(brms_numeric2, comparison = "ratioavg")
 expect_equivalent(nrow(cmp1), 64)
 expect_equivalent(nrow(cmp2), 2)
 expect_equivalent(nrow(cmp3), 64)
@@ -451,12 +451,12 @@ expect_equivalent(nrow(cmp4), 2)
 
 # Issue #432: comparisons = conf.low = conf.high because mean() returns a
 # single number when applied to the draws matrix
-cmp <- comparisons(brms_binomial, variables = "tx", transform_pre = "lnoravg")
+cmp <- comparisons(brms_binomial, variables = "tx", comparison = "lnoravg")
 expect_true(all(cmp$estimate != cmp$conf.low))
 expect_true(all(cmp$estimate != cmp$conf.high))
 expect_true(all(cmp$conf.high != cmp$conf.low))
 
-# Issue #432: posterior_draws() and tidy() error with `transform_pre="avg"`
+# Issue #432: posterior_draws() and tidy() error with `comparison="avg"`
 pd <- posterior_draws(cmp)
 expect_inherits(pd, "data.frame")
 expect_equivalent(nrow(pd), 4000)
@@ -499,7 +499,7 @@ expect_equivalent(p3$estimate[1], -p3$estimate[2])
 # `by` argument is supported for predictions() because it is a simple average.
 # In comparisons(), some transformations are non-collapsible, so we can't just
 # take the average, and we need to rely on more subtle transformations from
-# `transform_pre_function_dict`.
+# `comparison_function_dict`.
 p <- predictions(
     brms_factor,
     by = "cyl_fac")
@@ -563,20 +563,20 @@ expect_inherits(p, "predictions")
 expect_equivalent(nrow(p), 2)
 
 
-# transform_post works for comparisons() and predictions()
+# transform works for comparisons() and predictions()
 void <- capture.output(suppressMessages(
     mod <- brm(gear ~ mpg + hp, data = mtcars, family = poisson)
 ))
 
 p1 <- predictions(mod, type = "link")
-p2 <- predictions(mod, type = "link", transform_post = exp)
+p2 <- predictions(mod, type = "link", transform = exp)
 expect_equivalent(exp(p1$estimate), p2$estimate)
 expect_equivalent(exp(p1$conf.low), p2$conf.low)
 expect_equivalent(exp(p1$conf.high), p2$conf.high)
 expect_equivalent(exp(attr(p1, "posterior_draws")), attr(p2, "posterior_draws"))
 
 p1 <- comparisons(mod, type = "link")
-p2 <- comparisons(mod, type = "link", transform_post = exp)
+p2 <- comparisons(mod, type = "link", transform = exp)
 expect_equivalent(exp(p1$estimate), p2$estimate)
 expect_equivalent(exp(p1$conf.low), p2$conf.low)
 expect_equivalent(exp(p1$conf.high), p2$conf.high)
@@ -702,5 +702,17 @@ expect_equivalent(nrow(cmp), 5)
 
 
 
+# Issue #703
+mod <- marginaleffects:::modelarchive_model("brms_inhaler_cat")
+pre <- predictions(mod, type = "link")
+expect_inherits(pre, "predictions")
+cmp <- comparisons(mod, type = "link")
+expect_inherits(cmp, "comparisons")
+
+
+
+
+
 source("helpers.R")
 rm(list = ls())
+
