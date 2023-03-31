@@ -27,11 +27,11 @@ comparison_function_dict <- list(
     # ratios
     "ratio" = function(hi, lo) hi / lo,
     "ratioavg" = function(hi, lo) mean(hi) / mean(lo),
-    "ratioavgwts" = function(hi, lo) wmean(hi) / wmean(lo),
+    "ratioavgwts" = function(hi, lo, w) wmean(hi, w) / wmean(lo, w),
 
     "lnratio" = function(hi, lo) log(hi / lo),
     "lnratioavg" = function(hi, lo) log(mean(hi) / mean(lo)),
-    "lnratioavgwts" = function(hi, lo) log(wmean(hi) / wmean(lo)),
+    "lnratioavgwts" = function(hi, lo, w) log(wmean(hi, w) / wmean(lo, w)),
 
     "lnor" = function(hi, lo) log((hi / (1 - hi)) / (lo / (1 - lo))),
     "lnoravg" = function(hi, lo) log((mean(hi) / (1 - mean(hi))) / (mean(lo) / (1 - mean(lo)))),
@@ -83,9 +83,11 @@ comparison_label_dict <- list(
 )
 
 sanity_comparison <- function(comparison) {
+    # wts versions are used internally but not available directly to users
+    valid <- names(comparison_function_dict)
+    valid <- valid[!grepl("wts$", valid)]
     checkmate::assert(
-        checkmate::check_choice(comparison,
-                                choices = names(comparison_function_dict)),
+        checkmate::check_choice(comparison, choices = valid),
         checkmate::check_function(comparison))
 }
 

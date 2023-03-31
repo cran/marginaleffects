@@ -76,10 +76,12 @@
 #' * `std.error`: standard errors computed using the delta method.
 #' * `conf.low`: lower bound of the confidence interval (or equal-tailed interval for bayesian models)
 #' * `conf.high`: upper bound of the confidence interval (or equal-tailed interval for bayesian models)
+#' * `p.value`: p value associated to the `estimate` column. The null is determined by the `hypothesis` argument (0 by default), and p values are computed before applying the `transform` argument. For models of class `feglm`, `Gam`, `glm` and `negbin`, p values are computed on the link scale by default unless the `type` argument is specified explicitly.
 #'
 #' See `?print.marginaleffects` for printing options.
 #'
 #' @examples
+#' \dontrun{
 #' # Adjusted Prediction for every row of the original dataset
 #' mod <- lm(mpg ~ hp + factor(cyl), data = mtcars)
 #' pred <- predictions(mod)
@@ -175,6 +177,7 @@
 #'     by = c("4,6", "4,6", "8"),
 #'     group = as.character(c(4, 6, 8)))
 #' predictions(mod, newdata = "mean", byfun = sum, by = by)
+#' }
 #'
 #' @inheritParams slopes
 #' @inheritParams comparisons
@@ -260,7 +263,11 @@ predictions <- function(model,
     }
 
     # if type is NULL, we backtransform if relevant
-    if ((is.null(type)) && is.null(transform) && isTRUE(class(model)[1] %in% c("glm", "Gam"))) {
+    flag1 <- is.null(type)
+    flag2 <- is.null(transform)
+    flag3 <- isTRUE(class(model)[1] %in% c("glm", "Gam", "negbin"))
+    flag4 <- isTRUE(hush(model[["method_type"]]) %in% c("feglm"))
+    if (flag1 && flag2 && (flag3 || flag4)) {
         dict <- subset(type_dictionary, class == class(model)[1])$type
         type <- sanitize_type(model = model, type = type)
         linv <- tryCatch(insight::link_inverse(model), error = function(e) NULL)
@@ -505,13 +512,21 @@ predictions <- function(model,
     marginaleffects_wts_internal <- out[["marginaleffects_wts_internal"]]
     out[["marginaleffects_wts_internal"]] <- NULL
 
-    # clean columns
+    # bycols
     if (isTRUE(checkmate::check_data_frame(by))) {
         bycols <- setdiff(colnames(by), "by")
     } else {
         bycols <- by
     }
 
+    # sort rows
+    if (is.null(draws)) { # dangerous for bayes to align draws
+        idx <- c("term", grep("^rowid|^group$", colnames(out), value = TRUE), bycols)
+        idx <- intersect(idx, colnames(out))
+        if (length(idx) > 0) data.table::setorderv(out, cols = idx)
+    }
+
+    # clean columns
     stubcols <- c(
         "rowid", "rowidcf", "term", "group", "hypothesis",
         bycols,
@@ -625,6 +640,11 @@ get_predictions <- function(model,
         out <- merge_by_rowid(out, newdata)
     }
 
+    # by: auto group
+    if (isTRUE(checkmate::check_character(by))) {
+        by <- intersect(c("group", by), colnames(out))
+    }
+
     # averaging by groups
     out <- get_by(
         out,
@@ -635,7 +655,6 @@ get_predictions <- function(model,
         verbose = verbose,
         ...)
 
-    # after get_by
     draws <- attr(out, "posterior_draws")
 
     # hypothesis tests using the delta method

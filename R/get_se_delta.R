@@ -71,10 +71,14 @@ get_se_delta <- function(model,
 
     # TODO: this is a terrible sanity check
     # some vcov methods return an unnamed matrix, some have duplicate names
-    if (!is.null(dimnames(vcov)) && anyDuplicated(colnames(vcov)) == 0 &&
-        all(names(coefs) %in% colnames(vcov))) {
-        vcov <- vcov[names(coefs), names(coefs), drop = FALSE]
+    flag <- anyDuplicated(colnames(vcov)) == 0 || anyDuplicated(names(coefs))  == 0
+    if (flag && !is.null(dimnames(vcov)) && all(names(coefs) %in% colnames(vcov))) {
+        bnames <- intersect(names(coefs), colnames(vcov))
+        vcov <- vcov[bnames, bnames, drop = FALSE]
+        colnames(vcov) <- row.names(vcov) <- names(coefs)
+        coefs <- coefs[bnames]
     }
+    
 
     # input: named vector of coefficients
     # output: gradient
@@ -103,12 +107,18 @@ get_se_delta <- function(model,
     # align J and V: This might be a problematic hack, but I have not found examples yet.
     V <- vcov
     if (!isTRUE(ncol(J) == ncol(V))) {
-        cols <- intersect(colnames(J), colnames(V))
-        if (length(cols) == 0) {
-           insight::format_error("The jacobian does not match the variance-covariance matrix.")
+        beta <- get_coef(model)
+        # Issue #718: ordinal::clm in test-pkg-ordinal.R
+        if (anyNA(beta) && anyDuplicated(names(beta)) && ncol(J) > ncol(V) && ncol(J) == length(beta) && length(stats::na.omit(beta)) == ncol(V)) {
+            J <- J[, !is.na(beta), drop = FALSE]
+        } else {
+            cols <- intersect(colnames(J), colnames(V))
+            if (length(cols) == 0) {
+                insight::format_error("The jacobian does not match the variance-covariance matrix.")
+            }
+            V <- V[cols, cols, drop = FALSE]
+            J <- J[, cols, drop = FALSE]
         }
-        V <- V[cols, cols, drop = FALSE]
-        J <- J[, cols, drop = FALSE]
     }
 
     # Var(dydx) = J Var(beta) J'

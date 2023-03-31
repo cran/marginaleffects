@@ -1,3 +1,32 @@
+# marginaleffects 0.11.1
+
+Breaking change:
+
+* Row orders are now more consistent, but may have changed from previous version. This could affect results from `hypothesis` with `b1`, `b2`, ... indexing.
+
+Support new models:
+
+* `nlme::lme()`
+* `phylolm::phylolm()`
+* `phylolm::phyloglm()`
+
+New:
+
+* Vignette on 2x2 experimental designs. Thanks to Demetri Pananos.
+* `comparisons()` accepts data frames with two numeric columns ("low" and "high") to specify fully customizable contrasts.
+* `datagrid()` gets a new `by` argument to create apply grid-making functions within groups.
+* `plot_*()` gain a `newdata` argument for use with `by`.
+
+Bug:
+
+* `comparisons(comparison = "lnratioavg")` ignored `wts` argument. Thanks to Demetri Pananos for report #737.
+* `ordinal::clm()`: incorrect standard errors when location and scale parameters are the same. Thanks to MrJerryTAO for report #718.
+* Incorrect label for "2sd" comparisons. Thanks to Andy Milne for report #720.
+* Invalid factor levels in `datagrid()` means `newdata` argument gets ignored. Thanks to Josh Errickson for report #721.
+* Error in models with only categorical predictors and the `by` argument. Thanks to Sam Brilleman for report #723.
+* Elasticities are now supported for `ordinal::clm()` models. Thanks to MrJerryTAO for report #729.
+* `glmmTMB` models with zero-inflated components are supported. Thanks to @Helsinki-Ronan and @strengejacke for report #734.
+
 # marginaleffects 0.11.0
 
 Breaking changes:

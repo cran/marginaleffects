@@ -1,7 +1,7 @@
 Package: marginaleffects
 Title: Predictions, Comparisons, Slopes, Marginal Means, and Hypothesis
         Tests
-Version: 0.11.0
+Version: 0.11.1
 Authors@R: 
     c(person(given = "Vincent",
              family = "Arel-Bundock",
@@ -22,7 +22,7 @@ Authors@R:
              email = "etienne.bacher@protonmail.com",
              role = "ctb",
              comment = c(ORCID = "0000-0002-9271-5075")))
-Description: Compute and plot predictions, slopes, marginal means, and comparisons (contrasts, risk ratios, odds, etc.) for over 75 classes of statistical models in R. Conduct linear and non-linear hypothesis tests, or equivalence tests. Calculate uncertainty estimates using the delta method, bootstrapping, or simulation-based inference.
+Description: Compute and plot predictions, slopes, marginal means, and comparisons (contrasts, risk ratios, odds, etc.) for over 80 classes of statistical models in R. Conduct linear and non-linear hypothesis tests, or equivalence tests. Calculate uncertainty estimates using the delta method, bootstrapping, or simulation-based inference.
 License: GPL (>= 3)
 Copyright: inst/COPYRIGHTS
 Encoding: UTF-8
@@ -30,7 +30,7 @@ URL: https://vincentarelbundock.github.io/marginaleffects/
 BugReports: https://github.com/vincentarelbundock/marginaleffects/issues
 RoxygenNote: 7.2.3
 Depends: R (>= 3.6.0)
-Imports: checkmate, data.table, generics, insight (>= 0.19.0), methods,
+Imports: checkmate, data.table, generics, insight (>= 0.19.1), methods,
         Rcpp (>= 1.0.10)
 LinkingTo: Rcpp, RcppEigen
 Suggests: AER, Amelia, afex, aod, bench, betareg, BH, bife, biglm,
@@ -43,12 +43,13 @@ Suggests: AER, Amelia, afex, aod, bench, betareg, BH, bife, biglm,
         MASS, mclogit, MCMCglmm, missRanger, mgcv, mhurdle, mice,
         miceadds, mlogit, modelbased, modelsummary, nlme, nnet,
         numDeriv, optmatch, ordinal, parameters, patchwork, pkgdown,
-        plm, polspline, poorman, posterior, prediction, pscl, purrr,
-        quantreg, Rchoice, remotes, rmarkdown, rms, robust, robustbase,
-        robustlmm, rsample, rstanarm, rstantools, rsvg,
+        phylolm, plm, polspline, poorman, posterior, prediction, pscl,
+        purrr, quantreg, Rchoice, remotes, rmarkdown, rms, robust,
+        robustbase, rsample, rstanarm, rstantools, rsvg,
         sampleSelection, sandwich, scam, speedglm, spelling, survey,
         survival, svglite, systemfonts, tibble, tidymodels, tidyr,
-        tidyverse, tinytest, titanic, truncreg, tsModel, withr
+        tidyverse, tinysnapshot, tinytest, titanic, truncreg, tsModel,
+        withr
 Collate: 'RcppExports.R' 'backtransform.R' 'bootstrap_boot.R'
         'bootstrap_fwb.R' 'bootstrap_rsample.R' 'broom.R' 'by.R' 'ci.R'
         'comparisons.R' 'complete_levels.R' 'datagrid.R'
@@ -69,24 +70,24 @@ Collate: 'RcppExports.R' 'backtransform.R' 'bootstrap_boot.R'
         'methods_glmmTMB.R' 'methods_glmx.R'
         'methods_inferences_simulation.R' 'methods_lme4.R'
         'methods_mclogit.R' 'methods_mgcv.R' 'methods_mhurdle.R'
-        'methods_mlm.R' 'methods_mlogit.R' 'methods_ordinal.R'
-        'methods_plm.R' 'methods_pscl.R' 'methods_quantreg.R'
-        'methods_rms.R' 'methods_robustlmm.R' 'methods_rstanarm.R'
-        'methods_sampleSelection.R' 'methods_scam.R' 'methods_stats.R'
-        'methods_survival.R' 'methods_tobit1.R' 'modelarchive.R'
-        'myTryCatch.R' 'package.R' 'plot.R' 'plot_build.R'
-        'plot_comparisons.R' 'plot_predictions.R' 'plot_slopes.R'
-        'posterior_draws.R' 'predictions.R' 'print.R' 'recall.R'
-        'sanitize_comparison.R' 'sanitize_condition.R'
-        'sanitize_conf_level.R' 'sanitize_hypothesis.R'
-        'sanitize_interaction.R' 'sanitize_newdata.R' 'sanitize_type.R'
-        'sanitize_variables.R' 'sanitize_vcov.R' 'sanity.R'
-        'sanity_by.R' 'sanity_dots.R' 'settings.R' 'slopes.R'
-        'summary.R' 'tinytest.R' 'type_dictionary.R'
-        'unpack_matrix_cols.R' 'utils.R'
+        'methods_mlm.R' 'methods_mlogit.R' 'methods_nlme.R'
+        'methods_ordinal.R' 'methods_plm.R' 'methods_pscl.R'
+        'methods_quantreg.R' 'methods_rms.R' 'methods_robustlmm.R'
+        'methods_rstanarm.R' 'methods_sampleSelection.R'
+        'methods_scam.R' 'methods_stats.R' 'methods_survival.R'
+        'methods_tobit1.R' 'modelarchive.R' 'myTryCatch.R' 'package.R'
+        'plot.R' 'plot_build.R' 'plot_comparisons.R'
+        'plot_predictions.R' 'plot_slopes.R' 'posterior_draws.R'
+        'predictions.R' 'print.R' 'recall.R' 'sanitize_comparison.R'
+        'sanitize_condition.R' 'sanitize_conf_level.R'
+        'sanitize_hypothesis.R' 'sanitize_interaction.R'
+        'sanitize_newdata.R' 'sanitize_type.R' 'sanitize_variables.R'
+        'sanitize_vcov.R' 'sanity.R' 'sanity_by.R' 'sanity_dots.R'
+        'settings.R' 'slopes.R' 'summary.R' 'tinytest.R'
+        'type_dictionary.R' 'unpack_matrix_cols.R' 'utils.R'
 Language: en-US
 NeedsCompilation: yes
-Packaged: 2023-03-09 21:33:27 UTC; vincent
+Packaged: 2023-03-31 16:45:06 UTC; vincent
 Author: Vincent Arel-Bundock [aut, cre, cph]
     (<https://orcid.org/0000-0003-2042-7063>),
   Marcio Augusto Diniz [ctb] (<https://orcid.org/0000-0002-2427-7843>),
@@ -94,4 +95,4 @@ Author: Vincent Arel-Bundock [aut, cre, cph]
   Etienne Bacher [ctb] (<https://orcid.org/0000-0002-9271-5075>)
 Maintainer: Vincent Arel-Bundock <vincent.arel-bundock@umontreal.ca>
 Repository: CRAN
-Date/Publication: 2023-03-10 10:10:02 UTC
+Date/Publication: 2023-03-31 18:30:07 UTC

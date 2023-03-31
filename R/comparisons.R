@@ -35,6 +35,7 @@
 #'   - Numeric variables:
 #'     * Numeric of length 1: Contrast for a gap of `x`, computed at the observed value plus and minus `x / 2`. For example, estimating a `+1` contrast compares adjusted predictions when the regressor is equal to its observed value minus 0.5 and its observed value plus 0.5.
 #'     * Numeric vector of length 2: Contrast between the 2nd element and the 1st element of the `x` vector.
+#'     * Data frame with the same number of rows as `newdata`, with two columns of "low" and "high" values to compare.
 #'     * Function which accepts a numeric vector and returns a data frame with two columns of "low" and "high" values to compare. See examples below.
 #'     * "iqr": Contrast across the interquartile range of the regressor.
 #'     * "sd": Contrast across one standard deviation around the regressor mean.
@@ -87,11 +88,12 @@
 #' * `term`: the variable whose marginal effect is computed
 #' * `dydx`: slope of the outcome with respect to the term, for a given combination of predictor values
 #' * `std.error`: standard errors computed by via the delta method.
+#' * `p.value`: p value associated to the `estimate` column. The null is determined by the `hypothesis` argument (0 by default), and p values are computed before applying the `transform` argument.
 #'
 #' See `?print.marginaleffects` for printing options.
 #'
 #' @examples
-#'
+#' \dontrun{
 #' library(marginaleffects)
 #'
 #' # Linear model
@@ -197,6 +199,7 @@
 #'     group = c("3", "4", "5"),
 #'     by = c("3,4", "3,4", "5"))
 #' comparisons(mod, type = "probs", by = by)
+#' }
 #'
 #' @export
 comparisons <- function(model,
@@ -363,7 +366,13 @@ comparisons <- function(model,
     sanity_by(by, newdata)
 
     # after sanity_by
-    newdata <- dedup_newdata(model = model, newdata = newdata, wts = wts, by = by, cross = cross, comparison = comparison)
+    newdata <- dedup_newdata(
+        model = model,
+        newdata = newdata,
+        wts = wts,
+        by = by,
+        cross = cross,
+        comparison = comparison)
     if (is.null(wts) && "marginaleffects_wts_internal" %in% colnames(newdata)) {
         wts <- "marginaleffects_wts_internal"
     }
@@ -509,8 +518,8 @@ comparisons <- function(model,
         bycols <- by
     }
 
-    if (is.null(draws) && !"rowid" %in% colnames(mfx)) {
-        idx <- c("term", grep("^term$|^contrast$|^contrast_", colnames(mfx), value = TRUE), bycols)
+    if (is.null(draws)) {
+        idx <- c("term", grep("^term$|^contrast$|^contrast_|^rowid|^group$", colnames(mfx), value = TRUE), bycols)
         idx <- intersect(idx, colnames(mfx))
         if (length(idx) > 0) data.table::setorderv(mfx, cols = idx)
     }

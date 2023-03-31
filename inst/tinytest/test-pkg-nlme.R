@@ -51,5 +51,20 @@ expect_equivalent(mm$std.error, em$std.error)
 
 
 
+# issue #99: Support `lme`
+if (packageVersion("insight") < "0.19.0.12") exit_file("insight version")
+mod <- lme(distance ~ age + Sex, data = Orthodont, random = ~ 1)
+mfx <- avg_slopes(mod)
+cmp <- comparisons(mod)
+pre <- predictions(mod)
+expect_inherits(mfx, "slopes")
+expect_inherits(cmp, "comparisons")
+expect_inherits(pre, "predictions")
+
+
+
+
+
+
 source("helpers.R")
 rm(list = ls())

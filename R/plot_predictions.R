@@ -5,7 +5,9 @@
 #'
 #' The `by` argument is used to plot marginal predictions, that is, predictions made on the original data, but averaged by subgroups. This is analogous to using the `by` argument in the `predictions()` function.
 #'
-#' The `condition` argument is used to plot conditional predictions, that is, predictions made on a user-specified grid. This is analogous to using the `newdata` argument and `datagrid()` function in a `predictions()` call. Unspecified variables are held at their mean or mode.
+#' The `condition` argument is used to plot conditional predictions, that is, predictions made on a user-specified grid. This is analogous to using the `newdata` argument and `datagrid()` function in a `predictions()` call. 
+#' 
+#' All unspecified variables are held at their mean or mode. This includes grouping variables in mixed-effects models, so analysts who fit such models may want to specify the groups of interest using the `variables` argument, or supply model-specific arguments to compute population-level estimates. See details below.
 #' 
 #' See the "Plots" vignette and website for tutorials and information on how to customize plots:
 #'
@@ -27,6 +29,7 @@
 #' @param draw `TRUE` returns a `ggplot2` plot. `FALSE` returns a `data.frame` of the underlying data.
 #' @inheritParams plot_slopes
 #' @inheritParams predictions
+#' @template model_specific_arguments
 #' @return A `ggplot2` object or data frame (if `draw=FALSE`)
 #' @export
 #' @examples
@@ -43,6 +46,7 @@
 plot_predictions <- function(model,
                              condition = NULL,
                              by = NULL,
+                             newdata = NULL,
                              type = NULL,
                              vcov = NULL,
                              conf_level = 0.95,
@@ -54,6 +58,8 @@ plot_predictions <- function(model,
                              ...) {
 
     dots <- list(...)
+
+    checkmate::assert_number(points, lower = 0, upper = 1)
     
     if ("variables" %in% names(dots)) {
         insight::format_error("The `variables` argument is not supported by this function.")
@@ -61,8 +67,20 @@ plot_predictions <- function(model,
     if ("effect" %in% names(dots)) {
         insight::format_error("The `effect` argument is not supported by this function.")
     }
+    if ("transform_post" %in% names(dots)) { # backward compatibility
+        transform <- dots[["transform_post"]]
+    }
 
-    checkmate::assert_number(points, lower = 0, upper = 1)
+    # order of the first few paragraphs is important
+    scall <- substitute(newdata)
+    if (!is.null(condition) && !is.null(newdata)) {
+        insight::format_error("The `condition` and `newdata` arguments cannot be used simultaneously.")
+    }
+    newdata <- sanitize_newdata_call(scall, newdata, model)
+    if (!is.null(newdata) && is.null(by)) {
+        insight::format_error("The `newdata` argument requires a `by` argument.")
+    }
+    checkmate::assert_character(by, null.ok = TRUE)
 
     # sanity check
     checkmate::assert_character(by, null.ok = TRUE, max.len = 3, min.len = 1, names = "unnamed")
@@ -70,11 +88,10 @@ plot_predictions <- function(model,
         msg <- "One of the `condition` and `by` arguments must be supplied, but not both."
         insight::format_error(msg)
     }
-    if (is.null(by)) by <- FALSE
 
     # conditional
     if (!is.null(condition)) {
-        modeldata <- get_modeldata(model, additional_variables = names(condition$condition))
+        modeldata <- get_modeldata(model, additional_variables = names(condition))
         condition <- sanitize_condition(model, condition, variables = NULL, modeldata = modeldata)
         v_x <- condition$condition1
         v_color <- condition$condition2
@@ -91,9 +108,14 @@ plot_predictions <- function(model,
     }
 
     # marginal
-    if (!isFALSE(by)) { # switched from NULL above
+    if (!isFALSE(by) && !is.null(by)) { # switched from NULL above
         condition <- NULL
         modeldata <- get_modeldata(model, additional_variables = by)
+        newdata <- sanitize_newdata(
+            model = model,
+            newdata = newdata,
+            modeldata = modeldata,
+            by = by)
         datplot <- predictions(
             model,
             by = by,
@@ -102,6 +124,7 @@ plot_predictions <- function(model,
             conf_level = conf_level,
             wts = NULL,
             transform = transform,
+            newdata = newdata,
             modeldata = modeldata,
             ...)
         v_x <- by[[1]]

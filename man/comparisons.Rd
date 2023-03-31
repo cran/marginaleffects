@@ -91,6 +91,7 @@ avg_comparisons(
 \itemize{
 \item Numeric of length 1: Contrast for a gap of \code{x}, computed at the observed value plus and minus \code{x / 2}. For example, estimating a \code{+1} contrast compares adjusted predictions when the regressor is equal to its observed value minus 0.5 and its observed value plus 0.5.
 \item Numeric vector of length 2: Contrast between the 2nd element and the 1st element of the \code{x} vector.
+\item Data frame with the same number of rows as \code{newdata}, with two columns of "low" and "high" values to compare.
 \item Function which accepts a numeric vector and returns a data frame with two columns of "low" and "high" values to compare. See examples below.
 \item "iqr": Contrast across the interquartile range of the regressor.
 \item "sd": Contrast across one standard deviation around the regressor mean.
@@ -224,6 +225,7 @@ A \code{data.frame} with one row per observation (per term/group) and several co
 \item \code{term}: the variable whose marginal effect is computed
 \item \code{dydx}: slope of the outcome with respect to the term, for a given combination of predictor values
 \item \code{std.error}: standard errors computed by via the delta method.
+\item \code{p.value}: p value associated to the \code{estimate} column. The null is determined by the \code{hypothesis} argument (0 by default), and p values are computed before applying the \code{transform} argument.
 }
 
 See \code{?print.marginaleffects} for printing options.
@@ -310,7 +312,6 @@ compute derivatives and elasticities.\tabular{ll}{
    Shortcut \tab Function \cr
    difference \tab \(hi, lo) hi - lo \cr
    differenceavg \tab \(hi, lo) mean(hi) - mean(lo) \cr
-   differenceavgwts \tab \(hi, lo, w) wmean(hi, w) - wmean(lo, w) \cr
    dydx \tab \(hi, lo, eps) (hi - lo)/eps \cr
    eyex \tab \(hi, lo, eps, y, x) (hi - lo)/eps * (x/y) \cr
    eydx \tab \(hi, lo, eps, y, x) ((hi - lo)/eps)/y \cr
@@ -319,22 +320,14 @@ compute derivatives and elasticities.\tabular{ll}{
    eyexavg \tab \(hi, lo, eps, y, x) mean((hi - lo)/eps * (x/y)) \cr
    eydxavg \tab \(hi, lo, eps, y, x) mean(((hi - lo)/eps)/y) \cr
    dyexavg \tab \(hi, lo, eps, x) mean(((hi - lo)/eps) * x) \cr
-   dydxavgwts \tab \(hi, lo, eps, w) wmean((hi - lo)/eps, w) \cr
-   eyexavgwts \tab \(hi, lo, eps, y, x, w) wmean((hi - lo)/eps * (x/y), w) \cr
-   eydxavgwts \tab \(hi, lo, eps, y, x, w) wmean(((hi - lo)/eps)/y, w) \cr
-   dyexavgwts \tab \(hi, lo, eps, x, w) wmean(((hi - lo)/eps) * x, w) \cr
    ratio \tab \(hi, lo) hi/lo \cr
    ratioavg \tab \(hi, lo) mean(hi)/mean(lo) \cr
-   ratioavgwts \tab \(hi, lo) wmean(hi)/wmean(lo) \cr
    lnratio \tab \(hi, lo) log(hi/lo) \cr
    lnratioavg \tab \(hi, lo) log(mean(hi)/mean(lo)) \cr
-   lnratioavgwts \tab \(hi, lo) log(wmean(hi)/wmean(lo)) \cr
    lnor \tab \(hi, lo) log((hi/(1 - hi))/(lo/(1 - lo))) \cr
    lnoravg \tab \(hi, lo) log((mean(hi)/(1 - mean(hi)))/(mean(lo)/(1 - mean(lo)))) \cr
-   lnoravgwts \tab \(hi, lo, w) log((wmean(hi, w)/(1 - wmean(hi, w)))/(wmean(lo, w)/(1 - wmean(lo, w)))) \cr
    expdydx \tab \(hi, lo, eps) ((exp(hi) - exp(lo))/exp(eps))/eps \cr
    expdydxavg \tab \(hi, lo, eps) mean(((exp(hi) - exp(lo))/exp(eps))/eps) \cr
-   expdydxavgwts \tab \(hi, lo, eps, w) wmean(((exp(hi) - exp(lo))/exp(eps))/eps, w) \cr
 }
 }
 
@@ -396,7 +389,7 @@ Thanks to Russell V. Lenth for the excellent \code{emmeans} package and document
 }
 
 \examples{
-
+\dontrun{
 library(marginaleffects)
 
 # Linear model
@@ -501,5 +494,6 @@ by <- data.frame(
     group = c("3", "4", "5"),
     by = c("3,4", "3,4", "5"))
 comparisons(mod, type = "probs", by = by)
+}
 
 }

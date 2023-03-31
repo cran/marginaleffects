@@ -5,8 +5,10 @@
 #'
 #' The `by` argument is used to plot marginal comparisons, that is, comparisons made on the original data, but averaged by subgroups. This is analogous to using the `by` argument in the `comparisons()` function.
 #'
-#' The `condition` argument is used to plot conditional comparisons, that is, comparisons made on a user-specified grid. This is analogous to using the `newdata` argument and `datagrid()` function in a `comparisons()` call. Unspecified variables are held at their mean or mode.
+#' The `condition` argument is used to plot conditional comparisons, that is, comparisons made on a user-specified grid. This is analogous to using the `newdata` argument and `datagrid()` function in a `comparisons()` call.
 #' 
+#' All unspecified variables are held at their mean or mode. This includes grouping variables in mixed-effects models, so analysts who fit such models may want to specify the groups of interest using the `variables` argument, or supply model-specific arguments to compute population-level estimates. See details below.
+
 #' See the "Plots" vignette and website for tutorials and information on how to customize plots:
 #'
 #' * https://vincentarelbundock.github.io/marginaleffects/articles/plot.html
@@ -17,6 +19,7 @@
 #' @inheritParams comparisons
 #' @inheritParams plot_slopes
 #' @inheritParams slopes
+#' @template model_specific_arguments
 #' @return A `ggplot2` object
 #' @export
 #' @examples
@@ -35,6 +38,7 @@ plot_comparisons <- function(model,
                              variables = NULL,
                              condition = NULL,
                              by = NULL,
+                             newdata = NULL,
                              type = "response",
                              vcov = NULL,
                              conf_level = 0.95,
@@ -54,12 +58,19 @@ plot_comparisons <- function(model,
             insight::format_error("The `effect` argument has been renamed to `variables`.")
         }
     }
-    
-    # sanity check
-    checkmate::assert(
-        checkmate::check_character(variables, names = "unnamed"),
-        checkmate::check_list(variables, names = "unique"),
-        .var.name = "variables")
+    if ("transform_post" %in% names(dots)) { # backward compatibility
+        transform <- dots[["transform_post"]]
+    }
+
+    # order of the first few paragraphs is important
+    scall <- substitute(newdata)
+    if (!is.null(condition) && !is.null(newdata)) {
+        insight::format_error("The `condition` and `newdata` arguments cannot be used simultaneously.")
+    }
+    newdata <- sanitize_newdata_call(scall, newdata, model)
+    if (!is.null(newdata) && is.null(by)) {
+        insight::format_error("The `newdata` argument requires a `by` argument.")
+    }
 
     checkmate::assert_character(by, null.ok = TRUE, max.len = 3, min.len = 1, names = "unnamed")
     if ((!is.null(condition) && !is.null(by)) || (is.null(condition) && is.null(by))) {
@@ -67,9 +78,15 @@ plot_comparisons <- function(model,
         insight::format_error(msg)
     }
 
+    # sanity check
+    checkmate::assert(
+        checkmate::check_character(variables, names = "unnamed"),
+        checkmate::check_list(variables, names = "unique"),
+        .var.name = "variables")
+
     # conditional
     if (!is.null(condition)) {
-        modeldata <- get_modeldata(model, additional_variables = names(condition$condition))
+        modeldata <- get_modeldata(model, additional_variables = names(condition))
         condition <- sanitize_condition(model, condition, variables, modeldata = modeldata)
         v_x <- condition$condition1
         v_color <- condition$condition2
@@ -93,9 +110,15 @@ plot_comparisons <- function(model,
     # marginal
     if (!is.null(by)) {
         modeldata <- get_modeldata(model, additional_variables = by)
+        newdata <- sanitize_newdata(
+            model = model,
+            newdata = newdata,
+            modeldata = modeldata,
+            by = by)
         datplot <- comparisons(
             model,
             by = by,
+            newdata = newdata,
             type = type,
             vcov = vcov,
             conf_level = conf_level,

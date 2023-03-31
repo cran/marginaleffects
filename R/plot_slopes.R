@@ -5,8 +5,10 @@
 #'
 #' The `by` argument is used to plot marginal slopes, that is, slopes made on the original data, but averaged by subgroups. This is analogous to using the `by` argument in the `slopes()` function.
 #'
-#' The `condition` argument is used to plot conditional slopes, that is, slopes made on a user-specified grid. This is analogous to using the `newdata` argument and `datagrid()` function in a `slopes()` call. Unspecified variables are held at their mean or mode.
+#' The `condition` argument is used to plot conditional slopes, that is, slopes made on a user-specified grid. This is analogous to using the `newdata` argument and `datagrid()` function in a `slopes()` call.
 #' 
+#' All unspecified variables are held at their mean or mode. This includes grouping variables in mixed-effects models, so analysts who fit such models may want to specify the groups of interest using the `variables` argument, or supply model-specific arguments to compute population-level estimates. See details below.
+
 #' See the "Plots" vignette and website for tutorials and information on how to customize plots:
 #'
 #' * https://vincentarelbundock.github.io/marginaleffects/articles/plot.html
@@ -25,6 +27,7 @@
 #' @param gray FALSE grayscale or color plot
 #' @param draw `TRUE` returns a `ggplot2` plot. `FALSE` returns a `data.frame` of the underlying data.
 #' @inheritParams slopes
+#' @template model_specific_arguments
 #' @return A `ggplot2` object
 #' @export
 #' @examples
@@ -45,6 +48,7 @@ plot_slopes <- function(model,
                         variables = NULL,
                         condition = NULL,
                         by = NULL,
+                        newdata = NULL,
                         type = "response",
                         vcov = NULL,
                         conf_level = 0.95,
@@ -63,6 +67,12 @@ plot_slopes <- function(model,
         }
     }
 
+    # order of the first few paragraphs is important
+    # if `newdata` is a call to `typical` or `counterfactual`, insert `model`
+    # should probably not be nested too deeply in the call stack since we eval.parent() (not sure about this)
+    scall <- substitute(newdata)
+    newdata <- sanitize_newdata_call(scall, newdata, model)
+
     valid <- c("dydx", "eyex", "eydx", "dyex")
     checkmate::assert_choice(slope, choices = valid)
 
@@ -71,6 +81,7 @@ plot_slopes <- function(model,
         variables = variables,
         condition = condition,
         by = by,
+        newdata = newdata,
         type = type,
         vcov = vcov,
         conf_level = conf_level,
