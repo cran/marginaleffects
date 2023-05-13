@@ -1,7 +1,7 @@
 Package: marginaleffects
 Title: Predictions, Comparisons, Slopes, Marginal Means, and Hypothesis
         Tests
-Version: 0.11.1
+Version: 0.11.2
 Authors@R: 
     c(person(given = "Vincent",
              family = "Arel-Bundock",
@@ -28,7 +28,7 @@ Copyright: inst/COPYRIGHTS
 Encoding: UTF-8
 URL: https://vincentarelbundock.github.io/marginaleffects/
 BugReports: https://github.com/vincentarelbundock/marginaleffects/issues
-RoxygenNote: 7.2.3
+RoxygenNote: 7.2.3.9000
 Depends: R (>= 3.6.0)
 Imports: checkmate, data.table, generics, insight (>= 0.19.1), methods,
         Rcpp (>= 1.0.10)
@@ -46,7 +46,7 @@ Suggests: AER, Amelia, afex, aod, bench, betareg, BH, bife, biglm,
         phylolm, plm, polspline, poorman, posterior, prediction, pscl,
         purrr, quantreg, Rchoice, remotes, rmarkdown, rms, robust,
         robustbase, rsample, rstanarm, rstantools, rsvg,
-        sampleSelection, sandwich, scam, speedglm, spelling, survey,
+        sampleSelection, sandwich, scam, spelling, speedglm, survey,
         survival, svglite, systemfonts, tibble, tidymodels, tidyr,
         tidyverse, tinysnapshot, tinytest, titanic, truncreg, tsModel,
         withr
@@ -61,13 +61,13 @@ Collate: 'RcppExports.R' 'backtransform.R' 'bootstrap_boot.R'
         'get_model_matrix.R' 'get_model_matrix_attribute.R'
         'get_modeldata.R' 'get_predict.R' 'get_se_delta.R' 'get_vcov.R'
         'github_issue.R' 'hush.R' 'hypotheses.R' 'imputation.R'
-        'inferences.R' 'marginal_means.R' 'mean_or_mode.R' 'set_coef.R'
-        'methods_MASS.R' 'methods_MCMCglmm.R' 'methods_Rchoice.R'
-        'methods_afex.R' 'methods_aod.R' 'methods_betareg.R'
-        'methods_bife.R' 'methods_biglm.R' 'methods_nnet.R'
-        'methods_brglm2.R' 'sanity_model.R' 'methods_brms.R'
-        'methods_crch.R' 'methods_fixest.R' 'methods_gamlss.R'
-        'methods_glmmTMB.R' 'methods_glmx.R'
+        'inferences.R' 'marginal_means.R' 'mean_or_mode.R' 'methods.R'
+        'set_coef.R' 'methods_MASS.R' 'methods_MCMCglmm.R'
+        'methods_Rchoice.R' 'methods_afex.R' 'methods_aod.R'
+        'methods_betareg.R' 'methods_bife.R' 'methods_biglm.R'
+        'methods_nnet.R' 'methods_brglm2.R' 'sanity_model.R'
+        'methods_brms.R' 'methods_crch.R' 'methods_fixest.R'
+        'methods_gamlss.R' 'methods_glmmTMB.R' 'methods_glmx.R'
         'methods_inferences_simulation.R' 'methods_lme4.R'
         'methods_mclogit.R' 'methods_mgcv.R' 'methods_mhurdle.R'
         'methods_mlm.R' 'methods_mlogit.R' 'methods_nlme.R'
@@ -87,7 +87,7 @@ Collate: 'RcppExports.R' 'backtransform.R' 'bootstrap_boot.R'
         'type_dictionary.R' 'unpack_matrix_cols.R' 'utils.R'
 Language: en-US
 NeedsCompilation: yes
-Packaged: 2023-03-31 16:45:06 UTC; vincent
+Packaged: 2023-05-12 20:25:23 UTC; vincent
 Author: Vincent Arel-Bundock [aut, cre, cph]
     (<https://orcid.org/0000-0003-2042-7063>),
   Marcio Augusto Diniz [ctb] (<https://orcid.org/0000-0002-2427-7843>),
@@ -95,4 +95,4 @@ Author: Vincent Arel-Bundock [aut, cre, cph]
   Etienne Bacher [ctb] (<https://orcid.org/0000-0002-9271-5075>)
 Maintainer: Vincent Arel-Bundock <vincent.arel-bundock@umontreal.ca>
 Repository: CRAN
-Date/Publication: 2023-03-31 18:30:07 UTC
+Date/Publication: 2023-05-13 10:50:08 UTC

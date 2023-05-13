@@ -1,3 +1,23 @@
+# marginaleffects 0.11.2
+
+* `vcov()` and `coef()` methods for `marginaleffects` objects.
+* Strings in `wts` are accepted with the `by` argument.
+* `predictions()` and `avg_predictions()` no longer use an automatic backtransformation for GLM models unless `hypothesis` is `NULL`.
+* `vcov()` can be used to retrieve a full variance-covariance matrix from objects produced by `comparisons()`, `slopes()`, `predictions()`, or `marginal_means()` objects.
+* When processing objects obtained using `mice` multiple imputation, the pooled model using `mice::pool` is attached to the `model` attribute of the output. This means that functions like `modelsummary::modelsummary()` will not erroneously report goodness-of-fit statistics from just a single model and will instead appropriately report the statistics for the pooled model. Thanks to @Tristan-Siegfried for PR #740.
+* More informative error messages on some prediction problems. Thanks to @andymilne for Report #751.
+
+Performance:
+
+* `inferences()` is now up to 17x faster and much more memory-efficient when `method` is `"boot"` or `"rsample"` (#770, #771, @etiennebacher).
+
+Bugs:
+
+* `brms` models with `nl=TRUE` and a single predictor generated an error. Thanks to @Tristan-Siegried for Report #759.
+* `avg_predictions()`: Incorrect group-wise averaging when all predictors are categorical, the `variables` variable is used, and  we are averaging with `avg_` or the `by` argument. Thanks to BorgeJorge for report #766.
+* Bug when `datagrid()` when called inside a user-written function. Thanks to @NickCH-K for report #769 and to @capnrefsmmat for the diagnostics.
+
+
 # marginaleffects 0.11.1
 
 Breaking change:

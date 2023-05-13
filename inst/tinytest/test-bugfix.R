@@ -41,8 +41,6 @@ mod <- lm(mpg ~ group + hp, data = dat)
 expect_error(comparisons(mod), pattern = "forbidden")
 
 
-exit_file("works interactively")
-
 # Issue #556
 set.seed(12345)
 n = 500
@@ -73,6 +71,7 @@ p1 <- predictions(m2, type = "link")
 p2 <- predictions(m2, newdata = dat, type = "link")
 p3 <- as.data.frame(predict(m2, se.fit = TRUE, type = "link"))
 
+exit_file("works locally")
 expect_equal(p1$estimate, p3$fit)
 expect_equal(p1$std.error, p3$se.fit)
 expect_equal(p2$estimate, p3$fit)

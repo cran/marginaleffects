@@ -25,7 +25,7 @@
 #' * `NULL`: compute slopes or comparisons for all the variables in the model object (can be slow).
 #' * Character vector: subset of variables (usually faster).
 #' @param newdata Grid of predictor values at which we evaluate the slopes.
-#' + `NULL` (default): Unit-level slopes for each observed value in the original dataset.
+#' + `NULL` (default): Unit-level slopes for each observed value in the original dataset. See [insight::get_data()]
 #' + data frame: Unit-level slopes for each row of the `newdata` data frame.
 #' + [datagrid()] call to specify a custom grid of regressors. For example:
 #'   - `newdata = datagrid(cyl = c(4, 6))`: `cyl` variable equal to 4 and 6 and other regressors fixed at their means or modes.
@@ -60,6 +60,7 @@
 #' - "eyex": dY/dX * Y / X
 #' - "eydx": dY/dX * Y
 #' - "dyex": dY/dX / X
+#' - Y is the predicted value of the outcome; X is the observed value of the predictor.
 #' @param wts string or numeric: weights to use when computing average
 #' contrasts or slopes. These weights only affect the averaging in
 #' `avg_*()` or with the `by` argument, and not the unit-level estimates themselves.
