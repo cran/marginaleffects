@@ -17,6 +17,7 @@
 #' @param variables Name of the variable whose contrast we want to plot on the y-axis.
 #' @param draw `TRUE` returns a `ggplot2` plot. `FALSE` returns a `data.frame` of the underlying data.
 #' @inheritParams comparisons
+#' @param newdata When `newdata` is `NULL`, the grid is determined by the `condition` argument. When `newdata` is not `NULL`, the argument behaves in the same way as in the `comparisons()` function.
 #' @inheritParams plot_slopes
 #' @inheritParams slopes
 #' @template model_specific_arguments
@@ -42,6 +43,7 @@ plot_comparisons <- function(model,
                              type = "response",
                              vcov = NULL,
                              conf_level = 0.95,
+                             wts = NULL,
                              comparison = "difference",
                              transform = NULL,
                              rug = FALSE,
@@ -71,6 +73,9 @@ plot_comparisons <- function(model,
     if (!is.null(newdata) && is.null(by)) {
         insight::format_error("The `newdata` argument requires a `by` argument.")
     }
+    if (!is.null(wts) && is.null(by)) {
+        insight::format_error("The `wts` argument requires a `by` argument.")
+    }
 
     checkmate::assert_character(by, null.ok = TRUE, max.len = 3, min.len = 1, names = "unnamed")
     if ((!is.null(condition) && !is.null(by)) || (is.null(condition) && is.null(by))) {
@@ -98,7 +103,7 @@ plot_comparisons <- function(model,
             vcov = vcov,
             conf_level = conf_level,
             by = FALSE,
-            wts = NULL,
+            wts = wts,
             variables = variables,
             comparison = comparison,
             transform = transform,
@@ -123,7 +128,7 @@ plot_comparisons <- function(model,
             vcov = vcov,
             conf_level = conf_level,
             variables = variables,
-            wts = NULL,
+            wts = wts,
             comparison = comparison,
             transform = transform,
             cross = FALSE,

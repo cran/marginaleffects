@@ -1,7 +1,7 @@
 Package: marginaleffects
 Title: Predictions, Comparisons, Slopes, Marginal Means, and Hypothesis
         Tests
-Version: 0.11.2
+Version: 0.12.0
 Authors@R: 
     c(person(given = "Vincent",
              family = "Arel-Bundock",
@@ -34,7 +34,7 @@ Imports: checkmate, data.table, generics, insight (>= 0.19.1), methods,
         Rcpp (>= 1.0.10)
 LinkingTo: Rcpp, RcppEigen
 Suggests: AER, Amelia, afex, aod, bench, betareg, BH, bife, biglm,
-        blme, boot, brglm2, brms, brmsmargins, broom, collapse,
+        blme, boot, brglm2, brms, brmsmargins, broom, car, collapse,
         conflicted, covr, crch, distributional, dplyr, emmeans,
         equivalence, estimatr, fixest, future, fwb, gam, gamlss,
         gamlss.dist, geepack, ggdag, ggdist, ggokabeito, ggplot2,
@@ -59,8 +59,9 @@ Collate: 'RcppExports.R' 'backtransform.R' 'bootstrap_boot.R'
         'get_contrast_data_numeric.R' 'get_contrasts.R'
         'get_group_names.R' 'get_hypothesis.R' 'get_jacobian.R'
         'get_model_matrix.R' 'get_model_matrix_attribute.R'
-        'get_modeldata.R' 'get_predict.R' 'get_se_delta.R' 'get_vcov.R'
-        'github_issue.R' 'hush.R' 'hypotheses.R' 'imputation.R'
+        'get_modeldata.R' 'get_predict.R' 'get_se_delta.R'
+        'get_term_labels.R' 'get_vcov.R' 'github_issue.R' 'hush.R'
+        'hypotheses.R' 'hypotheses_joint.R' 'imputation.R'
         'inferences.R' 'marginal_means.R' 'mean_or_mode.R' 'methods.R'
         'set_coef.R' 'methods_MASS.R' 'methods_MCMCglmm.R'
         'methods_Rchoice.R' 'methods_afex.R' 'methods_aod.R'
@@ -87,7 +88,7 @@ Collate: 'RcppExports.R' 'backtransform.R' 'bootstrap_boot.R'
         'type_dictionary.R' 'unpack_matrix_cols.R' 'utils.R'
 Language: en-US
 NeedsCompilation: yes
-Packaged: 2023-05-12 20:25:23 UTC; vincent
+Packaged: 2023-05-19 18:02:45 UTC; vincent
 Author: Vincent Arel-Bundock [aut, cre, cph]
     (<https://orcid.org/0000-0003-2042-7063>),
   Marcio Augusto Diniz [ctb] (<https://orcid.org/0000-0002-2427-7843>),
@@ -95,4 +96,4 @@ Author: Vincent Arel-Bundock [aut, cre, cph]
   Etienne Bacher [ctb] (<https://orcid.org/0000-0002-9271-5075>)
 Maintainer: Vincent Arel-Bundock <vincent.arel-bundock@umontreal.ca>
 Repository: CRAN
-Date/Publication: 2023-05-13 10:50:08 UTC
+Date/Publication: 2023-05-20 11:50:02 UTC

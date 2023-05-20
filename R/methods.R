@@ -12,6 +12,11 @@ vcov.predictions <- vcov.comparisons
 
 #' @noRd
 #' @export
+vcov.hypotheses <- vcov.comparisons
+
+
+#' @noRd
+#' @export
 vcov.slopes <- vcov.comparisons
 
 
@@ -24,7 +29,14 @@ vcov.marginalmeans <- vcov.comparisons
 #' @noRd
 coef.comparisons <- function(object, ...) {
   if (!is.null(object$estimate)) {
-    return(object$estimate)
+    out <- object$estimate
+    if (is.null(names(out))) {
+      lab <- tryCatch(get_term_labels(object), error = function(e) NULL)
+      if (length(lab) == length(out)) {
+        out <- stats::setNames(out, lab)
+      }
+    }
+    return(out)
   } else {
     stop("The input object does not contain an 'estimate' element.")
   }
@@ -44,3 +56,8 @@ coef.marginalmeans <- coef.comparisons
 #' @export
 #' @noRd
 coef.predictions <- coef.comparisons
+
+
+#' @export
+#' @noRd
+coef.hypotheses <- coef.comparisons

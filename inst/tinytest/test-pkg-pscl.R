@@ -43,8 +43,8 @@ expect_equivalent(mfx$estimate, em$phd.trend, tolerance = .01)
 # margins: standard errors are not supported (all zeros)
 res <- slopes(model, newdata = head(bioChemists, 2))
 mar <- margins(model, data = head(bioChemists, 2), unit_ses = TRUE)
-expect_equivalent(res$estimate[5:6], as.numeric(mar$dydx_phd), tolerance = .0001)
-expect_equivalent(res$estimate[1:2], as.numeric(mar$dydx_femWomen), tolerance = .00001)
+expect_equivalent(res$estimate[res$term == "phd"], as.numeric(mar$dydx_phd), tolerance = .0001)
+expect_equivalent(res$estimate[res$term == "fem"], as.numeric(mar$dydx_femWomen), tolerance = .00001)
 
 
 
@@ -108,7 +108,7 @@ model <- zeroinfl(art ~ kid5 + phd + mar | ment,
 mm <- marginal_means(model)
 expect_marginal_means(mm)
 # response
-mm <- tidy(marginal_means(model))
+mm <- tidy(marginal_means(model)) |> dplyr::arrange(value)
 em <- tidy(emmeans(model, specs = "mar", df = Inf))
 expect_equivalent(mm$estimate, em$estimate, tol = 0.01)
 expect_equivalent(mm$std.error, em$std.error, tolerance = .01)

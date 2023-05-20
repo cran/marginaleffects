@@ -13,6 +13,7 @@ plot_comparisons(
   type = "response",
   vcov = NULL,
   conf_level = 0.95,
+  wts = NULL,
   comparison = "difference",
   transform = NULL,
   rug = FALSE,
@@ -48,25 +49,7 @@ plot_comparisons(
 \item See examples below.
 }}
 
-\item{newdata}{Grid of predictor values at which we evaluate the comparisons.
-\itemize{
-\item \code{NULL} (default): Unit-level contrasts for each observed value in the original dataset (empirical distribution). See \code{\link[insight:get_data]{insight::get_data()}}
-\item data frame: Unit-level contrasts for each row of the \code{newdata} data frame.
-\item string:
-\itemize{
-\item "mean": Contrasts at the Mean. Contrasts when each predictor is held at its mean or mode.
-\item "median": Contrasts at the Median. Contrasts when each predictor is held at its median or mode.
-\item "marginalmeans": Contrasts at Marginal Means.
-\item "tukey": Contrasts at Tukey's 5 numbers.
-\item "grid": Contrasts on a grid of representative numbers (Tukey's 5 numbers and unique values of categorical predictors).
-}
-\item \code{\link[=datagrid]{datagrid()}} call to specify a custom grid of regressors. For example:
-\itemize{
-\item \code{newdata = datagrid(cyl = c(4, 6))}: \code{cyl} variable equal to 4 and 6 and other regressors fixed at their means or modes.
-\item \code{newdata = datagrid(mpg = fivenum)}: \code{mpg} variable held at Tukey's five numbers (using the \code{fivenum} function), and other regressors fixed at their means or modes.
-\item See the Examples section and the \link{datagrid} documentation.
-}
-}}
+\item{newdata}{When \code{newdata} is \code{NULL}, the grid is determined by the \code{condition} argument. When \code{newdata} is not \code{NULL}, the argument behaves in the same way as in the \code{comparisons()} function.}
 
 \item{type}{string indicates the type (scale) of the predictions used to
 compute contrasts or slopes. This can differ based on the model
@@ -93,6 +76,14 @@ the \code{marginaleffects:::type_dictionary} dataframe.}
 }}
 
 \item{conf_level}{numeric value between 0 and 1. Confidence level to use to build a confidence interval.}
+
+\item{wts}{string or numeric: weights to use when computing average
+contrasts or slopes. These weights only affect the averaging in
+\verb{avg_*()} or with the \code{by} argument, and not the unit-level estimates themselves.
+\itemize{
+\item string: column name of the weights variable in \code{newdata}. When supplying a column name to \code{wts}, it is recommended to supply the original data (including the weights variable) explicitly to \code{newdata}.
+\item numeric: vector of length equal to the number of rows in the original data or in \code{newdata} (if supplied).
+}}
 
 \item{comparison}{How should pairs of predictions be compared? Difference, ratio, odds ratio, or user-defined functions.
 \itemize{

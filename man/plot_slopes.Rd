@@ -13,6 +13,7 @@ plot_slopes(
   type = "response",
   vcov = NULL,
   conf_level = 0.95,
+  wts = NULL,
   slope = "dydx",
   rug = FALSE,
   gray = FALSE,
@@ -47,24 +48,7 @@ plot_slopes(
 \item See examples below.
 }}
 
-\item{newdata}{Grid of predictor values at which we evaluate the slopes.
-\itemize{
-\item \code{NULL} (default): Unit-level slopes for each observed value in the original dataset. See \code{\link[insight:get_data]{insight::get_data()}}
-\item data frame: Unit-level slopes for each row of the \code{newdata} data frame.
-\item \code{\link[=datagrid]{datagrid()}} call to specify a custom grid of regressors. For example:
-\itemize{
-\item \code{newdata = datagrid(cyl = c(4, 6))}: \code{cyl} variable equal to 4 and 6 and other regressors fixed at their means or modes.
-\item See the Examples section and the \code{\link[=datagrid]{datagrid()}} documentation.
-}
-\item string:
-\itemize{
-\item "mean": Marginal Effects at the Mean. Slopes when each predictor is held at its mean or mode.
-\item "median": Marginal Effects at the Median. Slopes when each predictor is held at its median or mode.
-\item "marginalmeans": Marginal Effects at Marginal Means. See Details section below.
-\item "tukey": Marginal Effects at Tukey's 5 numbers.
-\item "grid": Marginal Effects on a grid of representative numbers (Tukey's 5 numbers and unique values of categorical predictors).
-}
-}}
+\item{newdata}{When \code{newdata} is \code{NULL}, the grid is determined by the \code{condition} argument. When \code{newdata} is not \code{NULL}, the argument behaves in the same way as in the \code{slopes()} function.}
 
 \item{type}{string indicates the type (scale) of the predictions used to
 compute contrasts or slopes. This can differ based on the model
@@ -91,6 +75,14 @@ the \code{marginaleffects:::type_dictionary} dataframe.}
 }}
 
 \item{conf_level}{numeric value between 0 and 1. Confidence level to use to build a confidence interval.}
+
+\item{wts}{string or numeric: weights to use when computing average
+contrasts or slopes. These weights only affect the averaging in
+\verb{avg_*()} or with the \code{by} argument, and not the unit-level estimates themselves.
+\itemize{
+\item string: column name of the weights variable in \code{newdata}. When supplying a column name to \code{wts}, it is recommended to supply the original data (including the weights variable) explicitly to \code{newdata}.
+\item numeric: vector of length equal to the number of rows in the original data or in \code{newdata} (if supplied).
+}}
 
 \item{slope}{string indicates the type of slope or (semi-)elasticity to compute:
 \itemize{

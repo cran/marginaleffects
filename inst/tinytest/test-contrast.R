@@ -94,7 +94,6 @@ expect_equivalent(cmp$conf.high, emm$asymp.UCL, tolerance = tol)
 
 
 # smart contrast labels
-dat <- mtcars
 dat$am <- as.logical(dat$am)
 dat$cyl <- as.factor(dat$cyl)
 dat$gear <- as.character(dat$gear)
@@ -102,7 +101,8 @@ dat <- dat
 mod <- lm(mpg ~ hp + am + cyl + gear, data = dat)
 cmp1 <- comparisons(
     mod,
-    newdata = "mean")
+    newdata = "mean") |>
+    dplyr::arrange(term)
 expect_equivalent(
     cmp1$contrast,
     c("TRUE - FALSE", "6 - 4", "8 - 4", "4 - 3", "5 - 3", "+1"))
