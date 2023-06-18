@@ -59,9 +59,10 @@
 #' @template model_specific_arguments
 #' @template bayesian
 #' @template equivalence
+#' @template type
+#' @template references
 #'
-#' @return Data frame of marginal means with one row per variable-value
-#' combination.
+#' @return Data frame of marginal means with one row per variable-value combination.
 #' @export
 #' @examples
 #' library(marginaleffects)
@@ -160,6 +161,31 @@ marginal_means <- function(model,
 
     if (!is.null(equivalence) && !is.null(p_adjust)) {
         insight::format_error("The `equivalence` and `p_adjust` arguments cannot be used together.")
+    }
+
+    # build call: match.call() doesn't work well in *apply()
+    call_attr <- c(list(
+        name = "marginal_means",
+        model = model,
+        newdata = newdata,
+        variables = variables,
+        type = type,
+        vcov = vcov,
+        by = by,
+        conf_level = conf_level,
+        transform = transform,
+        wts = wts,
+        hypothesis = hypothesis,
+        equivalence = equivalence,
+        p_adjust = p_adjust,
+        df = df),
+        list(...))
+    call_attr <- do.call("call", call_attr)
+    
+    # multiple imputation
+    if (inherits(model, "mira")) {
+        out <- process_imputation(model, call_attr, marginal_means = TRUE)
+        return(out)
     }
 
     # if type is NULL, we backtransform if relevant
@@ -373,7 +399,7 @@ marginal_means <- function(model,
     out <- backtransform(out, transform)
 
     # column order
-    cols <- c("rowid", "group", colnames(by), "term", "hypothesis", "value", variables, "estimate", "std.error", "statistic", "p.value", "conf.low", "conf.high", sort(colnames(out)))
+    cols <- c("rowid", "group", colnames(by), "term", "hypothesis", "value", variables, "estimate", "std.error", "statistic", "p.value", "s.value", "conf.low", "conf.high", sort(colnames(out)))
     cols <- unique(cols)
     cols <- intersect(cols, colnames(out))
     out <- out[, cols, drop = FALSE]
@@ -385,7 +411,7 @@ marginal_means <- function(model,
     attr(out, "type") <- type
     attr(out, "model_type") <- class(model)[1]
     attr(out, "variables") <- variables
-    attr(out, "call") <- match.call()
+    attr(out, "call") <- call_attr
     attr(out, "conf_level") <- conf_level
     attr(out, "transform_label") <- names(transform)[1]
 

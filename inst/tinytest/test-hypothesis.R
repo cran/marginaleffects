@@ -51,7 +51,7 @@ expect_error(slopes(
     newdata = "mean",
     hypothesis = c(1, 1, 1),
     variables = "cyl"),
-    pattern = "of length")
+    pattern = "but has length")
 
 # errors
 expect_error(slopes(
@@ -153,6 +153,12 @@ expect_inherits(mm, "marginalmeans")
 expect_equal(nrow(mm), 2)
 
 
+# wildcard
+mm1 <- marginal_means(mod, hypothesis = "b* = b1")
+expect_equal(mm1$term, paste0("b", 1:9, "=b1"))
+expect_equal(mm1$estimate[1], 0)
+
+
 # marginalmeans: string function
 mm1 <- marginal_means(
     mod,
@@ -248,33 +254,6 @@ dat <- transform(iris, dummy = as.factor(rbinom(nrow(iris), 1, prob = c(0.4, 0.6
 m <- lm(Sepal.Width ~ Sepal.Length * Species + dummy, data = dat)
 mfx <- slopes(m, variables = "Sepal.Length", by = c("Species", "dummy"), hypothesis = "pairwise")
 expect_true("setosa, 0 - setosa, 1" %in% mfx$term)
-
-
-# # Issue #568
-# # TODO: p-value computed before transform; null on the pre-transform scale
-# mod <- glm(vs ~ hp, data = mtcars, family = binomial)
-
-# comparisons(mod,
-#     newdata = "mean",
-#     comparison = "ratio")
-
-# comparisons(mod,
-#     newdata = "mean",
-#     comparison = "ratio",
-#     hypothesis = 0)
-
-# comparisons(mod,
-#     newdata = "mean",
-#     comparison = "ratio",
-#     hypothesis = 1)
-
-# marginaleffects
-
-# hypotheses(mod, hypothesis = -2)
-
-# predictions(mod, newdata = "mean", hypothesis = .75)
-
-# slopes(mod, newdata = "mean", hypothesis = .75)
 
 
 rm(list = ls())

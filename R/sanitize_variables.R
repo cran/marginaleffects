@@ -192,6 +192,7 @@ sanitize_variables <- function(variables,
                 # Eventually it would be nice to consolidate, but that's a lot of work.
                 valid_str <- c("iqr", "minmax", "sd", "2sd")
                 flag <- isTRUE(checkmate::check_numeric(predictors[[v]], min.len = 1, max.len = 2)) ||
+                        isTRUE(checkmate::check_numeric(predictors[[v]], len = nrow(newdata))) ||
                         isTRUE(checkmate::check_choice(predictors[[v]], choices = valid_str)) ||
                         isTRUE(checkmate::check_function(predictors[[v]]))
                 if (!isTRUE(flag)) {
@@ -228,7 +229,7 @@ sanitize_variables <- function(variables,
 
         } else {
             if (calling_function == "comparisons") {
-                valid <- c("reference", "sequential", "pairwise", "all")
+                valid <- c("reference", "sequential", "pairwise", "all", "revpairwise", "revsequential", "revreference")
                 # minmax needs an actual factor in the original data to guarantee correct order of levels.
                 if (is.factor(modeldata[[v]])) { 
                     valid <- c(valid, "minmax")

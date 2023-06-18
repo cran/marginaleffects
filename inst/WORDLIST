@@ -1,11 +1,10 @@
-inv
-chisq
 ’s
 AAP
 AAPs
 Adelie
 Adelies
 AFAICT
+aje
 al
 AME
 APM
@@ -25,17 +24,20 @@ Beaumais
 BH
 Boca
 bonferroni
+BorgeJorge
 Brilleman
 brms
 bugfix
 Bundock
 cdot
+chisq
 CMD
 cme
 Codecov
 confounders
 cran
 CRC
+cumprob
 customclass
 customizable
 Customizable
@@ -46,6 +48,7 @@ Demetri
 differenceavg
 differenceavgwts
 differencing
+disp
 doi
 Dowd
 dX
@@ -62,6 +65,7 @@ elasticities
 elasticities
 emmeans
 EMMs
+Ep
 Epidemiologic
 eps
 Errickson
@@ -76,6 +80,7 @@ expdydxavg
 expdydxavgwts
 exponentiate
 exponentiating
+expvalue
 eydx
 eydxavg
 eydxavgwts
@@ -109,6 +114,7 @@ hommel
 https
 incrementing
 interpretable
+inv
 io
 IPW
 iqr
@@ -124,10 +130,14 @@ Kapre
 kenward
 Krinsky
 Kurz
+kwaa
 Lakens
 Leeper
 Lenth
 Lifecycle
+lift
+liftavg
+linpred
 listwise
 LLC
 lm
@@ -139,6 +149,7 @@ lnoravgwts
 lnratio
 lnratioavg
 lnratioavgwts
+lp
 Lüdecke
 Marcio
 marginalmeans
@@ -198,7 +209,6 @@ Stata
 Stata's
 Stata’s
 StataCorp
-BorgeJorge
 streptokinase
 th
 threenum
@@ -216,4 +226,7 @@ vcovHC
 vincentarelbundock
 Wittenberg
 wmean
+xb
 Xu
+zlink
+zprob

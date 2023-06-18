@@ -29,12 +29,14 @@ sanity_dots <- function(model, calling_function = NULL, ...) {
         c("include_random", "re.form", "allow.new.levels", "random.only")
     valid[["brmsfit"]] <- c("ndraws", "re_formula", "allow_new_levels",
                             "sample_new_levels", "dpar", "resp")
+    valid[["brmsfit_multiple"]] <- valid[["brmsfit"]]
     valid[["selection"]] <- c("part") # sampleSelection
     valid[["glmmTMB"]] <- c("re.form", "allow.new.levels", "zitype") # glmmTMB
     valid[["bam"]] <- c("exclude") # mgcv
     valid[["rlmerMod"]] <- c("re.form", "allow.new.levels")
     valid[["gamlss"]] <- c("what", "safe") # gamlss
     valid[["lme"]] <- c("level") # nlme::lme
+    valid[["bife"]] <- c("alpha_new", "corrected") # nlme::lme
 
     white_list <- c(
         "conf.int", "modeldata", "internal_call", "df",

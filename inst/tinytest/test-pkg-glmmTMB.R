@@ -1,4 +1,6 @@
 source("helpers.R")
+exit_file("glmmTMB produces weird SEs")
+
 # if (!EXPENSIVE) exit_file("EXPENSIVE")
 using("marginaleffects")
 # exit_file("glmmTMB always causes problems")
@@ -261,6 +263,39 @@ p <- avg_predictions(mod, variables = "groups", newdata = tmp)
 expect_inherits(p, "predictions")
 
 
+# Simple prediction standard errors
+m <- glmmTMB(mpg ~ hp + (1 | carb), data = transform(mtcars, carb = as.character(carb)))
+p1 <- predictions(m)
+p2 <- data.frame(predict(m, se.fit = TRUE))
+expect_equivalent(p1$estimate, p2$fit)
+expect_equivalent(p1$std.error, p2$se.fit, tol = 1e-6)
+
+
+exit_file("Issue #810 is not fixed")
+
+# Issue #810
+pkgload::load_all()
+m <- glmmTMB(Sepal.Length ~ Sepal.Width, data = iris)
+p1 <- predictions(m, newdata = iris) |> head()
+p2 <- data.frame(predict(m, newdata = iris, se.fit = TRUE)) |> head()
+expect_equivalent(p1$estimate, p2$fit)
+expect_equivalent(p1$std.error, p2$se.fit, tol = 1e-6)
+
+m <- glmmTMB(Sepal.Length ~ Sepal.Width + (1 | Species), data = iris)
+p1 <- predictions(m, newdata = iris) |> head()
+p2 <- data.frame(predict(m, newdata = iris, se.fit = TRUE)) |> head()
+expect_equivalent(p1$estimate, p2$fit)
+expect_equivalent(p1$std.error, p2$se.fit, tol = 1e-6)
+
+m <- glmmTMB(Sepal.Length ~ Sepal.Width + (1 | Petal.Width * Species), data = iris)
+p1 <- predictions(m, newdata = iris)
+p2 <- data.frame(predict(m, newdata = iris, se.fit = TRUE))
+expect_equivalent(p1$estimate, p2$fit)
+expect_equivalent(p1$std.error, p2$se.fit, tol = 1e-6)
+
+
+
 
 source("helpers.R")
 rm(list = ls())
+
