@@ -1,4 +1,5 @@
 source("helpers.R")
+exit_file("Matrix")
 using("marginaleffects")
 
 requiet("quantreg")
@@ -21,7 +22,7 @@ mfx <- slopes(model, variables = "hp", newdata = datagrid(hp = 110, wt = 2, cyl 
 em <- suppressMessages(emtrends(model, ~hp, "hp", at = list(hp = 110, wt = 2, cyl = 4)))
 em <- tidy(em)
 expect_equivalent(mfx$estimate, em$hp.trend, tolerance = .00001)
-expect_equivalent(mfx$std.error, em$std.error, tolerance = .00001)
+expect_equivalent(mfx$std.error, em$std.error, tolerance = .001)
 
 
 # predictions: rq: no validity
@@ -40,6 +41,14 @@ tmp$cyl <- factor(tmp$cyl)
 model <- quantreg::rq(mpg ~ hp + wt + cyl, data = tmp)
 mm <- marginal_means(model)
 expect_marginal_means(mm)
+
+
+
+# Issue #829
+mod = rq(Sepal.Length ~ Sepal.Width * Petal.Length + Species, tau = .25, data = iris)
+cmp = comparisons(mod)
+expect_false(any(is.na(cmp$Species)))
+expect_false(any(is.na(iris$Species)))
 
 
 

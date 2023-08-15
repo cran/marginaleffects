@@ -199,34 +199,36 @@ predictions <- function(model,
                         equivalence = NULL,
                         p_adjust = NULL,
                         df = Inf,
+                        numderiv = "fdforward",
                         ...) {
 
-
     dots <- list(...)
-    
-    # backward compatibility
-    if ("transform_post" %in% names(dots)) transform <- dots[["transform_post"]]
 
-    # order of the first few paragraphs is important
+    # very early, before any use of newdata
     # if `newdata` is a call to `typical` or `counterfactual`, insert `model`
     scall <- rlang::enquo(newdata)
     newdata <- sanitize_newdata_call(scall, newdata, model)
 
-    if (!is.null(equivalence) && !is.null(p_adjust)) {
-        insight::format_error("The `equivalence` and `p_adjust` arguments cannot be used together.")
+    if ("cross" %in% names(dots)) {
+        insight::format_error("The `cross` argument is not available in this function.")
     }
-    
-    
-    # is the model supported?
-    model <- sanitize_model(
-        model = model,
-        newdata = newdata,
-        wts = wts,
-        vcov = vcov,
-        calling_function = "predictions",
-        ...)
+
+    # extracting modeldata repeatedly is slow.
+    # checking dots allows marginalmeans to pass modeldata to predictions.
+    if (isTRUE(by)) {
+        modeldata <- get_modeldata(model,
+            additional_variables = FALSE,
+            modeldata = dots[["modeldata"]],
+            wts = wts)
+    } else {
+        modeldata <- get_modeldata(model,
+            additional_variables = by,
+            modeldata = dots[["modeldata"]],
+            wts = wts)
+    }
 
     # build call: match.call() doesn't work well in *apply()
+    # after sanitize_newdata_call
     call_attr <- c(list(
         name = "predictions",
         model = model,
@@ -241,8 +243,27 @@ predictions <- function(model,
         transform = transform,
         hypothesis = hypothesis,
         df = df),
-        list(...))
+        dots)
+    if ("modeldata" %in% names(dots)) {
+        call_attr[["modeldata"]] <- modeldata
+    }
     call_attr <- do.call("call", call_attr)
+
+    # sanity checks
+    sanity_dots(model = model, ...)
+    numderiv <- sanitize_numderiv(numderiv)
+    sanity_df(df, newdata)
+    sanity_equivalence_p_adjust(equivalence, p_adjust)
+    model <- sanitize_model(
+        model = model,
+        newdata = newdata,
+        wts = wts,
+        vcov = vcov,
+        calling_function = "predictions",
+        ...)
+    tmp <- sanitize_hypothesis(hypothesis, ...)
+    hypothesis <- tmp$hypothesis
+    hypothesis_null <- tmp$hypothesis_null
 
     # multiple imputation
     if (inherits(model, "mira")) {
@@ -250,26 +271,6 @@ predictions <- function(model,
         return(out)
     }
 
-    # extracting modeldata repeatedly is slow.
-    # checking dots allows marginalmeans to pass modeldata to predictions.
-    if ("modeldata" %in% names(dots)) {
-        modeldata <- dots[["modeldata"]]
-    } else {
-        addvar <- NULL
-        if (isTRUE(checkmate::check_character(by))) {
-            addvar <- c(addvar, by)
-        }
-        if (isTRUE(checkmate::check_data_frame(by))) {
-            addvar <- c(addvar, colnames(by))
-        }
-        if (isTRUE(checkmate::check_string(wts))) {
-            addvar <- c(addvar, wts)
-        }
-        if (is.null(addvar)) {
-            addvar <- FALSE
-        }
-        modeldata <- get_modeldata(model, additional_variables = addvar)
-    }
 
     # if type is NULL, we backtransform if relevant
     flag_class <- isTRUE(class(model)[1] %in% c("glm", "Gam", "negbin")) ||
@@ -291,14 +292,12 @@ predictions <- function(model,
         type <- sanitize_type(model = model, type = type)
     }
 
-    # do not check the model because `insight` supports more models than `marginaleffects`
-    # model <- sanitize_model(model)
 
-    # input sanity checks
-    sanity_df(df, newdata)
-
+    # save the original because it gets converted to a named list, which breaks
+    # user-input sanity checks
+    transform_original <- transform
     transform <- sanitize_transform(transform)
-    sanity_dots(model = model, ...)
+
     model <- sanitize_model_specific(
         model = model,
         newdata = newdata,
@@ -306,16 +305,14 @@ predictions <- function(model,
         calling_function = "predictions",
         ...)
 
-    tmp <- sanitize_hypothesis(hypothesis, ...)
-    hypothesis <- tmp$hypothesis
-    hypothesis_null <- tmp$hypothesis_null
 
     conf_level <- sanitize_conf_level(conf_level, ...)
     newdata <- sanitize_newdata(
         model = model,
         newdata = newdata,
         modeldata = modeldata,
-        by = by)
+        by = by,
+        wts = wts)
 
     # after sanitize_newdata
     sanity_by(by, newdata)
@@ -327,16 +324,9 @@ predictions <- function(model,
         wts = wts,
         by = by,
         byfun = byfun)
+
     if (is.null(wts) && "marginaleffects_wts_internal" %in% colnames(newdata)) {
         wts <- "marginaleffects_wts_internal"
-    }
-
-    # weights: after sanitize_newdata; before sanitize_variables
-    sanity_wts(wts, newdata) # after sanity_newdata
-    if (!is.null(wts) && isTRUE(checkmate::check_string(wts))) {
-        newdata[["marginaleffects_wts_internal"]] <- newdata[[wts]]
-    } else {
-        newdata[["marginaleffects_wts_internal"]] <- wts
     }
 
     # analogous to comparisons(variables=list(...))
@@ -404,7 +394,7 @@ predictions <- function(model,
         FUN = predictions,
         model = model, newdata = newdata, vcov = vcov, variables = variables, type = type, by = by,
         conf_level = conf_level,
-        byfun = byfun, wts = wts, transform = transform, hypothesis = hypothesis, ...)
+        byfun = byfun, wts = wts, transform = transform_original, hypothesis = hypothesis, ...)
     if (!is.null(out)) {
         return(out)
     }
@@ -486,7 +476,8 @@ predictions <- function(model,
                     J = J,
                     hypothesis = hypothesis,
                     by = by,
-                    byfun = byfun)
+                    byfun = byfun,
+                    numderiv = numderiv)
                 args <- utils::modifyList(args, dots)
                 se <- do.call(get_se_delta, args)
                 if (is.numeric(se) && length(se) == nrow(tmp)) {
@@ -665,6 +656,8 @@ get_predictions <- function(model,
     # hypothesis tests using the delta method
     out <- get_hypothesis(out, hypothesis = hypothesis, by = by)
 
+    out <- sort_columns(out, newdata, by)
+
     return(out)
 }
 
@@ -687,6 +680,7 @@ avg_predictions <- function(model,
                             equivalence = NULL,
                             p_adjust = NULL,
                             df = Inf,
+                            numderiv = "fdforward",
                             ...) {
 
     # order of the first few paragraphs is important

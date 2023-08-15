@@ -29,7 +29,7 @@ sanity_model_supported_class <- function(model) {
         "betareg",
         "bglmerMod",
         "blmerMod",
-        "bife",
+        # "bife",
         "biglm",
         c("bigglm", "biglm"),
         "brglmFit",
@@ -41,6 +41,8 @@ sanity_model_supported_class <- function(model) {
         "coxph",
         "crch",
         "fixest",
+        "flic",
+        "flac",
         c("Gam", "glm", "lm"), # package: gam
         c("gam", "glm", "lm"), # package: mgcv
         c("gamlss", "gam", "glm", "lm"), # package: gamlss
@@ -68,6 +70,7 @@ sanity_model_supported_class <- function(model) {
         "lm_robust",
         # "logitr",
         "loess",
+        "logistf",
         c("lrm", "lm"),
         c("lrm", "rms", "glm"),
         c("mblogit", "mclogit"),
@@ -78,8 +81,10 @@ sanity_model_supported_class <- function(model) {
         "mlogit",
         c("multinom", "nnet"),
         c("negbin", "glm", "lm"),
+        "nls",
         c("ols", "rms", "lm"),
         c("orm", "rms"),
+        c("oohbchoice", "dbchoice"),
         "phylolm",
         "phyloglm",
         c("plm", "panelmodel"),

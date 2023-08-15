@@ -14,6 +14,7 @@ hypotheses(
   joint = FALSE,
   joint_test = "f",
   FUN = NULL,
+  numderiv = "fdforward",
   ...
 )
 }
@@ -84,6 +85,14 @@ hypotheses(
 \item Function which accepts a model object and returns a numeric vector or a data.frame with two columns called \code{term} and \code{estimate}. This argument can be useful when users want to conduct a hypothesis test on an arbitrary function of quantities held in a model object.
 }}
 
+\item{numderiv}{string or list of strings indicating the method to use to for the numeric differentiation used in to compute delta method standard errors.
+\itemize{
+\item "fdforward": finite difference method with forward differences
+\item "fdcenter": finite difference method with central differences (default)
+\item "richardson": Richardson extrapolation method
+\item Extra arguments can be specified by passing a list to the \code{numDeriv} argument, with the name of the method first and named arguments following, ex: \code{numderiv=list("fdcenter", eps = 1e-5)}. When an unknown argument is used, \code{marginaleffects} prints the list of valid arguments for each method.
+}}
+
 \item{...}{Additional arguments are passed to the \code{predict()} method
 supplied by the modeling package.These arguments are particularly useful
 for mixed-effects or bayesian models (see the online vignettes on the
@@ -106,6 +115,8 @@ package website, or scroll down this page for a full list of vignettes:
 Warning #1: Tests are conducted directly on the scale defined by the \code{type} argument. For some models, it can make sense to conduct hypothesis or equivalence tests on the \code{"link"} scale instead of the \code{"response"} scale which is often the default.
 
 Warning #2: For hypothesis tests on objects produced by the \code{marginaleffects} package, it is safer to use the \code{hypothesis} argument of the original function.  Using \code{hypotheses()} may not work in certain environments, in lists, or when working programmatically with *apply style functions.
+
+Warning #3: The tests assume that the \code{hypothesis} expression is (approximately) normally distributed, which for non-linear functions of the parameters may not be realistic. More reliable confidence intervals can be obtained using the \code{inferences()} function with \code{method = "boot"}.
 }
 \section{Joint hypothesis tests}{
 

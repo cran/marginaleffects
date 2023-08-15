@@ -86,8 +86,8 @@ cmp1 <- avg_comparisons(fit,
     variables = list(g = c("Control", "Z")),
     wts = "N",
     newdata = tmp,
-    transform_pre = "lnratioavg",
-    transform_post = exp)
+    comparison = "lnratioavg",
+    transform = exp)
 cmp2 <- predictions(fit, variables = list(g = c("Control", "Z"))) |> 
     dplyr::group_by(g) |>
     dplyr::summarise(estimate = weighted.mean(estimate, N)) |>
@@ -132,6 +132,45 @@ cmp2 <- avg_comparisons(fit,
     transform = exp)
 expect_equivalent(cmp1, cmp2)
 
+
+# Issue #865
+d = data.frame(
+  outcome = c(0,0,1,0,0,1,1,1,0,0,0,1,0,1,0,
+              0,0,0,0,1,0,0,1,1,1,0,0,0,1,0,0,0,0,0,0,0,
+              0,1,0,1,0,0,1,1,0,1,0,1,0,0,1,0,1,0,1,0,1,
+              1,1,0,0,0,0,0,0,0,1,0,1,0,1,1,1,1,0,1,1,1,
+              0,0,0,0,1,1,0,0,1,0,1,0,1,0,1,0,1,0,0,1,1,0),
+  foo = c(1,1,1,1,1,1,0,1,1,1,1,1,1,1,0,
+          1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,0,1,1,
+          1,1,1,1,0,1,1,1,1,1,0,1,1,1,1,0,1,1,1,1,1,
+          1,1,0,1,1,1,1,0,1,1,1,1,1,1,1,1,1,1,1,1,1,
+          1,1,0,1,1,1,1,0,1,1,1,1,1,1,1,1,1,1,1,1,1,1),
+  bar = c(1,1,1,0,0,0,1,1,0,0,1,0,1,0,1,
+          1,1,1,0,1,1,1,1,0,1,0,0,1,0,0,1,1,1,1,0,0,
+          1,1,0,1,1,1,1,1,0,1,1,1,1,0,1,0,0,0,0,0,1,
+          1,0,0,0,0,1,0,1,1,0,0,1,1,1,1,1,1,1,1,0,1,
+          0,1,1,0,1,0,1,1,1,0,1,0,1,1,0,0,1,1,0,1,1,1)
+)
+mod = glm(
+  outcome ~ foo + bar,
+  family = "binomial",
+  data = d
+)
+cmp1 <- avg_comparisons(mod, variables = list(foo = 0:1),
+                type = "response", comparison = "difference")
+cmp2 <- comparisons(mod, variables = list(foo = 0:1),
+            type = "response", comparison = "differenceavg")
+expect_equivalent(cmp1$estimate, cmp2$estimate)
+
+
+# Issue #870
+Guerry <- read.csv("https://vincentarelbundock.github.io/Rdatasets/csv/HistData/Guerry.csv")
+Guerry <- na.omit(Guerry)
+mod <- lm(Literacy ~ Pop1831 * Desertion, data = Guerry)
+p1 <- predictions(mod, by = "Region", wts = "Donations")
+p2 <- predictions(mod, by = "Region")
+expect_inherits(p1, "predictions")
+expect_false(any(p1$estimate == p2$estimate))
 
 
 # brms

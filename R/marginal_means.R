@@ -146,11 +146,13 @@ marginal_means <- function(model,
                            df = Inf,
                            wts = "equal",
                            by = NULL,
+                           numderiv = "fdforward",
                            ...) {
 
 
     # deprecation and backward compatibility
     dots <- list(...)
+    sanity_equivalence_p_adjust(equivalence, p_adjust)
     if ("transform_post" %in% names(dots)) transform <- dots[["transform_post"]]
     if ("variables_grid" %in% names(dots)) {
         if (!is.null(newdata)) {
@@ -162,6 +164,8 @@ marginal_means <- function(model,
     if (!is.null(equivalence) && !is.null(p_adjust)) {
         insight::format_error("The `equivalence` and `p_adjust` arguments cannot be used together.")
     }
+
+    numderiv = sanitize_numderiv(numderiv)
 
     # build call: match.call() doesn't work well in *apply()
     call_attr <- c(list(
@@ -208,7 +212,7 @@ marginal_means <- function(model,
         type <- sanitize_type(model = model, type = type)
     }
 
-    modeldata <- get_modeldata(model, additional_variables = FALSE)
+    modeldata <- get_modeldata(model, additional_variables = FALSE, wts = wts)
 
     checkmate::assert_flag(cross)
     transform <- sanitize_transform(transform)
@@ -370,7 +374,8 @@ marginal_means <- function(model,
             cross = cross,
             modeldata = modeldata,
             hypothesis = hypothesis,
-            by = by)
+            by = by,
+            numderiv = numderiv)
         args <- c(args, list(...))
         args[["equivalence"]] <- NULL
         se <- do.call(get_se_delta, args)
@@ -405,7 +410,6 @@ marginal_means <- function(model,
     out <- out[, cols, drop = FALSE]
 
     # attributes
-    class(out) <- c("marginalmeans", class(out))
     attr(out, "model") <- model
     attr(out, "jacobian") <- J
     attr(out, "type") <- type
@@ -425,6 +429,8 @@ marginal_means <- function(model,
         insight::check_if_installed("brms")
         attr(out, "nchains") <- brms::nchains(model)
     }
+
+    class(out) <- c("marginalmeans", class(out))
 
     return(out)
 }

@@ -20,6 +20,7 @@ predictions(
   equivalence = NULL,
   p_adjust = NULL,
   df = Inf,
+  numderiv = "fdforward",
   ...
 )
 
@@ -38,6 +39,7 @@ avg_predictions(
   equivalence = NULL,
   p_adjust = NULL,
   df = Inf,
+  numderiv = "fdforward",
   ...
 )
 }
@@ -170,6 +172,14 @@ levels. See examples section.}
 \item{p_adjust}{Adjust p-values for multiple comparisons: "holm", "hochberg", "hommel", "bonferroni", "BH", "BY", or "fdr". See \link[stats:p.adjust]{stats::p.adjust}}
 
 \item{df}{Degrees of freedom used to compute p values and confidence intervals. A single numeric value between 1 and \code{Inf}. When \code{df} is \code{Inf}, the normal distribution is used. When \code{df} is finite, the \code{t} distribution is used. See \link[insight:get_df]{insight::get_df} for a convenient function to extract degrees of freedom. Ex: \code{slopes(model, df = insight::get_df(model))}}
+
+\item{numderiv}{string or list of strings indicating the method to use to for the numeric differentiation used in to compute delta method standard errors.
+\itemize{
+\item "fdforward": finite difference method with forward differences
+\item "fdcenter": finite difference method with central differences (default)
+\item "richardson": Richardson extrapolation method
+\item Extra arguments can be specified by passing a list to the \code{numDeriv} argument, with the name of the method first and named arguments following, ex: \code{numderiv=list("fdcenter", eps = 1e-5)}. When an unknown argument is used, \code{marginaleffects} prints the list of valid arguments for each method.
+}}
 
 \item{...}{Additional arguments are passed to the \code{predict()} method
 supplied by the modeling package.These arguments are particularly useful
@@ -328,7 +338,7 @@ The \code{type} argument determines the scale of the predictions used to compute
 
 Some of the most common \code{type} values are:
 
-response, link, E, Ep, average, class, conditional, count, cum.prob, cumprob, density, disp, expected, expvalue, fitted, latent, linear.predictor, linpred, location, lp, mean, p, pr, precision, prediction, prob, probs, quantile, risk, scale, survival, unconditional, variance, xb, zero, zlink, zprob
+response, link, E, Ep, average, class, conditional, count, cum.prob, cumprob, density, disp, expected, expvalue, fitted, latent, linear.predictor, linpred, location, lp, mean, p, pr, precision, prediction, prob, probability, probs, quantile, risk, scale, survival, unconditional, utility, variance, xb, zero, zlink, zprob
 }
 
 \examples{

@@ -98,4 +98,41 @@ mod <- lm(Petal.Length ~ Sepal.Length * Sepal.Width * Species, data = iris)
 expect_error(inferences(marginal_means(mod), method = "fwb"), pattern = "not supported")
 
 
+# Issue #856
+tmp <- lm(Petal.Length ~ Sepal.Length * Species, data = iris)
+cmp <- avg_comparisons(tmp,
+    variables = list(Sepal.Length = 1, Species = "reference"),
+    cross = TRUE) |>
+    inferences(method = "boot", R = 5) |>
+    suppressWarnings()
+expect_inherits(cmp, "comparisons")
+expect_equal(nrow(cmp), 2)
+
+
+# Issue #853
+m <- glm(am ~ mpg + hp + cyl, data = mtcars, family = binomial)
+p <- avg_predictions(m, by = "cyl") |>
+  inferences(method = "boot", R = 5) |>
+  suppressWarnings()
+expect_inherits(p, "predictions")
+p <- predictions(m, by = "cyl") |>
+  inferences(method = "boot", R = 5) |>
+  suppressWarnings()
+expect_inherits(p, "predictions")
+
+
+# Issue #851: simulation-based inference use the original estimates, not the mean/median of simulations
+mod <- glm(vs ~ hp + mpg + am, data = mtcars, family = binomial)
+cmp1 <- avg_comparisons(mod)
+cmp2 <- cmp1 |> inferences(method = "simulation", R = 500)
+expect_equivalent(cmp1$estimate, cmp2$estimate)
+
+
+# mfxplainer bug
+mod <- lm(mpg ~ hp + cyl, data = mtcars)
+p <- avg_predictions(mod, by = "cyl") |> inferences(method = "simulation", R = 25)
+expect_inherits(p, "predictions")
+
+
+
 rm(list = ls())

@@ -1,5 +1,35 @@
 # News
 
+## 0.14.0
+
+Breaking changes:
+
+* Row order of the output changes for some objects. Rows are not sorted alphabetically by `term`, `by`, and variables explicitly supplied to `datagrid`. This can affect hypothesis tests computed using the b1, b2, b3, and other indices.
+* New procedure `numderiv` argument use a different procedure to select the step size used in the finite difference numeric derivative used to compute standard errors: abs(x) * sqrt(.Machine$double.eps). The numerical results may not be exactly identical to previous versions of `marginaleffects`, but the step size should be adequate in a broader variety of cases. Note that users can use the `numderiv` argument for more control on numeric differentiation, as documented.
+* `bife` models are no longer supported pending investigation in weird results in the tests. Looking for volunteers write more thorough tests.
+
+New:
+
+* Support: `logistf` package.
+* Support: `DCchoice` package.
+* Support: `stats::nls`
+* `hypotheses()` can now accept raw data frame, which gives a lot of flexibility for custom contrasts and functions. See the Hypothesis vignette for an example.
+* `numderiv` argument allows users to use finite difference (center or forward) or Richardson's method to compute the numerical derivatives used in the calculation of standard errors.
+
+Bug fixes:
+
+* `inferences()` supports the `cross` argument for `comparisons()` objects. Thanks to Kirill Solovev for report #856.
+* `splines::bs()` in formulas could produce incorrect results due to weirdness in `stats::model.matrix()`. Thanks to @chiungming for report #831.
+* `mgcv` with `ocat` are now supported. Thanks to Lorenzo Fabbri for Issue #844.
+* `quantreg` problem with `rowid` merge did not affect estimates but did not return the full original data. Issue #829.
+* `get_modeldata()` extracts weights variable when available.
+* `predictions()` is no longer broken in some `inferences()` calls. Issue #853
+* Inaccurate averaging with `comparison=differenceavg` some models where all predictors are categorical. Thanks to Karl Ove Hufthammer for report #865.
+
+Misc:
+
+* Major refactor to simplify the code base and make maintenance easier.
+
 ## marginaleffects 0.13.0
 
 Breaking change:

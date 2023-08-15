@@ -88,6 +88,11 @@
 #' the maximum and minimum values of the variable with respect to which we
 #' are taking the derivative. Changing `eps` may be necessary to avoid
 #' numerical problems in certain models.
+#' @param numderiv string or list of strings indicating the method to use to for the numeric differentiation used in to compute delta method standard errors.
+#' + "fdforward": finite difference method with forward differences
+#' + "fdcenter": finite difference method with central differences (default)
+#' + "richardson": Richardson extrapolation method
+#' + Extra arguments can be specified by passing a list to the `numDeriv` argument, with the name of the method first and named arguments following, ex: `numderiv=list("fdcenter", eps = 1e-5)`. When an unknown argument is used, `marginaleffects` prints the list of valid arguments for each method.
 #' @param ... Additional arguments are passed to the `predict()` method
 #' supplied by the modeling package.These arguments are particularly useful
 #' for mixed-effects or bayesian models (see the online vignettes on the
@@ -211,12 +216,13 @@ slopes <- function(model,
                    p_adjust = NULL,
                    df = Inf,
                    eps = NULL,
+                   numderiv = "fdforward",
                    ...) {
 
+    dots <- list(...)
 
-    # order of the first few paragraphs is important
+    # very early, before any use of newdata
     # if `newdata` is a call to `typical` or `counterfactual`, insert `model`
-    # should probably not be nested too deeply in the call stack since we eval.parent() (not sure about this)
     scall <- rlang::enquo(newdata)
     newdata <- sanitize_newdata_call(scall, newdata, model)
 
@@ -277,6 +283,7 @@ slopes <- function(model,
         p_adjust = p_adjust,
         by = by,
         eps = eps,
+        numderiv = numderiv,
         comparison = slope,
         cross = FALSE,
         # secret arguments
@@ -285,31 +292,8 @@ slopes <- function(model,
 
     data.table::setDT(out)
 
-    # clean columns
-    stubcols <- c("rowid", "group", "term", "contrast", "hypothesis", "dydx", "estimate", "std.error", "statistic", "p.value", "s.value", "conf.low", "conf.high",
-                  sort(grep("^predicted", colnames(newdata), value = TRUE)))
-    cols <- intersect(stubcols, colnames(out))
-    cols <- unique(c(cols, colnames(out)))
-    if (length(setdiff(names(out), cols)) > 0L) {
-      out[, setdiff(names(out), cols) := NULL]
-    }
-
-    if ("group" %in% colnames(out) && all(out$group == "main_marginaleffect")) {
-        out[, "group" := NULL]
-    }
-
-    # return contrast column only when relevant
-    if ("contrast" %in% colnames(out)) {
-        out[is.na(contrast), "contrast" := ""]
-        out[contrast == "dydx", "contrast" := "dY/dX"]
-        if (all(out$contrast == "dY/dX")) {
-            out[, "contrast" := NULL]
-        }
-    }
-
     attr(out, "vcov.type") <- get_vcov_label(vcov)
-    # save newdata=datagrid() for use in recall()
-    attr(out, "newdata") <- newdata
+    attr(out, "newdata") <- newdata # recall
     attr(out, "call") <- call_attr
 
     # class
@@ -357,6 +341,7 @@ avg_slopes <- function(model,
                        p_adjust = NULL,
                        df = Inf,
                        eps = NULL,
+                       numderiv = "fdforward",
                        ...) {
 
     # order of the first few paragraphs is important
@@ -392,6 +377,7 @@ avg_slopes <- function(model,
         p_adjust = p_adjust,
         df = df,
         eps = eps,
+        numderiv = numderiv,
         ...)
 
     return(out)

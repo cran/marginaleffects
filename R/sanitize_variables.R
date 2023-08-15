@@ -18,7 +18,7 @@ sanitize_variables <- function(variables,
     
     # extensions with no `get_data()`
     if (is.null(modeldata) || nrow(modeldata) == 0) {
-        modeldata <- set_variable_class(newdata)
+        modeldata <- set_variable_class(newdata, model)
         no_modeldata <- TRUE
     } else {
         no_modeldata <- FALSE
@@ -44,7 +44,7 @@ sanitize_variables <- function(variables,
         dv <- hush(unlist(insight::find_response(model, combine = FALSE), use.names = FALSE))
         predictors <- unique(setdiff(predictors, dv))
         if (length(predictors) == 0) { # unsupported by insight (e.g., numpyro)
-            predictors <- hush(colnames(newdata))
+            predictors <- setdiff(hush(colnames(newdata)), c(dv, "rowid"))
         }
     } else {
         predictors <- variables
@@ -54,7 +54,7 @@ sanitize_variables <- function(variables,
     if (isTRUE(checkmate::check_character(predictors))) {
         predictors <- stats::setNames(rep(list(NULL), length(predictors)), predictors)
     }
-    
+
     # reserved keywords
     # Issue #697: we used to allow "group", as long as it wasn't in
     # `variables`, but this created problems with automatic `by=TRUE`. Perhaps
@@ -143,7 +143,6 @@ sanitize_variables <- function(variables,
     # NULL to defaults
     for (v in names(predictors)) {
         if (is.null(predictors[[v]])) {
-
             if (get_variable_class(modeldata, v, "binary")) {
                 predictors[[v]] <- 0:1
 
@@ -334,8 +333,8 @@ sanitize_variables <- function(variables,
 
     # can't take the slope of an outcome
     dv <- hush(insight::find_response(model))
-    if (any(names(predictors) %in% dv)) {
-        insight::format_error("The outcome variable cannot be used in the `variables` argument.")
+    if (all(names(predictors) %in% dv)) {
+        insight::format_error("There are no valid predictor variables. Please make sure your model includes predictors and use the `variables` argument.")
     }
     
     # interaction: get_contrasts() assumes there is only one function when interaction=TRUE
@@ -349,6 +348,9 @@ sanitize_variables <- function(variables,
         }
     }
 
+    # sort variables alphabetically
+    predictors <- predictors[sort(names(predictors))]
+    others <- others[sort(names(others))]
 
     # output
     out <- list(conditional = predictors, others = others)

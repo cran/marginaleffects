@@ -96,7 +96,7 @@ plot_predictions <- function(model,
 
     # conditional
     if (!is.null(condition)) {
-        modeldata <- get_modeldata(model, additional_variables = names(condition))
+        modeldata <- get_modeldata(model, additional_variables = names(condition), wts = wts)
         condition <- sanitize_condition(model, condition, variables = NULL, modeldata = modeldata)
         v_x <- condition$condition1
         v_color <- condition$condition2
@@ -116,12 +116,13 @@ plot_predictions <- function(model,
     # marginal
     if (!isFALSE(by) && !is.null(by)) { # switched from NULL above
         condition <- NULL
-        modeldata <- get_modeldata(model, additional_variables = by)
+        modeldata <- get_modeldata(model, additional_variables = by, wts = wts)
         newdata <- sanitize_newdata(
             model = model,
             newdata = newdata,
             modeldata = modeldata,
-            by = by)
+            by = by,
+            wts = wts)
         datplot <- predictions(
             model,
             by = by,
