@@ -14,6 +14,7 @@
 #' @param nrows The number of rows which will be printed before truncation.
 #' @param ncols The maximum number of column names to display at the bottom of the printed output.
 #' @param style "summary" or "data.frame"
+#' @param type boolean: should the type be printed?
 #' @param ... Other arguments are currently ignored.
 #' @export
 #' @examples
@@ -35,6 +36,7 @@ print.marginaleffects <- function(x,
                                   nrows = getOption("marginaleffects_print_nrows", default = 30),
                                   ncols = getOption("marginaleffects_print_ncols", default = 30),
                                   style = getOption("marginaleffects_print_style", default = "summary"),
+                                  type = getOption("marginaleffects_print_type", default = TRUE),
                                   ...) {
 
 
@@ -116,6 +118,15 @@ print.marginaleffects <- function(x,
         "conf.high" = ifelse(is.null(alpha),
             "CI high",
             sprintf("%.1f %%", 100 - alpha / 2)),
+        "pred.low" = ifelse(is.null(alpha),
+            "Pred low",
+            sprintf("Pred. %.1f %%", alpha / 2)),
+        "pred.high" = ifelse(is.null(alpha),
+            "Pred high",
+            sprintf("Pred. %.1f %%", 100 - alpha / 2)),
+        "pred.set" = ifelse(is.null(alpha),
+            "Pred Set",
+            sprintf("Pred Set %.1f %%", 100 - alpha / 2)),
         "p.value.nonsup" = "p (NonSup)",
         "p.value.noninf" = "p (NonInf)",
         "p.value.equiv" = "p (Equiv)",
@@ -142,6 +153,7 @@ print.marginaleffects <- function(x,
     tmp <- c("by",
         attr(nd, "variables_datagrid"),
         attr(nd, "newdata_variables_datagrid"),
+        attr(x, "variables_datagrid"),
         attr(x, "newdata_variables_datagrid")
     )
     if (isTRUE(checkmate::check_character(attr(x, "by")))) {
@@ -232,6 +244,9 @@ print.marginaleffects <- function(x,
     }
     if (ncol(x) <= ncols) {
         cat("Columns:", paste(colnames(x), collapse = ", "), "\n")
+    }
+    if (isTRUE(type) && !is.null(attr(x, "type"))) {
+        cat("Type: ", attr(x, "type"), "\n")
     }
     cat("\n")
 

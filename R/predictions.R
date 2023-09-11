@@ -10,13 +10,10 @@
 #'
 #' See the predictions vignette and package website for worked examples and case studies:
 
-#' * <https://vincentarelbundock.github.io/marginaleffects/articles/predictions.html>
-#' * <https://vincentarelbundock.github.io/marginaleffects/>
+#' * <https://marginaleffects.com/articles/predictions.html>
+#' * <https://marginaleffects.com/>
 #'
 #' @rdname predictions
-#' @details
-#' For `glm()`, `MASS::glm.nb`, `gam::gam()`, and `feols::feglm` models with `type`, `transform` and `hypothesis` all equal to `NULL` (the default), `predictions()` first predicts on the link scale, and then backtransforms the estimates and confidence intervals. This implies that the `estimate` produced by `avg_predictions()` will not be exactly equal to the average of the `estimate` column produced by `predictions()`. Users can circumvent this behavior and average predictions directly on the response scale by setting `type="response"` explicitly. With `type="response"`, the intervals are symmetric and may have undesirable properties (e.g., stretching beyond the `[0,1]` bounds for a binary outcome regression).
-#' 
 #' @param model Model object
 #' @param variables Counterfactual variables.
 #' * Output:
@@ -37,8 +34,8 @@
 #'     + "threenum": mean and 1 standard deviation on both sides
 #'     + "fivenum": Tukey's five numbers
 #' @param newdata Grid of predictor values at which we evaluate predictions.
-#' + `NULL` (default): Predictions for each observed value in the original dataset. See [insight::get_data()]
-#' + data frame: Predictions for each row of the `newdata` data frame.
+#' + Warning: Please avoid modifying your dataset between fitting the model and calling a `marginaleffects` function. This can sometimes lead to unexpected results.
+#' + `NULL` (default): Unit-level predictions for each observed value in the dataset (empirical distribution). The dataset is retrieved using [insight::get_data()], which tries to extract data from the environment. This may produce unexpected results if the original data frame has been altered since fitting the model.
 #' + string:
 #'   - "mean": Predictions at the Mean. Predictions when each predictor is held at its mean or mode.
 #'   - "median": Predictions at the Median. Predictions when each predictor is held at its median or mode.
@@ -59,8 +56,7 @@
 #' type, but will typically be a string such as: "response", "link", "probs",
 #' or "zero". When an unsupported string is entered, the model-specific list of
 #' acceptable values is returned in an error message. When `type` is `NULL`, the
-#' default value is used. This default is the first model-related row in
-#' the `marginaleffects:::type_dictionary` dataframe. See the details section for a note on backtransformation.
+#' first entry in the error message is used by default.
 #' @param transform A function applied to unit-level adjusted predictions and confidence intervals just before the function returns results. For bayesian models, this function is applied to individual draws from the posterior distribution, before computing summaries.
 #'
 #' @template deltamethod
@@ -204,6 +200,11 @@ predictions <- function(model,
 
     dots <- list(...)
 
+    if ("transform_post" %in% names(dots)) {
+        transform <- dots[["transform_post"]]
+        insight::format_warning("The `transform_post` argument is deprecated. Use `transform` instead.")
+    }
+
     # very early, before any use of newdata
     # if `newdata` is a call to `typical` or `counterfactual`, insert `model`
     scall <- rlang::enquo(newdata)
@@ -271,27 +272,13 @@ predictions <- function(model,
         return(out)
     }
 
-
     # if type is NULL, we backtransform if relevant
-    flag_class <- isTRUE(class(model)[1] %in% c("glm", "Gam", "negbin")) ||
-                  isTRUE(hush(model[["method_type"]]) %in% c("feglm"))
-    if (is.null(type) &&
-        is.null(transform) &&
-        isTRUE(checkmate::check_number(hypothesis, null.ok = TRUE)) &&
-        flag_class) {
-        dict <- subset(type_dictionary, class == class(model)[1])$type
-        type <- sanitize_type(model = model, type = type)
-        linv <- tryCatch(insight::link_inverse(model), error = function(e) NULL)
-        if (isTRUE(type == "response") && isTRUE("link" %in% dict) && is.function(linv)) {
-            type <- "link"
-            transform <- linv
-        } else {
-            type <- sanitize_type(model = model, type = type)
-        }
+    type_string <- sanitize_type(model = model, type = type, calling_function = "predictions")
+    if (type_string == "invlink(link)") {
+        type_call <- "link"
     } else {
-        type <- sanitize_type(model = model, type = type)
+        type_call <- type_string
     }
-
 
     # save the original because it gets converted to a named list, which breaks
     # user-input sanity checks
@@ -392,7 +379,7 @@ predictions <- function(model,
     # Bootstrap
     out <- inferences_dispatch(
         FUN = predictions,
-        model = model, newdata = newdata, vcov = vcov, variables = variables, type = type, by = by,
+        model = model, newdata = newdata, vcov = vcov, variables = variables, type = type_call, by = by,
         conf_level = conf_level,
         byfun = byfun, wts = wts, transform = transform_original, hypothesis = hypothesis, ...)
     if (!is.null(out)) {
@@ -408,7 +395,7 @@ predictions <- function(model,
     args <- list(
         model = model,
         newdata = newdata,
-        type = type,
+        type = type_call,
         hypothesis = hypothesis,
         wts = wts,
         by = by,
@@ -471,7 +458,7 @@ predictions <- function(model,
                     model,
                     newdata = newdata,
                     vcov = V,
-                    type = type,
+                    type = type_call,
                     FUN = fun,
                     J = J,
                     hypothesis = hypothesis,
@@ -539,13 +526,17 @@ predictions <- function(model,
     out <- equivalence(out, equivalence = equivalence, df = df, ...)
 
     # after rename to estimate / after assign draws
+    if (identical(type_string, "invlink(link)")) {
+        linv <- tryCatch(insight::link_inverse(model), error = function(e) identity)
+        out <- backtransform(out, transform = linv)
+    }
     out <- backtransform(out, transform = transform)
 
     data.table::setDF(out)
     class(out) <- c("predictions", class(out))
     out <- set_marginaleffects_attributes(out, attr_cache = newdata_attr_cache)
     attr(out, "model") <- model
-    attr(out, "type") <- type
+    attr(out, "type") <- type_string
     attr(out, "model_type") <- class(model)[1]
     attr(out, "vcov.type") <- get_vcov_label(vcov)
     attr(out, "jacobian") <- J

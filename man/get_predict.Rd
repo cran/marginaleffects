@@ -7,7 +7,8 @@
 %   R/methods_lme4.R, R/methods_mclogit.R, R/methods_mhurdle.R,
 %   R/methods_mlogit.R, R/methods_ordinal.R, R/methods_quantreg.R,
 %   R/methods_rms.R, R/methods_robustlmm.R, R/methods_rstanarm.R,
-%   R/methods_stats.R, R/methods_survival.R, R/methods_tobit1.R
+%   R/methods_stats.R, R/methods_survey.R, R/methods_survival.R,
+%   R/methods_tobit1.R
 \name{get_predict}
 \alias{get_predict}
 \alias{get_predict.default}
@@ -43,6 +44,7 @@
 \alias{get_predict.stanreg}
 \alias{get_predict.lm}
 \alias{get_predict.glm}
+\alias{get_predict.svyolr}
 \alias{get_predict.coxph}
 \alias{get_predict.tobit1}
 \title{Get predicted values from a model object (internal function)}
@@ -115,6 +117,8 @@ get_predict(model, newdata, type, ...)
 
 \method{get_predict}{glm}(model, newdata = insight::get_data(model), type = "response", ...)
 
+\method{get_predict}{svyolr}(model, newdata = insight::get_data(model), type = "probs", ...)
+
 \method{get_predict}{coxph}(model, newdata = insight::get_data(model), type = "lp", ...)
 
 \method{get_predict}{tobit1}(model, newdata = insight::get_data(model), type = "response", ...)
@@ -124,8 +128,8 @@ get_predict(model, newdata, type, ...)
 
 \item{newdata}{Grid of predictor values at which we evaluate the slopes.
 \itemize{
-\item \code{NULL} (default): Unit-level slopes for each observed value in the original dataset. See \code{\link[insight:get_data]{insight::get_data()}}
-\item data frame: Unit-level slopes for each row of the \code{newdata} data frame.
+\item Warning: Please avoid modifying your dataset between fitting the model and calling a \code{marginaleffects} function. This can sometimes lead to unexpected results.
+\item \code{NULL} (default): Unit-level slopes for each observed value in the dataset (empirical distribution). The dataset is retrieved using \code{\link[insight:get_data]{insight::get_data()}}, which tries to extract data from the environment. This may produce unexpected results if the original data frame has been altered since fitting the model.
 \item \code{\link[=datagrid]{datagrid()}} call to specify a custom grid of regressors. For example:
 \itemize{
 \item \code{newdata = datagrid(cyl = c(4, 6))}: \code{cyl} variable equal to 4 and 6 and other regressors fixed at their means or modes.
@@ -146,8 +150,7 @@ compute contrasts or slopes. This can differ based on the model
 type, but will typically be a string such as: "response", "link", "probs",
 or "zero". When an unsupported string is entered, the model-specific list of
 acceptable values is returned in an error message. When \code{type} is \code{NULL}, the
-default value is used. This default is the first model-related row in
-the \code{marginaleffects:::type_dictionary} dataframe.}
+first entry in the error message is used by default.}
 
 \item{...}{Additional arguments are passed to the \code{predict()} method
 supplied by the modeling package.These arguments are particularly useful

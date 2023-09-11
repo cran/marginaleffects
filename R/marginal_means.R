@@ -5,13 +5,14 @@
 #' holding other numeric predictors at their means. To learn more, read the marginal means vignette, visit the
 #' package website, or scroll down this page for a full list of vignettes:
 #' 
-#' * <https://vincentarelbundock.github.io/marginaleffects/articles/marginalmeans.html>
-#' * <https://vincentarelbundock.github.io/marginaleffects/>
+#' * <https://marginaleffects.com/articles/marginalmeans.html>
+#' * <https://marginaleffects.com/>
 #'
 #' @param variables Focal variables
 #' + Character vector of variable names: compute marginal means for each category of the listed variables.
 #' + `NULL`: calculate marginal means for all logical, character, or factor variables in the dataset used to fit `model`. Hint:  Set `cross=TRUE` to compute marginal means for combinations of focal variables.
 #' @param newdata Grid of predictor values over which we marginalize.
+#' + Warning: Please avoid modifying your dataset between fitting the model and calling a `marginaleffects` function. This can sometimes lead to unexpected results.
 #' + `NULL` create a grid with all combinations of all categorical predictors in the model. Warning: can be expensive.
 #' + Character vector: subset of categorical variables to use when building the balanced grid of predictors. Other variables are held to their mean or mode.
 #' + Data frame: A data frame which includes all the predictors in the original model. The full dataset is replicated once for every combination of the focal variables in the `variables` argument, using the `datagridcf()` function.
@@ -20,10 +21,7 @@
 #' type, but will typically be a string such as: "response", "link", "probs",
 #' or "zero". When an unsupported string is entered, the model-specific list of
 #' acceptable values is returned in an error message. When `type` is `NULL`, the
-#' default value is used. This default is the first model-related row in
-#' the `marginaleffects:::type_dictionary` dataframe. If `type` is `NULL` and
-#' the default value is "response", the function tries to compute marginal means
-#' on the link scale before backtransforming them using the inverse link function.
+#' first entry in the error message is used by default. 
 #' @param wts character value. Weights to use in the averaging.
 #' + "equal": each combination of variables in `newdata` gets equal weight.
 #' + "cells": each combination of values for the variables in the `newdata` gets a weight proportional to its frequency in the original data.
@@ -53,7 +51,7 @@
 #'
 #'   The `marginaleffects` website compares the output of this function to the
 #'   popular `emmeans` package, which provides similar but more advanced
-#'   functionality: https://vincentarelbundock.github.io/marginaleffects/
+#'   functionality: https://marginaleffects.com/
 #'
 #' @template deltamethod
 #' @template model_specific_arguments
@@ -193,23 +191,11 @@ marginal_means <- function(model,
     }
 
     # if type is NULL, we backtransform if relevant
-    flag_class <- isTRUE(class(model)[1] %in% c("glm", "Gam", "negbin")) ||
-                  isTRUE(hush(model[["method_type"]]) %in% c("feglm"))
-    if (is.null(type) &&
-        is.null(transform) &&
-        isTRUE(checkmate::check_number(hypothesis, null.ok = TRUE)) &&
-        flag_class) {
-        dict <- subset(type_dictionary, class == class(model)[1])$type
-        type <- sanitize_type(model = model, type = type)
-        linv <- tryCatch(insight::link_inverse(model), error = function(e) NULL)
-        if (isTRUE(type == "response") && isTRUE("link" %in% dict) && is.function(linv)) {
-            type <- "link"
-            transform <- linv
-        } else {
-            type <- sanitize_type(model = model, type = type)
-        }
+    type_string <- sanitize_type(model = model, type = type, calling_function = "marginal_means")
+    if (type_string == "invlink(link)") {
+        type_call <- "link"
     } else {
-        type <- sanitize_type(model = model, type = type)
+        type_call <- type_string
     }
 
     modeldata <- get_modeldata(model, additional_variables = FALSE, wts = wts)
@@ -348,7 +334,7 @@ marginal_means <- function(model,
     args <- list(
         model = model,
         newdata = newgrid,
-        type = type,
+        type = type_call,
         variables = focal,
         cross = cross,
         hypothesis = hypothesis,
@@ -366,7 +352,7 @@ marginal_means <- function(model,
         args <- list(
             model,
             vcov = vcov,
-            type = type,
+            type = type_call,
             FUN = get_se_delta_marginalmeans,
             index = NULL,
             variables = focal,
@@ -401,6 +387,10 @@ marginal_means <- function(model,
     out <- equivalence(out, equivalence = equivalence, df = df, ...)
 
     # after assign draws
+    if (identical(type_string, "invlink(link)")) {
+        linv <- tryCatch(insight::link_inverse(model), error = function(e) identity)
+        out <- backtransform(out, transform = linv)
+    }
     out <- backtransform(out, transform)
 
     # column order
@@ -412,7 +402,7 @@ marginal_means <- function(model,
     # attributes
     attr(out, "model") <- model
     attr(out, "jacobian") <- J
-    attr(out, "type") <- type
+    attr(out, "type") <- type_string
     attr(out, "model_type") <- class(model)[1]
     attr(out, "variables") <- variables
     attr(out, "call") <- call_attr

@@ -1,4 +1,7 @@
+invlink
+Rcpp
 ’s
+Aaditya
 AAP
 AAPs
 Adelie
@@ -7,10 +10,15 @@ AFAICT
 aje
 al
 AME
+Anastasios
+Angelopoulos
 APM
 ARD
 Arel
 args
+arxiv
+arXiv
+arXivhttp
 Augusto
 Avina
 backtransform
@@ -29,6 +37,7 @@ Brilleman
 brms
 bugfix
 Bundock
+Candes
 cdot
 chisq
 CMD
@@ -41,6 +50,7 @@ cumprob
 customclass
 customizable
 Customizable
+cv
 datagrid
 deduplication
 demeaned
@@ -62,7 +72,6 @@ dyex
 dyexavg
 dyexavglnratioavgwts
 dyexavgwts
-elasticities
 elasticities
 emmeans
 EMMs
@@ -93,6 +102,7 @@ fdcenter
 fdforward
 fdr
 fivenum
+Foygel
 frac
 fwb
 Gam
@@ -115,6 +125,7 @@ Heteroskedasticity
 hochberg
 holm
 hommel
+http
 https
 Hufthammer
 incrementing
@@ -187,6 +198,8 @@ probs
 programmatically
 PxD
 quartile
+Ramdas
+Randas
 ratioavg
 ratioavgwts
 Raton
@@ -202,6 +215,7 @@ revpairwise
 revreference
 revsequential
 richardson
+Rina
 Robb
 Rohan
 rowid
@@ -213,6 +227,7 @@ sd
 semilog
 sensical
 sequential
+softmax
 Solovev
 Stata
 Stata's
@@ -221,6 +236,7 @@ StataCorp
 streptokinase
 th
 threenum
+Tibshirani
 tidiers
 TLDR
 Tomz

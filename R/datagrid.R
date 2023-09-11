@@ -15,7 +15,7 @@
 #' @param by character vector with grouping variables within which `FUN_*` functions are applied to create "sub-grids" with unspecified variables.
 #' @param FUN_character the function to be applied to character variables.
 #' @param FUN_factor the function to be applied to factor variables.
-#' @param FUN_logical the function to be applied to factor variables.
+#' @param FUN_logical the function to be applied to logical variables.
 #' @param FUN_integer the function to be applied to integer variables.
 #' @param FUN_numeric the function to be applied to numeric variables.
 #' @param FUN_other the function to be applied to other variable types.
@@ -192,6 +192,8 @@ datagrid_engine <- function(
                 out[[n]] <- FUN_logical(dat_automatic[[n]])
             } else if (get_variable_class(dat, n, "character")) {
                 out[[n]] <- FUN_character(dat_automatic[[n]])
+            } else if (get_variable_class(dat, n, "binary")) {
+                out[[n]] <- FUN_numeric(dat_automatic[[n]])
             } else if (get_variable_class(dat, n, "numeric")) {
                 if (is.integer(dat_automatic[[n]])) {
                     out[[n]] <- FUN_integer(dat_automatic[[n]])

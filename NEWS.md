@@ -1,5 +1,28 @@
 # News
 
+## 0.15.0
+
+New:
+
+* Conformal prediction via `inferences()`
+* `hypothesis` argument now accepts multiple string formulas.
+* The `type` argument now accepts an explicit `invlink(link)` value instead of silently back-transforming. Users are no longer pointed to `type_dictionary`. Instead, they should call their function with a bad `type` value, and they will obtain a list of valid types. The default `type` value is printed in the output. This is useful because the default `type` value is `NULL`, so the user often does not explicitly decide.
+* Allow install with Rcpp 1.0.0 and greater.
+
+Support new models:
+
+* `survey::svyolr()`
+
+Misc:
+
+* `inferences(method="simulation")` uses the original point estimate rather than the mean of the simulation distribution. Issue #851.
+* Better documentation and error messages for `newdata=NULL`
+* Some performance improvements for `predictions()` and `marginalmeans()` (#880, #882, @etiennebacher).
+
+Bug fix:
+
+* `newdata="median"` returned mean of binary variables. Thanks to @jkhanson1970 for report #896.
+
 ## 0.14.0
 
 Breaking changes:
@@ -379,9 +402,9 @@ New arguments:
 
 New or improved vignettes:
 
-* Hypothesis Tests and Custom Contrasts using the Delta Method: https://vincentarelbundock.github.io/marginaleffects/articles/hypothesis.html
-* Multiple Imputation: https://vincentarelbundock.github.io/marginaleffects/articles/multiple_imputation.html
-* Causal Inference with the g-Formula: https://vincentarelbundock.github.io/marginaleffects/articles/gformula.html
+* Hypothesis Tests and Custom Contrasts using the Delta Method: https://marginaleffects.com/articles/hypothesis.html
+* Multiple Imputation: https://marginaleffects.com/articles/multiple_imputation.html
+* Causal Inference with the g-Formula: https://marginaleffects.com/articles/gformula.html
  (Thanks to Rohan Kapre for the idea)
 
 Deprecated or renamed arguments:
@@ -433,7 +456,7 @@ New features:
 * More informative error messages and warnings
 * Bug fixes and performance improvements
 
-New pages on the `marginaleffects` website: https://vincentarelbundock.github.io/marginaleffects/
+New pages on the `marginaleffects` website: https://marginaleffects.com/
 
 * Alternative software packages
 * Robust standard errors (and more)

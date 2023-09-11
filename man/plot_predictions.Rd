@@ -50,8 +50,7 @@ compute contrasts or slopes. This can differ based on the model
 type, but will typically be a string such as: "response", "link", "probs",
 or "zero". When an unsupported string is entered, the model-specific list of
 acceptable values is returned in an error message. When \code{type} is \code{NULL}, the
-default value is used. This default is the first model-related row in
-the \code{marginaleffects:::type_dictionary} dataframe.}
+first entry in the error message is used by default.}
 
 \item{vcov}{Type of uncertainty estimates to report (e.g., for robust standard errors). Acceptable values:
 \itemize{
@@ -110,8 +109,8 @@ All unspecified variables are held at their mean or mode. This includes grouping
 
 See the "Plots" vignette and website for tutorials and information on how to customize plots:
 \itemize{
-\item https://vincentarelbundock.github.io/marginaleffects/articles/plot.html
-\item https://vincentarelbundock.github.io/marginaleffects
+\item https://marginaleffects.com/articles/plot.html
+\item https://marginaleffects.com
 }
 }
 \section{Model-Specific Arguments}{

@@ -10,8 +10,8 @@
 #'
 #' See the slopes vignette and package website for worked examples and case studies:
 #'
-#' * <https://vincentarelbundock.github.io/marginaleffects/articles/slopes.html>
-#' * <https://vincentarelbundock.github.io/marginaleffects/>
+#' * <https://marginaleffects.com/articles/slopes.html>
+#' * <https://marginaleffects.com/>
 #'
 #' @details
 #' A "slope" or "marginal effect" is the partial derivative of the regression equation
@@ -25,8 +25,8 @@
 #' * `NULL`: compute slopes or comparisons for all the variables in the model object (can be slow).
 #' * Character vector: subset of variables (usually faster).
 #' @param newdata Grid of predictor values at which we evaluate the slopes.
-#' + `NULL` (default): Unit-level slopes for each observed value in the original dataset. See [insight::get_data()]
-#' + data frame: Unit-level slopes for each row of the `newdata` data frame.
+#' + Warning: Please avoid modifying your dataset between fitting the model and calling a `marginaleffects` function. This can sometimes lead to unexpected results.
+#' + `NULL` (default): Unit-level slopes for each observed value in the dataset (empirical distribution). The dataset is retrieved using [insight::get_data()], which tries to extract data from the environment. This may produce unexpected results if the original data frame has been altered since fitting the model.
 #' + [datagrid()] call to specify a custom grid of regressors. For example:
 #'   - `newdata = datagrid(cyl = c(4, 6))`: `cyl` variable equal to 4 and 6 and other regressors fixed at their means or modes.
 #'   - See the Examples section and the [datagrid()] documentation.
@@ -53,8 +53,7 @@
 #' type, but will typically be a string such as: "response", "link", "probs",
 #' or "zero". When an unsupported string is entered, the model-specific list of
 #' acceptable values is returned in an error message. When `type` is `NULL`, the
-#' default value is used. This default is the first model-related row in
-#' the `marginaleffects:::type_dictionary` dataframe.
+#' first entry in the error message is used by default.
 #' @param slope string indicates the type of slope or (semi-)elasticity to compute:
 #' - "dydx": dY/dX
 #' - "eyex": dY/dX * Y / X
@@ -79,7 +78,7 @@
 #'   - "reference": differences between the estimates in each row and the estimate in the first row.
 #'   - "sequential": difference between an estimate and the estimate in the next row.
 #'   - "revpairwise", "revreference", "revsequential": inverse of the corresponding hypotheses, as described above.
-#' + See the Examples section below and the vignette: https://vincentarelbundock.github.io/marginaleffects/articles/hypothesis.html
+#' + See the Examples section below and the vignette: https://marginaleffects.com/articles/hypothesis.html
 #' @param p_adjust Adjust p-values for multiple comparisons: "holm", "hochberg", "hommel", "bonferroni", "BH", "BY", or "fdr". See [stats::p.adjust]
 #' @param df Degrees of freedom used to compute p values and confidence intervals. A single numeric value between 1 and `Inf`. When `df` is `Inf`, the normal distribution is used. When `df` is finite, the `t` distribution is used. See [insight::get_df] for a convenient function to extract degrees of freedom. Ex: `slopes(model, df = insight::get_df(model))`
 #' @param eps NULL or numeric value which determines the step size to use when
@@ -254,7 +253,7 @@ slopes <- function(model,
     # sanity checks and pre-processing
     model <- sanitize_model(model = model, newdata = newdata, wts = wts, vcov = vcov, calling_function = "marginaleffects", ...)
     sanity_dots(model = model, calling_function = "marginaleffects", ...)
-    type <- sanitize_type(model = model, type = type)
+    type <- sanitize_type(model = model, type = type, calling_function = "slopes")
 
     ############### sanity checks are over
 

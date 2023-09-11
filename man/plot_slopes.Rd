@@ -55,8 +55,7 @@ compute contrasts or slopes. This can differ based on the model
 type, but will typically be a string such as: "response", "link", "probs",
 or "zero". When an unsupported string is entered, the model-specific list of
 acceptable values is returned in an error message. When \code{type} is \code{NULL}, the
-default value is used. This default is the first model-related row in
-the \code{marginaleffects:::type_dictionary} dataframe.}
+first entry in the error message is used by default.}
 
 \item{vcov}{Type of uncertainty estimates to report (e.g., for robust standard errors). Acceptable values:
 \itemize{
@@ -119,8 +118,8 @@ The \code{condition} argument is used to plot conditional slopes, that is, slope
 All unspecified variables are held at their mean or mode. This includes grouping variables in mixed-effects models, so analysts who fit such models may want to specify the groups of interest using the \code{variables} argument, or supply model-specific arguments to compute population-level estimates. See details below.
 See the "Plots" vignette and website for tutorials and information on how to customize plots:
 \itemize{
-\item https://vincentarelbundock.github.io/marginaleffects/articles/plot.html
-\item https://vincentarelbundock.github.io/marginaleffects
+\item https://marginaleffects.com/articles/plot.html
+\item https://marginaleffects.com
 }
 }
 \section{Model-Specific Arguments}{

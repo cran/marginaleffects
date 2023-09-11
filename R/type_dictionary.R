@@ -49,6 +49,7 @@ hxlr,scale
 hxlr,density
 ivpml,pr
 ivpml,xb
+fixest,invlink(link)
 fixest,response
 fixest,link
 hurdle,response
@@ -59,12 +60,14 @@ iv_robust,response
 lm,response
 gam,response
 gam,link
+Gam,invlink(link)
 Gam,response
 Gam,link
 geeglm,response
 geeglm,link
 glimML,response
 glimML,link
+glm,invlink(link)
 glm,response
 glm,link
 glmerMod,response
@@ -101,6 +104,7 @@ mhurdle,E
 mhurdle,Ep
 mhurdle,p
 mlogit,response
+negbin,invlink(link)
 negbin,response
 negbin,link
 ols,lp
@@ -121,6 +125,7 @@ stanreg,response
 stanreg,link
 svyglm,response
 svyglm,link
+svyolr,probs
 tobit,response
 tobit1,expvalue
 tobit1,linpred

@@ -14,8 +14,8 @@
 #'
 #' See the comparisons vignette and package website for worked examples and case studies:
 #'
-#' * <https://vincentarelbundock.github.io/marginaleffects/articles/comparisons.html>
-#' * <https://vincentarelbundock.github.io/marginaleffects/>
+#' * <https://marginaleffects.com/articles/comparisons.html>
+#' * <https://marginaleffects.com/>
 #'
 #' @inheritParams slopes
 #' @inheritParams predictions
@@ -48,7 +48,8 @@
 #'     + `variables = list(gear = "sequential", hp = c(100, 120))`
 #'     + See the Examples section below for more.
 #' @param newdata Grid of predictor values at which we evaluate the comparisons.
-#' + `NULL` (default): Unit-level contrasts for each observed value in the original dataset (empirical distribution). See [insight::get_data()]
+#' + Warning: Please avoid modifying your dataset between fitting the model and calling a `marginaleffects` function. This can sometimes lead to unexpected results.
+#' + `NULL` (default): Unit-level contrasts for each observed value in the dataset (empirical distribution). The dataset is retrieved using [insight::get_data()], which tries to extract data from the environment. This may produce unexpected results if the original data frame has been altered since fitting the model.
 #' + data frame: Unit-level contrasts for each row of the `newdata` data frame.
 #' + string:
 #'   - "mean": Contrasts at the Mean. Contrasts when each predictor is held at its mean or mode.
@@ -239,6 +240,16 @@ comparisons <- function(model,
 
     dots <- list(...)
 
+    # backward compatibility
+    if ("transform_post" %in% names(dots)) {
+        transform <- dots[["transform_post"]]
+        insight::format_warning("The `transform_post` argument is deprecated. Use `transform` instead.")
+    }
+    if ("transform_pre" %in% names(dots)) {
+        comparison <- dots[["transform_pre"]]
+        insight::format_warning("The `transform_pre` argument is deprecated. Use `comparison` instead.")
+    }
+
     # very early, before any use of newdata
     # if `newdata` is a call to `typical` or `counterfactual`, insert `model`
     scall <- rlang::enquo(newdata)
@@ -302,7 +313,7 @@ comparisons <- function(model,
         calling_function = "comparisons",
         ...)
     cross <- sanitize_cross(cross, variables, model)
-    type <- sanitize_type(model = model, type = type)
+    type <- sanitize_type(model = model, type = type, calling_function = "comparisons")
     sanity_comparison(comparison)
     tmp <- sanitize_hypothesis(hypothesis, ...)
     hypothesis <- tmp$hypothesis

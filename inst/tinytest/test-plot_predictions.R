@@ -1,7 +1,7 @@
 source("helpers.R")
 using("marginaleffects")
 if (!requiet("tinysnapshot")) exit_file("tinysnapshot")
-# if (ON_WINDOWS || ON_OSX) exit_file("linux only")
+if (ON_CI || ON_WINDOWS || ON_OSX) exit_file("local linux only")
 using("tinysnapshot")
 requiet("nnet")
 
@@ -19,7 +19,7 @@ p2 <- predictions(
     mod,
     newdata = datagrid(mpg = range, am_fct = 0:1))
 p2$am_fct <- as.numeric(as.character(p2$am_fct))
-setorder(p2, am_fct, mpg)
+data.table::setorder(p2, am_fct, mpg)
 expect_equivalent(p1$estimate, p2$estimate)
 
 p1$condition1 <- as.character(p1$am_fct)
@@ -43,7 +43,7 @@ p2 <- predictions(
     mod,
     newdata = datagrid(mpg = threenum, am_fct = 0:1))
 p2$am_fct <- as.numeric(as.character(p2$am_fct))
-setorder(p2, am_fct, mpg)
+data.table::setorder(p2, am_fct, mpg)
 expect_equivalent(p1$estimate, p2$estimate)
 
 
