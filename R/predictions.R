@@ -267,7 +267,7 @@ predictions <- function(model,
     hypothesis_null <- tmp$hypothesis_null
 
     # multiple imputation
-    if (inherits(model, "mira")) {
+    if (inherits(model, c("mira", "amest"))) {
         out <- process_imputation(model, call_attr)
         return(out)
     }
@@ -275,7 +275,13 @@ predictions <- function(model,
     # if type is NULL, we backtransform if relevant
     type_string <- sanitize_type(model = model, type = type, calling_function = "predictions")
     if (type_string == "invlink(link)") {
-        type_call <- "link"
+        if (is.null(hypothesis)) {
+            type_call <- "link"
+        } else {
+            type_call <- "response"
+            type_string <- "response"
+            insight::format_warning('The `type="invlink"` argument is not available unless `hypothesis` is `NULL` or a single number. The value of the `type` argument was changed to "response" automatically. To suppress this warning, use `type="response"` explicitly in your function call.')
+        }
     } else {
         type_call <- type_string
     }
@@ -385,7 +391,7 @@ predictions <- function(model,
     if (!is.null(out)) {
         return(out)
     }
-    
+
 
     # pre-building the model matrix can speed up repeated predictions
     newdata <- get_model_matrix_attribute(model, newdata)

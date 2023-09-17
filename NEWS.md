@@ -1,5 +1,18 @@
 # News
 
+## 0.15.1
+
+* `hypotheses()`: The `FUN` argument handles `group` columns gracefully.
+* Native support for `Amelia` for multiple imputation.
+
+Documentation:
+
+* New section on "Complex aggregations" in the Hypothesis testing vignette.
+
+Bug fix:
+
+* Results of the `predictions()` function could be inaccurate when (a) running version 0.15.0, (b) `type` is `NULL` or `invlink(link)`, (c) model is `glm()`, and (d) the `hypothesis` argument is non-numeric. Thanks to @strengejacke for report [#903](https://github.com/vincentarelbundock/marginaleffects/issues/903)
+
 ## 0.15.0
 
 New:
