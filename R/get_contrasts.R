@@ -65,7 +65,15 @@ get_contrasts <- function(model,
             model,
             type = type,
             newdata = lo,
-            ...))[["value"]]
+            ...))
+
+        # tidymodels
+        if (inherits(pred_lo$error, "rlang_error") &&
+            isTRUE(grepl("the object should be", pred_lo$error$message))) {
+                insight::format_error(pred_lo$error$message)
+        } else {
+            pred_lo <- pred_lo[["value"]]
+        }
 
         pred_hi <- myTryCatch(get_predict(
             model,
@@ -105,7 +113,12 @@ get_contrasts <- function(model,
     data.table::setDT(original)
 
     if (!inherits(pred_hi, "data.frame") || !inherits(pred_lo, "data.frame") || !inherits(pred_or, c("data.frame", "NULL"))) {
-        insight::format_error("Unable to compute predicted values with this model. This error can arise when `insight::get_data()` is unable to extract the dataset from the model object, or when the data frame was modified since fitting the model. You can try to supply a different dataset to the `newdata` argument. If this does not work, you can file a report on the Github Issue Tracker: https://github.com/vincentarelbundock/marginaleffects/issues")
+        msg <- "Unable to compute predicted values with this model. This error can arise when `insight::get_data()` is unable to extract the dataset from the model object, or when the data frame was modified since fitting the model. You can try to supply a different dataset to the `newdata` argument."
+        if (inherits(pred_hi, "try-error")) {
+            msg <-c(msg, "", "In addition, this error message was raised:", "", as.character(pred_hi)) 
+        }
+        msg <- c(msg, "", "Bug Tracker: https://github.com/vincentarelbundock/marginaleffects/issues")
+        insight::format_error(msg)
     }
 
     # output data.frame
@@ -189,10 +202,15 @@ get_contrasts <- function(model,
     # elasticity requires the original (properly aligned) predictor values
     # this will discard factor variables which are duplicated, so in principle
     # it should be the "correct" size
-    elasticities <- Filter(
-        function(x) is.character(x$comparison) && x$comparison %in% elasticities,
-        variables)
+    # also need `x` when `x` is in the signature of the `comparison` custom function
+
+    FUN <- function(z) {
+        (is.character(z$comparison) && z$comparison %in% elasticities) ||
+        (is.function(z$comparison) && "x" %in% names(formals(z$comparison)))
+    }
+    elasticities <- Filter(FUN, variables)
     elasticities <- lapply(elasticities, function(x) x$name)
+
     if (length(elasticities) > 0) {
         # assigning a subset of "original" to "idx1" takes time and memory
         # better to do this here for most columns and add the "v" column only
@@ -284,7 +302,7 @@ get_contrasts <- function(model,
     # unknown arguments
     # singleton vs vector
     # different terms use different functions
-    safefun <- function(hi, lo, y, n, term, cross, wts, tmp_idx) {
+    safefun <- function(hi, lo, y, n, term, cross, wts, tmp_idx, newdata) {
         tn <- term[1]
         eps <- variables[[tn]]$eps
         # when cross=TRUE, sanitize_comparison enforces a single function
@@ -298,7 +316,8 @@ get_contrasts <- function(model,
             "lo" = lo,
             "y" = y,
             "eps" = eps,
-            "w" = wts)
+            "w" = wts,
+            "newdata" = newdata)
 
         # sometimes x is exactly the same length, but not always
         args[["x"]] <- elasticities[[tn]][tmp_idx]
@@ -357,7 +376,8 @@ get_contrasts <- function(model,
                     term = out$term[idx],
                     cross = cross,
                     wts = out$marginaleffects_wts_internal[idx],
-                    tmp_idx = out$tmp_idx)
+                    tmp_idx = out$tmp_idx,
+                    newdata = newdata)
             }
         }
 
@@ -394,7 +414,8 @@ get_contrasts <- function(model,
             term = term,
             cross = cross,
             wts = marginaleffects_wts_internal,
-            tmp_idx = tmp_idx),
+            tmp_idx = tmp_idx,
+            newdata = newdata),
         keyby = idx]
         out[, tmp_idx := NULL]
 

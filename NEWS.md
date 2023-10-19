@@ -1,5 +1,28 @@
 # News
 
+## 0.16.0
+
+Machine learning support:
+
+* `tidymodels` package
+* `mlr3` package
+
+Misc:
+
+* New vignettes:
+  - Inverse Probability Weighting 
+  - Machine Learning
+  - Matching
+* Add support for `hypotheses()` to `inferences()`. Thanks to @Tristan-Siegfried for code contribution #908.
+* Support `survival::survreg()`. Thanks to Carlisle Rainey for Report #911.
+* `column_names` argument in `print.marginaleffects()` to suppress the printed column names at the bottom of the printout.
+* The function supplied to the `comparison` argument of the `comparisons()` function can now operate on `x` and on `newdata` directly (e.g., to check the number of observations).
+* More informative errors from `predict()`.
+
+Bugs:
+
+* Some `gamlss` models generated an error related to the `what` argument. Thanks to @DHLocke for Issue #933
+
 ## 0.15.1
 
 * `hypotheses()`: The `FUN` argument handles `group` columns gracefully.
@@ -417,7 +440,7 @@ New or improved vignettes:
 
 * Hypothesis Tests and Custom Contrasts using the Delta Method: https://marginaleffects.com/articles/hypothesis.html
 * Multiple Imputation: https://marginaleffects.com/articles/multiple_imputation.html
-* Causal Inference with the g-Formula: https://marginaleffects.com/articles/gformula.html
+* Causal Inference with the g-Formula: https://marginaleffects.com/articles/gcomputation.html
  (Thanks to Rohan Kapre for the idea)
 
 Deprecated or renamed arguments:

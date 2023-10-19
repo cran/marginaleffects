@@ -274,7 +274,7 @@ predictions <- function(model,
 
     # if type is NULL, we backtransform if relevant
     type_string <- sanitize_type(model = model, type = type, calling_function = "predictions")
-    if (type_string == "invlink(link)") {
+    if (identical(type_string, "invlink(link)")) {
         if (is.null(hypothesis)) {
             type_call <- "link"
         } else {
@@ -384,7 +384,7 @@ predictions <- function(model,
 
     # Bootstrap
     out <- inferences_dispatch(
-        FUN = predictions,
+        INF_FUN = predictions,
         model = model, newdata = newdata, vcov = vcov, variables = variables, type = type_call, by = by,
         conf_level = conf_level,
         byfun = byfun, wts = wts, transform = transform_original, hypothesis = hypothesis, ...)
@@ -451,7 +451,7 @@ predictions <- function(model,
     V <- NULL
     J <- NULL
     if (!isFALSE(vcov)) {
-        V <- get_vcov(model, vcov = vcov, ...)
+        V <- get_vcov(model, vcov = vcov, type = type, ...)
 
         # Delta method
         if (!"std.error" %in% colnames(tmp) && is.null(draws)) {
@@ -596,10 +596,21 @@ get_predictions <- function(model,
 
     if (inherits(out$value, "data.frame")) {
         out <- out$value
+
     } else {
+
+        # tidymodels
+        if (inherits(out$error, "rlang_error") &&
+            isTRUE(grepl("the object should be", out$error$message))) {
+                insight::format_error(out$error$message)
+        }
+
         msg <- "Unable to compute predicted values with this model. You can try to supply a different dataset to the `newdata` argument."
         if (!is.null(out$error)) {
             msg <- c(paste(msg, "This error was also raised:"), "", out$error$message)
+        }
+        if (inherits(out$value, "try-error")) {
+            msg <- c(paste(msg, "", "This error was also raised:"), "", as.character(out$value))
         }
         msg <- c(msg, "", "Bug Tracker: https://github.com/vincentarelbundock/marginaleffects/issues")
         insight::format_error(msg)
@@ -696,7 +707,7 @@ avg_predictions <- function(model,
 
     # Bootstrap
     out <- inferences_dispatch(
-        FUN = avg_predictions,
+        INF_FUN = avg_predictions,
         model = model, newdata = newdata, vcov = vcov, variables = variables, type = type, by = by,
         conf_level = conf_level,
         byfun = byfun, wts = wts, transform = transform, hypothesis = hypothesis, ...)

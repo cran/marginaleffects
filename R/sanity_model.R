@@ -62,6 +62,7 @@ sanity_model_supported_class <- function(model) {
         "ivreg",
         "iv_robust",
         "ivpml",
+        "Learner",
         "lm",
         "lme",
         "lmerMod",
@@ -80,6 +81,7 @@ sanity_model_supported_class <- function(model) {
         "mhurdle",
         "mira",
         "mlogit",
+        "model_fit",
         c("multinom", "nnet"),
         c("negbin", "glm", "lm"),
         "nls",
@@ -98,10 +100,12 @@ sanity_model_supported_class <- function(model) {
         "speedglm",
         "speedlm",
         "stanreg",
+        "survreg",
         "svyolr",
         c("tobit", "survreg"),
         "tobit1",
         "truncreg",
+        "workflow",
         "zeroinfl"))
     flag <- FALSE
     for (sup in supported) {
@@ -127,11 +131,6 @@ sanitize_model <- function(model,
                            newdata = NULL,
                            vcov = NULL,
                            ...) {
-
-    # tidymodels appear to store the model fit in `model[["fit"]]`
-    if (inherits(model, "model_fit") && "fit" %in% names(model)) {
-        model <- model[["fit"]]
-    }
 
     model <- sanitize_model_specific(model, vcov = vcov, newdata = newdata, ...)
     sanity_model_supported_class(model)

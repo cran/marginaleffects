@@ -13,6 +13,7 @@
   ncols = getOption("marginaleffects_print_ncols", default = 30),
   style = getOption("marginaleffects_print_style", default = "summary"),
   type = getOption("marginaleffects_print_type", default = TRUE),
+  column_names = getOption("marginaleffects_print_column_names", default = TRUE),
   ...
 )
 }
@@ -32,6 +33,8 @@
 \item{style}{"summary" or "data.frame"}
 
 \item{type}{boolean: should the type be printed?}
+
+\item{column_names}{boolean: should the column names be printed?}
 
 \item{...}{Other arguments are currently ignored.}
 }

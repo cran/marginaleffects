@@ -4,11 +4,26 @@
 #' @param type character vector
 #' @noRd
 sanitize_type <- function(model, type, calling_function = "raw") {
+    # mlr3
+    if (inherits(model, "Learner")) {
+        if (is.null(type)) type <- "response"
+        valid <- setdiff(model$predict_types, "se")
+        checkmate::assert_choice(type, choices = valid, null.ok = TRUE)
+        return(type)
+    }
+
     checkmate::assert_character(type, len = 1, null.ok = TRUE)
-    cl <- class(model)[1]
+    
+    if (inherits(model, "model_fit")) {
+        cl <- "model_fit"
+    } else {
+        cl <- class(model)[1]
+    }
+
     if (!cl %in% type_dictionary$class) {
         cl <- "other"
     }
+
     dict <- type_dictionary
     # raw is often invoked by `get_predict()`, which is required for {clarify} and others.
     # we only allow invlink(link) in predictions() and marginal_means(), which are handled by {marginaleffects}
@@ -28,5 +43,6 @@ sanitize_type <- function(model, type, calling_function = "raw") {
     if (is.null(type)) {
         type <- dict$type[1]
     }
+
     return(type)
 }

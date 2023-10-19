@@ -98,6 +98,12 @@ mclogit,response
 mclogit,latent
 mclogit,link
 MCMCglmm,response
+model_fit,numeric
+model_fit,prob
+model_fit,class
+workflow,numeric
+workflow,prob
+workflow,class
 multinom,probs
 multinom,latent
 mhurdle,E
@@ -123,6 +129,9 @@ speedglm,response
 speedglm,link
 stanreg,response
 stanreg,link
+survreg,response
+survreg,link
+survreg,quantile
 svyglm,response
 svyglm,link
 svyolr,probs

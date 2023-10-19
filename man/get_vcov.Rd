@@ -2,7 +2,8 @@
 % Please edit documentation in R/get_vcov.R, R/methods_MCMCglmm.R,
 %   R/methods_afex.R, R/methods_aod.R, R/methods_biglm.R, R/methods_brms.R,
 %   R/methods_gamlss.R, R/methods_glmmTMB.R, R/methods_inferences_simulation.R,
-%   R/methods_mhurdle.R, R/methods_rms.R, R/methods_scam.R
+%   R/methods_mhurdle.R, R/methods_mlr3.R, R/methods_rms.R, R/methods_scam.R,
+%   R/methods_tidymodels.R
 \name{get_vcov}
 \alias{get_vcov}
 \alias{get_vcov.default}
@@ -15,8 +16,11 @@
 \alias{get_vcov.glmmTMB}
 \alias{get_vcov.inferences_simulation}
 \alias{get_vcov.mhurdle}
+\alias{get_vcov.Learner}
 \alias{get_vcov.orm}
 \alias{get_vcov.scam}
+\alias{get_vcov.model_fit}
+\alias{get_vcov.workflow}
 \title{Get a named variance-covariance matrix from a model object (internal function)}
 \usage{
 get_vcov(model, ...)
@@ -41,9 +45,15 @@ get_vcov(model, ...)
 
 \method{get_vcov}{mhurdle}(model, vcov = NULL, ...)
 
+\method{get_vcov}{Learner}(model, ...)
+
 \method{get_vcov}{orm}(model, vcov = NULL, ...)
 
 \method{get_vcov}{scam}(model, vcov = NULL, ...)
+
+\method{get_vcov}{model_fit}(model, type = NULL, ...)
+
+\method{get_vcov}{workflow}(model, type = NULL, ...)
 }
 \arguments{
 \item{model}{Model object}
@@ -72,6 +82,13 @@ arguments.}
 \item Square covariance matrix
 \item Function which returns a covariance matrix (e.g., \code{stats::vcov(model)})
 }}
+
+\item{type}{string indicates the type (scale) of the predictions used to
+compute contrasts or slopes. This can differ based on the model
+type, but will typically be a string such as: "response", "link", "probs",
+or "zero". When an unsupported string is entered, the model-specific list of
+acceptable values is returned in an error message. When \code{type} is \code{NULL}, the
+first entry in the error message is used by default.}
 }
 \value{
 A named square matrix of variance and covariances. The names must match the coefficient names.

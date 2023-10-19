@@ -15,6 +15,7 @@
 #' @param ncols The maximum number of column names to display at the bottom of the printed output.
 #' @param style "summary" or "data.frame"
 #' @param type boolean: should the type be printed?
+#' @param column_names boolean: should the column names be printed?
 #' @param ... Other arguments are currently ignored.
 #' @export
 #' @examples
@@ -37,6 +38,7 @@ print.marginaleffects <- function(x,
                                   ncols = getOption("marginaleffects_print_ncols", default = 30),
                                   style = getOption("marginaleffects_print_style", default = "summary"),
                                   type = getOption("marginaleffects_print_type", default = TRUE),
+                                  column_names = getOption("marginaleffects_print_column_names", default = TRUE),
                                   ...) {
 
 
@@ -242,7 +244,7 @@ print.marginaleffects <- function(x,
         cat(sprintf("Results averaged over levels of: %s",
                     paste(vg, collapse = ", ")), "\n")
     }
-    if (ncol(x) <= ncols) {
+    if (ncol(x) <= ncols && isTRUE(column_names)) {
         cat("Columns:", paste(colnames(x), collapse = ", "), "\n")
     }
     if (isTRUE(type) && !is.null(attr(x, "type"))) {
