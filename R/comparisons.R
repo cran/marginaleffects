@@ -14,7 +14,7 @@
 #'
 #' See the comparisons vignette and package website for worked examples and case studies:
 #'
-#' * <https://marginaleffects.com/articles/comparisons.html>
+#' * <https://marginaleffects.com/vignettes/comparisons.html>
 #' * <https://marginaleffects.com/>
 #'
 #' @inheritParams slopes
@@ -31,14 +31,17 @@
 #'     * "minmax": The highest and lowest levels of a factor.
 #'     * "revpairwise", "revreference", "revsequential": inverse of the corresponding hypotheses.
 #'     * Vector of length 2 with the two values to compare.
+#'     * Data frame with the same number of rows as `newdata`, with two columns of "lo" and "hi" values to compare.
+#'     * Function that accepts a vector and returns a data frame with two columns of "lo" and "hi" values to compare. See examples below.
 #'   - Logical variables:
 #'     * NULL: contrast between TRUE and FALSE
+#'     * Data frame with the same number of rows as `newdata`, with two columns of "lo" and "hi" values to compare.
+#'     * Function that accepts a vector and returns a data frame with two columns of "lo" and "hi" values to compare. See examples below.
 #'   - Numeric variables:
-#'     * Numeric of length 1: Contrast for a gap of `x`, computed at the observed value plus and minus `x / 2`. For example, estimating a `+1` contrast compares adjusted predictions when the regressor is equal to its observed value minus 0.5 and its observed value plus 0.5.
-#'     * Numeric of length equal to the number of rows in `newdata`: Same as above, but the contrast can be customized for each row of `newdata`.
-#'     * Numeric vector of length 2: Contrast between the 2nd element and the 1st element of the `x` vector.
-#'     * Data frame with the same number of rows as `newdata`, with two columns of "low" and "high" values to compare.
-#'     * Function which accepts a numeric vector and returns a data frame with two columns of "low" and "high" values to compare. See examples below.
+#'     * Numeric of length 1: Forward contrast for a gap of `x`, computed between the observed value and the observed value plus `x`. Users can set a global option to get a "center" or "backward" contrast instead: `options(marginaleffects_contrast_direction="center")`
+#'     * Numeric vector of length 2: Contrast between the largest and the smallest elements of the `x` vector.
+#'     * Data frame with the same number of rows as `newdata`, with two columns of "lo" and "hi" values to compare.
+#'     * Function that accepts a vector and returns a data frame with two columns of "lo" and "hi" values to compare. See examples below.
 #'     * "iqr": Contrast across the interquartile range of the regressor.
 #'     * "sd": Contrast across one standard deviation around the regressor mean.
 #'     * "2sd": Contrast across two standard deviations around the regressor mean.
@@ -46,6 +49,7 @@
 #'   - Examples:
 #'     + `variables = list(gear = "pairwise", hp = 10)`
 #'     + `variables = list(gear = "sequential", hp = c(100, 120))`
+#'     + `variables = list(hp = \(x) data.frame(low = x - 5, high = x + 10))`
 #'     + See the Examples section below for more.
 #' @param newdata Grid of predictor values at which we evaluate the comparisons.
 #' + Warning: Please avoid modifying your dataset between fitting the model and calling a `marginaleffects` function. This can sometimes lead to unexpected results.
@@ -509,6 +513,10 @@ comparisons <- function(model,
         model = model)
 
     # clean rows and columns
+    # WARNING: we cannot sort rows at the end because `get_hypothesis()` is
+    # applied in the middle, and it must already be sorted in the final order,
+    # otherwise, users cannot know for sure what is going to be the first and
+    # second rows, etc.
     mfx <- sort_columns(mfx, newdata, by)
 
     # bayesian draws

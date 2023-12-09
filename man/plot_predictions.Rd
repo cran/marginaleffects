@@ -26,14 +26,14 @@ plot_predictions(
 
 \item{condition}{Conditional predictions
 \itemize{
-\item Character vector (max length 3): Names of the predictors to display.
-\item Named list (max length 3): List names correspond to predictors. List elements can be:
+\item Character vector (max length 4): Names of the predictors to display.
+\item Named list (max length 4): List names correspond to predictors. List elements can be:
 \itemize{
 \item Numeric vector
 \item Function which returns a numeric vector or a set of unique categorical values
 \item Shortcut strings for common reference values: "minmax", "quartile", "threenum"
 }
-\item 1: x-axis. 2: color/shape. 3: facets.
+\item 1: x-axis. 2: color/shape. 3: facet (wrap if no fourth variable, otherwise cols of grid). 4: facet (rows of grid).
 \item Numeric variables in positions 2 and 3 are summarized by Tukey's five numbers \code{?stats::fivenum}
 }}
 
@@ -109,7 +109,7 @@ All unspecified variables are held at their mean or mode. This includes grouping
 
 See the "Plots" vignette and website for tutorials and information on how to customize plots:
 \itemize{
-\item https://marginaleffects.com/articles/plot.html
+\item https://marginaleffects.com/vignettes/plot.html
 \item https://marginaleffects.com
 }
 }
@@ -135,6 +135,18 @@ https://github.com/vincentarelbundock/marginaleffects/issues\tabular{llll}{
     \tab  \tab \code{allow.new.levels} \tab \link[robustlmm:rlmerMod-class]{robustlmm::predict.rlmerMod} \cr
    \code{MCMCglmm} \tab \code{MCMCglmm} \tab \code{ndraws} \tab  \cr
 }
+}
+
+\section{Prediction types}{
+
+
+The \code{type} argument determines the scale of the predictions used to compute quantities of interest with functions from the \code{marginaleffects} package. Admissible values for \code{type} depend on the model object. When users specify an incorrect value for \code{type}, \code{marginaleffects} will raise an informative error with a list of valid \code{type} values for the specific model object. The first entry in the list in that error message is the default type.
+
+The \code{invlink(link)} is a special type defined by \code{marginaleffects}. It is available for some (but not all) models and functions. With this link type, we first compute predictions on the link scale, then we use the inverse link function to backtransform the predictions to the response scale. This is useful for models with non-linear link functions as it can ensure that confidence intervals stay within desirable bounds, ex: 0 to 1 for a logit model. Note that an average of estimates with \code{type="invlink(link)"} will not always be equivalent to the average of estimates with \code{type="response"}.
+
+Some of the most common \code{type} values are:
+
+response, link, E, Ep, average, class, conditional, count, cum.prob, cumprob, density, disp, ev, expected, expvalue, fitted, invlink(link), latent, linear.predictor, linpred, location, lp, mean, numeric, p, ppd, pr, precision, prediction, prob, probability, probs, quantile, risk, scale, survival, unconditional, utility, variance, xb, zero, zlink, zprob
 }
 
 \examples{

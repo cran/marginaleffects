@@ -86,18 +86,21 @@ avg_comparisons(
 \item "minmax": The highest and lowest levels of a factor.
 \item "revpairwise", "revreference", "revsequential": inverse of the corresponding hypotheses.
 \item Vector of length 2 with the two values to compare.
+\item Data frame with the same number of rows as \code{newdata}, with two columns of "lo" and "hi" values to compare.
+\item Function that accepts a vector and returns a data frame with two columns of "lo" and "hi" values to compare. See examples below.
 }
 \item Logical variables:
 \itemize{
 \item NULL: contrast between TRUE and FALSE
+\item Data frame with the same number of rows as \code{newdata}, with two columns of "lo" and "hi" values to compare.
+\item Function that accepts a vector and returns a data frame with two columns of "lo" and "hi" values to compare. See examples below.
 }
 \item Numeric variables:
 \itemize{
-\item Numeric of length 1: Contrast for a gap of \code{x}, computed at the observed value plus and minus \code{x / 2}. For example, estimating a \code{+1} contrast compares adjusted predictions when the regressor is equal to its observed value minus 0.5 and its observed value plus 0.5.
-\item Numeric of length equal to the number of rows in \code{newdata}: Same as above, but the contrast can be customized for each row of \code{newdata}.
-\item Numeric vector of length 2: Contrast between the 2nd element and the 1st element of the \code{x} vector.
-\item Data frame with the same number of rows as \code{newdata}, with two columns of "low" and "high" values to compare.
-\item Function which accepts a numeric vector and returns a data frame with two columns of "low" and "high" values to compare. See examples below.
+\item Numeric of length 1: Forward contrast for a gap of \code{x}, computed between the observed value and the observed value plus \code{x}. Users can set a global option to get a "center" or "backward" contrast instead: \code{options(marginaleffects_contrast_direction="center")}
+\item Numeric vector of length 2: Contrast between the largest and the smallest elements of the \code{x} vector.
+\item Data frame with the same number of rows as \code{newdata}, with two columns of "lo" and "hi" values to compare.
+\item Function that accepts a vector and returns a data frame with two columns of "lo" and "hi" values to compare. See examples below.
 \item "iqr": Contrast across the interquartile range of the regressor.
 \item "sd": Contrast across one standard deviation around the regressor mean.
 \item "2sd": Contrast across two standard deviations around the regressor mean.
@@ -107,6 +110,7 @@ avg_comparisons(
 \itemize{
 \item \code{variables = list(gear = "pairwise", hp = 10)}
 \item \code{variables = list(gear = "sequential", hp = c(100, 120))}
+\item \verb{variables = list(hp = \\(x) data.frame(low = x - 5, high = x + 10))}
 \item See the Examples section below for more.
 }
 }
@@ -195,7 +199,7 @@ first entry in the error message is used by default.}
 \item "sequential": difference between an estimate and the estimate in the next row.
 \item "revpairwise", "revreference", "revsequential": inverse of the corresponding hypotheses, as described above.
 }
-\item See the Examples section below and the vignette: https://marginaleffects.com/articles/hypothesis.html
+\item See the Examples section below and the vignette: https://marginaleffects.com/vignettes/hypothesis.html
 }}
 
 \item{equivalence}{Numeric vector of length 2: bounds used for the two-one-sided test (TOST) of equivalence, and for the non-inferiority and non-superiority tests. See Details section below.}
@@ -260,7 +264,7 @@ slopes, elasticities, etc.
 
 See the comparisons vignette and package website for worked examples and case studies:
 \itemize{
-\item \url{https://marginaleffects.com/articles/comparisons.html}
+\item \url{https://marginaleffects.com/vignettes/comparisons.html}
 \item \url{https://marginaleffects.com/}
 }
 }
@@ -283,11 +287,11 @@ Standard errors for all quantities estimated by \code{marginaleffects} can be ob
 
 See the "Standard Errors and Confidence Intervals" vignette on the \code{marginaleffects} website for more details on the computation of standard errors:
 
-https://marginaleffects.com/articles/uncertainty.html
+https://marginaleffects.com/vignettes/uncertainty.html
 
 Note that the \code{inferences()} function can be used to compute uncertainty estimates using a bootstrap or simulation-based inference. See the vignette:
 
-https://marginaleffects.com/articles/bootstrap.html
+https://marginaleffects.com/vignettes/bootstrap.html
 }
 
 \section{Model-Specific Arguments}{
@@ -326,7 +330,7 @@ is the predictor in the original data. \code{eps} is the step size to use to
 compute derivatives and elasticities.\tabular{ll}{
    Shortcut \tab Function \cr
    difference \tab \(hi, lo) hi - lo \cr
-   differenceavg \tab \(hi, lo) mean(hi) - mean(lo) \cr
+   differenceavg \tab \(hi, lo) mean(hi - lo) \cr
    dydx \tab \(hi, lo, eps) (hi - lo)/eps \cr
    eyex \tab \(hi, lo, eps, y, x) (hi - lo)/eps * (x/y) \cr
    eydx \tab \(hi, lo, eps, y, x) ((hi - lo)/eps)/y \cr
@@ -342,7 +346,7 @@ compute derivatives and elasticities.\tabular{ll}{
    lnor \tab \(hi, lo) log((hi/(1 - hi))/(lo/(1 - lo))) \cr
    lnoravg \tab \(hi, lo) log((mean(hi)/(1 - mean(hi)))/(mean(lo)/(1 - mean(lo)))) \cr
    lift \tab \(hi, lo) (hi - lo)/lo \cr
-   liftavg \tab \(hi, lo) (mean(hi) - mean(lo))/mean(lo) \cr
+   liftavg \tab \(hi, lo) (mean(hi - lo))/mean(lo) \cr
    expdydx \tab \(hi, lo, eps) ((exp(hi) - exp(lo))/exp(eps))/eps \cr
    expdydxavg \tab \(hi, lo, eps) mean(((exp(hi) - exp(lo))/exp(eps))/eps) \cr
 }
@@ -414,7 +418,7 @@ The \code{invlink(link)} is a special type defined by \code{marginaleffects}. It
 
 Some of the most common \code{type} values are:
 
-response, link, E, Ep, average, class, conditional, count, cum.prob, cumprob, density, disp, expected, expvalue, fitted, invlink(link), latent, linear.predictor, linpred, location, lp, mean, numeric, p, pr, precision, prediction, prob, probability, probs, quantile, risk, scale, survival, unconditional, utility, variance, xb, zero, zlink, zprob
+response, link, E, Ep, average, class, conditional, count, cum.prob, cumprob, density, disp, ev, expected, expvalue, fitted, invlink(link), latent, linear.predictor, linpred, location, lp, mean, numeric, p, ppd, pr, precision, prediction, prob, probability, probs, quantile, risk, scale, survival, unconditional, utility, variance, xb, zero, zlink, zprob
 }
 
 \examples{

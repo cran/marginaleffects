@@ -10,6 +10,8 @@ other,class
 other,link
 bam,response
 bam,link
+bart,ev
+bart,ppd
 betareg,response
 betareg,link
 betareg,precision
@@ -65,6 +67,7 @@ Gam,response
 Gam,link
 geeglm,response
 geeglm,link
+Gls,lp
 glimML,response
 glimML,link
 glm,invlink(link)

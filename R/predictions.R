@@ -10,7 +10,7 @@
 #'
 #' See the predictions vignette and package website for worked examples and case studies:
 
-#' * <https://marginaleffects.com/articles/predictions.html>
+#' * <https://marginaleffects.com/vignettes/predictions.html>
 #' * <https://marginaleffects.com/>
 #'
 #' @rdname predictions
@@ -562,11 +562,6 @@ predictions <- function(model,
         attr(out, "nchains") <- brms::nchains(model)
     }
 
-    if (inherits(model, "brmsfit")) {
-        insight::check_if_installed("brms")
-        attr(out, "nchains") <- brms::nchains(model)
-    }
-
     if ("group" %in% names(out) && all(out$group == "main_marginaleffect")) {
         out$group <- NULL
     }
@@ -664,6 +659,10 @@ get_predictions <- function(model,
     # hypothesis tests using the delta method
     out <- get_hypothesis(out, hypothesis = hypothesis, by = by)
 
+    # WARNING: we cannot sort rows at the end because `get_hypothesis()` is
+    # applied in the middle, and it must already be sorted in the final order,
+    # otherwise, users cannot know for sure what is going to be the first and
+    # second rows, etc.
     out <- sort_columns(out, newdata, by)
 
     return(out)

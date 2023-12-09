@@ -27,6 +27,7 @@ sanity_model_supported_class <- function(model) {
     supported <- append(custom_classes, list(
         "afex_aov",
         "amest", #package: Amelia
+        "bart", # package: dbarts
         "betareg",
         "bglmerMod",
         "blmerMod",
@@ -48,6 +49,7 @@ sanity_model_supported_class <- function(model) {
         c("gam", "glm", "lm"), # package: mgcv
         c("gamlss", "gam", "glm", "lm"), # package: gamlss
         c("geeglm", "gee", "glm"),
+        c("Gls", "rms", "gls"),
         "glm",
         "gls",
         "glmerMod",
@@ -83,6 +85,7 @@ sanity_model_supported_class <- function(model) {
         "mlogit",
         "model_fit",
         c("multinom", "nnet"),
+        "mvgam",
         c("negbin", "glm", "lm"),
         "nls",
         c("ols", "rms", "lm"),

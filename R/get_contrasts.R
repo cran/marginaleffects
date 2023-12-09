@@ -24,7 +24,7 @@ get_contrasts <- function(model,
     data.table::setDF(original)
 
     # brms models need to be combined to use a single seed when sample_new_levels="gaussian"
-    if (inherits(model, "brmsfit")) {
+    if (inherits(model, c("brmsfit", "bart"))) {
 
         if (!"rowid" %in% colnames(lo)) {
             lo$rowid <- hi$rowid <- seq_len(nrow(lo))
@@ -79,7 +79,14 @@ get_contrasts <- function(model,
             model,
             type = type,
             newdata = hi,
-            ...))[["value"]]
+            ...))
+
+        # otherwise we keep the full error object instead of extracting the value
+        if (inherits(pred_hi$value, "data.frame")) {
+            pred_hi <- pred_hi$value
+        } else {
+            pred_hi <- pred_hi$error
+        }
     }
 
     # predict() takes up 2/3 of the wall time. This call is only useful when we
@@ -114,7 +121,7 @@ get_contrasts <- function(model,
 
     if (!inherits(pred_hi, "data.frame") || !inherits(pred_lo, "data.frame") || !inherits(pred_or, c("data.frame", "NULL"))) {
         msg <- "Unable to compute predicted values with this model. This error can arise when `insight::get_data()` is unable to extract the dataset from the model object, or when the data frame was modified since fitting the model. You can try to supply a different dataset to the `newdata` argument."
-        if (inherits(pred_hi, "try-error")) {
+        if (inherits(pred_hi, c("try-error", "error"))) {
             msg <-c(msg, "", "In addition, this error message was raised:", "", as.character(pred_hi)) 
         }
         msg <- c(msg, "", "Bug Tracker: https://github.com/vincentarelbundock/marginaleffects/issues")
@@ -145,7 +152,7 @@ get_contrasts <- function(model,
 
     # cross-contrasts or weird cases
     } else {
-        out <- merge(out, newdata, by = "rowid", all.x = TRUE)
+        out <- merge(out, newdata, by = "rowid", all.x = TRUE, sort = FALSE)
         if (isTRUE(nrow(out) == nrow(lo))) {
             tmp <- data.table(lo)[, .SD, .SDcols = patterns("^contrast|marginaleffects_wts_internal")]
             out <- cbind(out, tmp)
@@ -170,7 +177,7 @@ get_contrasts <- function(model,
             if (all(colnames(by) %in% c("by", colnames(newdata)))) {
                 nd <- c("rowid", setdiff(colnames(by), "by"))
                 nd <- newdata[, nd, drop = FALSE]
-                out <- merge(out, nd, by = "rowid")
+                out <- merge(out, nd, by = "rowid", sort = FALSE)
                 tmp <- setdiff(intersect(colnames(out), colnames(by)), "by")
             } else {
                 insight::format_error("The column in `by` must be present in `newdata`.")
@@ -238,7 +245,7 @@ get_contrasts <- function(model,
                 idx1[, (v) := original[[v]]]
                 setnames(idx1, old = v, new = "elast")
                 on_cols <- intersect(colnames(idx1), colnames(idx2))
-                idx2 <- unique(merge(idx2, idx1, by = on_cols)[, elast := elast])
+                idx2 <- unique(merge(idx2, idx1, by = on_cols, sort = FALSE)[, elast := elast])
             }
             elasticities[[v]] <- idx2$elast
         }
@@ -376,7 +383,7 @@ get_contrasts <- function(model,
                     term = out$term[idx],
                     cross = cross,
                     wts = out$marginaleffects_wts_internal[idx],
-                    tmp_idx = out$tmp_idx,
+                    tmp_idx = out$tmp_idx[idx],
                     newdata = newdata)
             }
         }

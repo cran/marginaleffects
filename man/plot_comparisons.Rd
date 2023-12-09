@@ -29,14 +29,14 @@ plot_comparisons(
 
 \item{condition}{Conditional slopes
 \itemize{
-\item Character vector (max length 3): Names of the predictors to display.
-\item Named list (max length 3): List names correspond to predictors. List elements can be:
+\item Character vector (max length 4): Names of the predictors to display.
+\item Named list (max length 4): List names correspond to predictors. List elements can be:
 \itemize{
 \item Numeric vector
 \item Function which returns a numeric vector or a set of unique categorical values
 \item Shortcut strings for common reference values: "minmax", "quartile", "threenum"
 }
-\item 1: x-axis. 2: color/shape. 3: facets.
+\item 1: x-axis. 2: color/shape. 3: facet (wrap if no fourth variable, otherwise cols of grid). 4: facet (rows of grid).
 \item Numeric variables in positions 2 and 3 are summarized by Tukey's five numbers \code{?stats::fivenum}.
 }}
 
@@ -126,7 +126,7 @@ The \code{condition} argument is used to plot conditional comparisons, that is, 
 All unspecified variables are held at their mean or mode. This includes grouping variables in mixed-effects models, so analysts who fit such models may want to specify the groups of interest using the \code{variables} argument, or supply model-specific arguments to compute population-level estimates. See details below.
 See the "Plots" vignette and website for tutorials and information on how to customize plots:
 \itemize{
-\item https://marginaleffects.com/articles/plot.html
+\item https://marginaleffects.com/vignettes/plot.html
 \item https://marginaleffects.com
 }
 }

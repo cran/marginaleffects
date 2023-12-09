@@ -5,7 +5,7 @@
 #' holding other numeric predictors at their means. To learn more, read the marginal means vignette, visit the
 #' package website, or scroll down this page for a full list of vignettes:
 #'
-#' * <https://marginaleffects.com/articles/marginalmeans.html>
+#' * <https://marginaleffects.com/vignettes/marginalmeans.html>
 #' * <https://marginaleffects.com/>
 #'
 #' @param variables Focal variables
@@ -222,8 +222,8 @@ marginal_means <- function(model,
 
 
     sanity_dots(model = model, ...)
-    if (inherits(model, "brmsfit")) {
-        insight::format_error("`brmsfit` objects are yet not supported by the `marginal_means` function.")
+    if (inherits(model, c("brmsfit", "bart"))) {
+        insight::format_error("This model object type is not yet supported by the `marginal_means` function.")
     }
 
     # fancy vcov processing to allow strings like "HC3"
@@ -520,7 +520,7 @@ get_marginalmeans <- function(model,
                 by[[b]] <- as.character(by[[b]])
             }
         }
-        out <- merge(out, by)
+        out <- merge(out, by, sort = FALSE)
         out <- out[, .(estimate = mean(estimate)), by = "by"]
     }
 

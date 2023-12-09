@@ -177,7 +177,7 @@ sanitize_variables <- function(variables,
 
         } else if (get_variable_class(modeldata, v, "binary")) {
             if (!isTRUE(checkmate::check_numeric(predictors[[v]])) || !is_binary(predictors[[v]])) {
-                msg <- sprintf("The `%s` variable is binary. The corresponding entry in the `variables` argument must be 0 or 1.")
+                msg <- sprintf("The `%s` variable is binary. The corresponding entry in the `variables` argument must be 0 or 1.", v)
                 insight::format_error(msg)
             }
             # get_contrast_data requires both levels
@@ -191,7 +191,6 @@ sanitize_variables <- function(variables,
                 # Eventually it would be nice to consolidate, but that's a lot of work.
                 valid_str <- c("iqr", "minmax", "sd", "2sd")
                 flag <- isTRUE(checkmate::check_numeric(predictors[[v]], min.len = 1, max.len = 2)) ||
-                        isTRUE(checkmate::check_numeric(predictors[[v]], len = nrow(newdata))) ||
                         isTRUE(checkmate::check_choice(predictors[[v]], choices = valid_str)) ||
                         isTRUE(checkmate::check_function(predictors[[v]]))
                 if (!isTRUE(flag)) {
@@ -236,7 +235,9 @@ sanitize_variables <- function(variables,
                 flag1 <- checkmate::check_choice(predictors[[v]], choices = valid)
                 flag2 <- checkmate::check_vector(predictors[[v]], len = 2)
                 flag3 <- checkmate::check_data_frame(predictors[[v]], nrows = nrow(newdata), ncols = 2)
-                if (!isTRUE(flag1) && !isTRUE(flag2) && !isTRUE(flag3)) {
+                flag4 <- checkmate::check_function(predictors[[v]])
+                flag5 <- checkmate::check_data_frame(predictors[[v]])
+                if (!isTRUE(flag1) && !isTRUE(flag2) && !isTRUE(flag3) && !isTRUE(flag4) && !isTRUE(flag5)) {
                     msg <- "The %s element of the `variables` argument must be a vector of length 2 or one of: %s"
                     msg <- sprintf(msg, v, paste(valid, collapse = ", "))
                     insight::format_error(msg)
@@ -294,7 +295,10 @@ sanitize_variables <- function(variables,
 
         fun_numeric <- fun_categorical <- comparison_function_dict[[comparison]]
         lab_numeric <- lab_categorical <- comparison_label_dict[[comparison]]
-        if (isTRUE(grepl("dydxavg|eyexavg|dyexavg|eydxavg", comparison))) {
+        if (isTRUE(grepl("dydxavgwts|eyexavgwts|dyexavgwts|eydxavgwts", comparison))) {
+            fun_categorical <- comparison_function_dict[["differenceavgwts"]]
+            lab_categorical <- comparison_label_dict[["differenceavgwts"]]
+        } else if (isTRUE(grepl("dydxavg|eyexavg|dyexavg|eydxavg", comparison))) {
             fun_categorical <- comparison_function_dict[["differenceavg"]]
             lab_categorical <- comparison_label_dict[["differenceavg"]]
         } else if (isTRUE(grepl("dydx$|eyex$|dyex$|eydx$", comparison))) {

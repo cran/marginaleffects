@@ -11,16 +11,16 @@
 #' 
 #' See the "Plots" vignette and website for tutorials and information on how to customize plots:
 #'
-#' * https://marginaleffects.com/articles/plot.html
+#' * https://marginaleffects.com/vignettes/plot.html
 #' * https://marginaleffects.com
 #' 
 #' @param condition Conditional predictions
-#' + Character vector (max length 3): Names of the predictors to display.
-#' + Named list (max length 3): List names correspond to predictors. List elements can be:
+#' + Character vector (max length 4): Names of the predictors to display.
+#' + Named list (max length 4): List names correspond to predictors. List elements can be:
 #'   - Numeric vector
 #'   - Function which returns a numeric vector or a set of unique categorical values 
 #'   - Shortcut strings for common reference values: "minmax", "quartile", "threenum"
-#' + 1: x-axis. 2: color/shape. 3: facets.
+#' + 1: x-axis. 2: color/shape. 3: facet (wrap if no fourth variable, otherwise cols of grid). 4: facet (rows of grid).
 #' + Numeric variables in positions 2 and 3 are summarized by Tukey's five numbers `?stats::fivenum`
 #' @param by Marginal predictions
 #' + Character vector (max length 3): Names of the categorical predictors to marginalize across.
@@ -31,6 +31,7 @@
 #' @inheritParams plot_slopes
 #' @inheritParams predictions
 #' @template model_specific_arguments
+#' @template type
 #' @return A `ggplot2` object or data frame (if `draw=FALSE`)
 #' @export
 #' @examples
@@ -82,7 +83,7 @@ plot_predictions <- function(model,
     checkmate::assert_character(by, null.ok = TRUE)
 
     # sanity check
-    checkmate::assert_character(by, null.ok = TRUE, max.len = 3, min.len = 1, names = "unnamed")
+    checkmate::assert_character(by, null.ok = TRUE, max.len = 4, min.len = 1, names = "unnamed")
     if ((!is.null(condition) && !is.null(by)) || (is.null(condition) && is.null(by))) {
         msg <- "One of the `condition` and `by` arguments must be supplied, but not both."
         insight::format_error(msg)
@@ -103,7 +104,8 @@ plot_predictions <- function(model,
         condition <- sanitize_condition(model, condition, variables = NULL, modeldata = modeldata)
         v_x <- condition$condition1
         v_color <- condition$condition2
-        v_facet <- condition$condition3
+        v_facet_1 <- condition$condition3
+        v_facet_2 <- condition$condition4
         datplot <- predictions(
             model,
             newdata = condition$newdata,
@@ -145,12 +147,12 @@ plot_predictions <- function(model,
             ...)
         v_x <- by[[1]]
         v_color <- hush(by[[2]])
-        v_facet <- hush(by[[3]])
+        v_facet_1 <- hush(by[[3]])
+        v_facet_2 <- hush(by[[4]])
     }
 
     dv <- unlist(insight::find_response(model, combine = TRUE), use.names = FALSE)[1]
-
-    datplot <- plot_preprocess(datplot, v_x = v_x, v_color = v_color, v_facet = v_facet, condition = condition, modeldata = modeldata)
+    datplot <- plot_preprocess(datplot, v_x = v_x, v_color = v_color, v_facet_1 = v_facet_1, v_facet_2 = v_facet_2, condition = condition, modeldata = modeldata)
 
     # return immediately if the user doesn't want a plot
     if (isFALSE(draw)) {
@@ -164,7 +166,8 @@ plot_predictions <- function(model,
     p <- plot_build(datplot,
         v_x = v_x,
         v_color = v_color,
-        v_facet = v_facet,
+        v_facet_1 = v_facet_1,
+        v_facet_2 = v_facet_2,
         points = points,
         modeldata = modeldata,
         dv = dv,
@@ -193,4 +196,7 @@ plot_predictions <- function(model,
 #' @inherit plot_predictions
 #' @keywords internal
 #' @export
-plot_cap <- plot_predictions
+plot_cap <- function(...) {
+    insight::format_warning("This function has been renamed to `plot_predictions()`. The `plot_cap()` alias will be removed in the near future.")
+    plot_predictions(...)
+}
