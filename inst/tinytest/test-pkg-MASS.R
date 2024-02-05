@@ -42,7 +42,7 @@ expect_margins(mfx, mar, se = FALSE)
 
 
 # margins: standard errors at mean gradient
-mfx_tid <- tidy(mfx)
+mfx_tid <- avg_slopes(model)
 mar_tid <- tidy(mar)[, c("term", "estimate", "std.error")]
 mar_tid <- setNames(mar_tid, c("term", "mar_estimate", "mar_std.error"))
 tmp <- merge(mfx_tid, mar_tid)
@@ -72,7 +72,7 @@ expect_equivalent(mfx$std.error[mfx$contrast == "8 - 4"], em$std.error[em$contra
 stata <- readRDS(testing_path("stata/stata.rds"))$mass_glm_nb
 model <- suppressWarnings(
 MASS::glm.nb(carb ~ wt + factor(cyl), data = mtcars))
-mfx <- tidy(slopes(model))
+mfx <- avg_slopes(model)
 stata$contrast <- ifelse(stata$term == "factor(cyl)6", "6 - 4", "")
 stata$contrast <- ifelse(stata$term == "factor(cyl)8", "8 - 4", stata$contrast)
 stata$term <- ifelse(grepl("cyl", stata$term), "cyl", stata$term)
@@ -85,8 +85,7 @@ expect_equivalent(mfx$std.error, mfx$std.errorstata, tolerance = .001)
 stata <- readRDS(testing_path("stata/stata.rds"))[["MASS_polr_01"]]
 dat <- read.csv(testing_path("stata/databases/MASS_polr_01.csv"))
 mod <- MASS::polr(factor(y) ~ x1 + x2, data = dat, Hess = TRUE)
-mfx <- slopes(mod, type = "probs")
-mfx <- tidy(mfx)
+mfx <- avg_slopes(mod, type = "probs")
 mfx <- merge(mfx, stata)
 expect_equivalent(mfx$estimate, mfx$dydxstata, tolerance = .01)
 expect_equivalent(mfx$std.error, mfx$std.errorstata, tolerance = .01)
@@ -147,10 +146,9 @@ dat$cyl <- as.factor(dat$cyl)
 dat$am <- as.logical(dat$am)
 dat <- dat
 model <- suppressWarnings(MASS::glm.nb(carb ~ am + cyl, data = dat))
-mm <- marginal_means(model, type = "link", variables = "cyl")
-ti <- tidy(mm) |> dplyr::arrange(value)
+mm <- predictions(model, type = "link", by = "cyl", newdata = datagrid(grid_type = "balanced"))
+ti <- mm |> dplyr::arrange(cyl)
 em <- tidy(emmeans::emmeans(model, "cyl"))
-expect_marginal_means(mm)
 expect_equivalent(ti$estimate, em$estimate)
 expect_equivalent(ti$std.error, em$std.error, tolerance = 1e-4)
 
@@ -159,9 +157,7 @@ dat <- mtcars
 dat$cyl <- as.factor(dat$cyl)
 dat$am <- as.logical(dat$am)
 model <- MASS::rlm(mpg ~ cyl + am, dat)
-mm <- marginal_means(model)
-expect_marginal_means(mm)
-ti <- tidy(marginal_means(model, variables = "cyl")) |> dplyr::arrange(value)
+ti <- predictions(model, by = "cyl", newdata = datagrid(grid_type = "balanced")) |> dplyr::arrange(cyl)
 em <- tidy(emmeans::emmeans(model, "cyl"))
 expect_equivalent(ti$estimate, em$estimate)
 expect_equivalent(ti$std.error, em$std.error, tolerance = 1e-4)
@@ -200,14 +196,13 @@ dat$cyl <- as.character(dat$cyl)
 dat <- dat
 mod <- polr(factor(gear) ~ cyl, data = dat, Hess = TRUE)
 # not clear why this generates a warning only on CI
-mfx <- suppressMessages(slopes(mod, type = "probs"))
-tid <- tidy(mfx)
+tid <- suppressMessages(avg_slopes(mod, type = "probs"))
 expect_equivalent(nrow(tid), 6)
 
 
 # polr: average predictions by group against Stata
 mod <- polr(factor(gear) ~ hp, data = mtcars, Hess = TRUE)
-p <- suppressMessages(tidy(predictions(mod, type = "probs")))
+p <- suppressMessages(avg_predictions(mod, type = "probs"))
 expect_equivalent(
     p$estimate,
     c(.4933237, .363384, .1432922),
@@ -243,7 +238,7 @@ mod <- suppressWarnings(MASS::polr(factor(gear) ~ vs + am, data = k, Hess = TRUE
 # TODO: emmeans seems broken at the moment
 # em <- emmeans(mod, specs = "am", type = "response")
 # em <- tidy(em)
-mm <- marginal_means(mod, variables = "am", type = "probs")
+mm <- predictions(mod, by = "am", type = "probs", newdata = datagrid(grid_type = "balanced"))
 expect_equivalent(nrow(mm), 6)
 
 

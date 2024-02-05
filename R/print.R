@@ -1,13 +1,13 @@
 #' Print `marginaleffects` objects
 #' 
 #' @description
-#' This function controls the text which is printed to the console when one of the core `marginalefffects` functions is called and the object is returned: `predictions()`, `comparisons()`, `slopes()`, `marginal_means()`, `hypotheses()`, `avg_predictions()`, `avg_comparisons()`, `avg_slopes()`.
+#' This function controls the text which is printed to the console when one of the core `marginalefffects` functions is called and the object is returned: `predictions()`, `comparisons()`, `slopes()`, `hypotheses()`, `avg_predictions()`, `avg_comparisons()`, `avg_slopes()`.
 #' 
 #' All of those functions return standard data frames. Columns can be extracted by name, `predictions(model)$estimate`, and all the usual data manipulation functions work out-of-the-box:  `colnames()`, `head()`, `subset()`, `dplyr::filter()`, `dplyr::arrange()`, etc.
 #' 
 #' Some of the data columns are not printed by default. You can disable pretty printing and print the full results as a standard data frame using the `style` argument or by applying `as.data.frame()` on the object. See examples below.
 #' 
-#' @param x An object produced by one of the [`marginaleffects`] package functions.
+#' @param x An object produced by one of the `marginaleffects` package functions.
 #' @param digits The number of digits to display.
 #' @param p_eps p values smaller than this number are printed in "<0.001" style.
 #' @param topn The number of rows to be printed from the beginning and end of tables with more than `nrows` rows.
@@ -276,6 +276,3 @@ print.comparisons <- print.marginaleffects
 #' @export
 print.slopes <- print.marginaleffects
 
-#' @noRd
-#' @export
-print.marginalmeans <- print.marginaleffects

@@ -20,30 +20,30 @@ expect_equivalent(nrow(p1), 2)
 
 # use comparison to collapse into averages
 mod <- glm(gear ~ cyl + am, family = poisson, data = mtcars)
-x <- tidy(comparisons(mod, comparison = "dydx"))
+x <- avg_comparisons(mod, comparison = "dydx")
 y <- comparisons(mod, comparison = "dydxavg")
 expect_equivalent(x$estimate, y$estimate)
-expect_equivalent(x$std.error, y$std.error)
+expect_equivalent(x$std.error, y$std.error, tolerance = 1e-5)
 
-x <- tidy(comparisons(mod, comparison = "eyex"))
+x <- avg_comparisons(mod, comparison = "eyex")
 y <- comparisons(mod, comparison = "eyexavg")
 expect_equivalent(x$estimate, y$estimate)
-expect_equivalent(x$std.error, y$std.error)
+expect_equivalent(x$std.error, y$std.error, tolerance = 1e-5)
 
-x <- tidy(comparisons(mod, comparison = "eydx"))
+x <- avg_comparisons(mod, comparison = "eydx")
 y <- comparisons(mod, comparison = "eydxavg")
 expect_equivalent(x$estimate, y$estimate)
-expect_equivalent(x$std.error, y$std.error)
+expect_equivalent(x$std.error, y$std.error, tolerance = 1e-5)
 
-x <- tidy(comparisons(mod, comparison = "dyex"))
+x <- avg_comparisons(mod, comparison = "dyex")
 y <- comparisons(mod, comparison = "dyexavg")
 expect_equivalent(x$estimate, y$estimate)
-expect_equivalent(x$std.error, y$std.error)
+expect_equivalent(x$std.error, y$std.error, tolerance = 1e-5)
 
-x <- tidy(slopes(mod, slope = "dyex"))
+x <- avg_slopes(mod, slope = "dyex")
 y <- slopes(mod, slope = "dyexavg")
 expect_equivalent(x$estimate, y$estimate)
-expect_equivalent(x$std.error, y$std.error)
+expect_equivalent(x$std.error, y$std.error, tolerance = 1e-5)
 
 # input sanity check
 expect_error(slopes(mod, slope = "bad"), pattern = "eyexavg")
@@ -58,14 +58,6 @@ mod <- glm(am ~ hp + mpg, data = mtcars, family = binomial)
 cmp <- comparisons(mod, by = "am", comparison = "lnor")
 expect_equal(nrow(cmp), 4)
 
-cmp <- comparisons(mod, by = "am")
-tid <- tidy(cmp)
-
-expect_equivalent(nrow(tid), nrow(cmp))
-expect_equivalent(nrow(tid), 4)
-expect_true("am" %in% colnames(tid))
-
-
 
 # counterfactual margins at()
 dat <- mtcars
@@ -76,7 +68,7 @@ mar <- data.frame(summary(mar))
 mfx <- slopes(
     mod,
     by = "cyl",
-    newdata = datagridcf(cyl = c(4, 6, 8)))
+    newdata = datagrid(cyl = c(4, 6, 8), grid_type = "counterfactual"))
 expect_equivalent(mfx$estimate, mar$AME)
 expect_equivalent(mfx$std.error, mar$SE, tolerance = 1e6)
 
@@ -161,12 +153,6 @@ pre1 <- slopes(mod, by = TRUE)
 pre2 <- slopes(mod, by = FALSE)
 expect_equivalent(nrow(pre1), 3)
 expect_equivalent(nrow(pre2), 96)
-
-mm <- marginal_means(
-    mod,
-    variables = "gear")
-expect_equivalent(nrow(mm), 3)
-expect_error(marginal_means(mod, by = TRUE, variables = "gear"))
 
 
 # marginaleffects poisson vs. margins

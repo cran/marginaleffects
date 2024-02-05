@@ -5,10 +5,8 @@
 #'
 #' The `by` argument is used to plot marginal comparisons, that is, comparisons made on the original data, but averaged by subgroups. This is analogous to using the `by` argument in the `comparisons()` function.
 #'
-#' The `condition` argument is used to plot conditional comparisons, that is, comparisons made on a user-specified grid. This is analogous to using the `newdata` argument and `datagrid()` function in a `comparisons()` call.
+#' The `condition` argument is used to plot conditional comparisons, that is, comparisons made on a user-specified grid. This is analogous to using the `newdata` argument and `datagrid()` function in a `comparisons()` call. All variables whose values are not specified explicitly are treated as usual by `datagrid()`, that is, they are held at their mean or mode (or rounded mean for integers). This includes grouping variables in mixed-effects models, so analysts who fit such models may want to specify the groups of interest using the `condition` argument, or supply model-specific arguments to compute population-level estimates. See details below.
 #' 
-#' All unspecified variables are held at their mean or mode. This includes grouping variables in mixed-effects models, so analysts who fit such models may want to specify the groups of interest using the `variables` argument, or supply model-specific arguments to compute population-level estimates. See details below.
-
 #' See the "Plots" vignette and website for tutorials and information on how to customize plots:
 #'
 #' * https://marginaleffects.com/vignettes/plot.html
@@ -161,14 +159,3 @@ plot_comparisons <- function(model,
     return(p)
 }
 
-
-#' `plot_comparisons()` is an alias to `plot_comparisons()`
-#'
-#' This alias is kept for backward compatibility.
-#' @inherit plot_predictions
-#' @keywords internal
-#' @export
-plot_cco <- function(...) {
-    insight::format_warning("This function has been renamed to `plot_comparisons()`. The `plot_cco()` alias will be removed in the near future.")
-    plot_comparisons(...)
-}

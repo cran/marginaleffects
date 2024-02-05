@@ -1,5 +1,40 @@
 # News
 
+## 0.18.0
+
+This release represents a major step towards 1.0.0. Some functions are renamed and now raise deprecation warnings. After 1.0.0, the API will become much more stable, and any change will have to be very deliberate with much lead time and deprecation delays.
+
+Breaking changes:
+
+* `tidy()` no longer takes the average of estimates in the original model object. Users who want an aggregate estimate should call the relevant `avg_*()` function, or use the `by` argument explicitly. The previous behavior led to unexpected behavior and increased code complexity a lot.
+* `summary()` methods are removed. These have never provided any additional information; they just reprinted the output already available with the standard print method. At least the default `summary()` for data frames (which is now triggered on `marginaleffects` object) provides a different view on the content of the object.
+* `plot_cco()`, `plot_cme()`, and `plot_cap()` were renamed in version 0.9.0, one year ago. They are now fully removed from the package.
+
+New:
+
+* `datagrid(grid_type = "balanced")` creates a balanced grid with all unique values of categorical predictors. This can be used with `predictions()` to compute marginal means as in the `emmeans` package.
+* `mvgam` package support (multivariate generalized additive models)
+
+Deprecation warnings:
+
+* `deltamethod()` has been named `hypotheses()` for a while. We now issue a deprecation warning and it will be removed eventually.
+* `datagridcf()` will eventually be deprecated and removed from the package. We will raise a warning for at least one year before removing the function. Identical results can be obtained with `datagrid(..., grid_type="counterfactual")`
+* `marginal_means()` will eventually be deprecated and removed from the package. We will raise a warning for at least one year before removing the function. Identical results can be obtained using the `predictions()` function and the `grid_type="balanced"` argument of `datagrid()`. Examples are in the marginal means vignette on the website.
+
+Minor:
+
+* Better warning messages for unsupported matrix columns, enhancing user experience and troubleshooting.
+* Various improvements to documentation.
+* Typos
+* Repository hosts model objects for easier testing.
+
+Bug fixes:
+
+* Error on `hypotheses(joint = "string")` for `comparisons()` objects (no result was returned). Thanks to @BorgeJorge for report #981. 
+* Enhanced support for multi-equation Bayesian models with `brms` models. Thanks to @winterstat for report #1006.
+* Parameter names with spaces could break standard errors. Thanks to @Lefty2021 for report #1005.
+
+
 ## 0.17.0
 
 Breaking changes:
@@ -24,7 +59,7 @@ Bugs:
 * `wts` argument now respected in `avg_slopes()` for binary variables. Thanks to @trose64 for report #961
 * Custom functions in the `comparison` argument of `comparisons()` did not supply the correct `x` vector length for bayesian models when the `by` argument is used. Thanks to @Sandhu-SS for report #931.
 * Add support for two facet variables (through `facet_grid`) when plotting using `condition`
-* `comparisons()`: When `variables` is a vector of length two and `newdata` has exactly two columns, there was ambiguity between custom vectors and length two vector of contrasts. But reported by C. Rainey on Twitter.
+* `comparisons()`: When `variables` is a vector of length two and `newdata` has exactly two columns, there was ambiguity between custom vectors and length two vector of contrasts. Bug reported by C. Rainey on Twitter.
 * Superfluous warning with `fixest::fenegbin`.
 
 ## 0.16.0

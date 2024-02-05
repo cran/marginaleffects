@@ -50,7 +50,7 @@ expect_equivalent(mfx$std.error, em$std.error, tolerance = 1e-5)
 stata <- readRDS(testing_path("stata/stata.rds"))[["stats_glm_01"]]
 dat <- read.csv(testing_path("stata/databases/stats_glm_01.csv"))
 mod <- glm(y ~ x1 * x2, family = binomial, data = dat)
-ame <- merge(tidy(slopes(mod, eps = 1e-4)), stata)
+ame <- merge(avg_slopes(mod, eps = 1e-4), stata)
 expect_equivalent(ame$estimate, ame$dydxstata, tolerance = 1e-4)
 expect_equivalent(ame$std.error, ame$std.errorstata, tolerance = 1e-4)
 
@@ -60,7 +60,7 @@ expect_equivalent(ame$std.error, ame$std.errorstata, tolerance = 1e-4)
 stata <- readRDS(testing_path("stata/stata.rds"))[["stats_lm_01"]]
 dat <- read.csv(testing_path("stata/databases/stats_lm_01.csv"))
 mod <- lm(y ~ x1 * x2, data = dat)
-ame <- merge(tidy(slopes(mod, eps = 1e-4)), stata)
+ame <- merge(avg_slopes(mod, eps = 1e-4), stata)
 expect_equivalent(ame$estimate, ame$dydxstata, tolerance = 1e-4)
 expect_equivalent(ame$std.error, ame$std.errorstata, tolerance = 1e-4)
 
@@ -94,11 +94,13 @@ dat <- mtcars
 dat$cyl <- as.factor(dat$cyl)
 dat$am <- as.logical(dat$am)
 mod <- lm(mpg ~ hp + cyl + am, data = dat)
-mm <- tidy(marginal_means(mod, variables = "cyl")) |> dplyr::arrange(value)
+mm <- predictions(mod, by = "cyl", newdata = datagrid(grid_type = "balanced")) |> 
+    dplyr::arrange(cyl)
 em <- broom::tidy(emmeans::emmeans(mod, specs = "cyl"))
 expect_equivalent(mm$estimate, em$estimate)
-expect_equivalent(mm$std.error, em$std.error)
-mm <- tidy(marginal_means(mod, variables = "am")) |> dplyr::arrange(value)
+expect_equivalent(mm$std.error, em$std.error, tolerance = 1e-6)
+mm <- predictions(mod, by = "am", newdata = datagrid(grid_type = "balanced")) |>
+    dplyr::arrange(am)
 em <- broom::tidy(emmeans::emmeans(mod, specs = "am"))
 expect_equivalent(mm$estimate, em$estimate)
 expect_equivalent(mm$std.error, em$std.error, tolerance = 1e-5)
@@ -117,22 +119,22 @@ dat$Region <- as.factor(dat$Region)
 dat$MainCity <- as.factor(dat$MainCity)
 mod <- glm(binary ~ Region + MainCity + Commerce, data = dat, family = "binomial")
 
-mm <- marginal_means(mod, type = "link", variables = "Region") |> dplyr::arrange(value) 
+mm <- predictions(mod, type = "link", by = "Region", newdata = datagrid(grid_type = "balanced")) |> dplyr::arrange(Region) 
 em <- data.frame(emmeans::emmeans(mod, specs = "Region"))
-expect_equivalent(as.character(mm$value), as.character(em$Region))
+expect_equivalent(as.character(mm$Region), as.character(em$Region))
 expect_equivalent(mm$estimate, em$emmean, tol = 0.05) # not sure why tolerance is not good
 expect_equivalent(mm$std.error, em$SE, tol = 0.001)
 
-mm <- marginal_means(mod, type = "link", variables = "MainCity") |> dplyr::arrange(value)
+mm <- predictions(mod, type = "link", newdata = datagrid(grid_type = "balanced"), by = "MainCity") |> dplyr::arrange(MainCity)
 em <- data.frame(emmeans::emmeans(mod, specs = "MainCity", type = "link"))
-expect_equivalent(as.character(mm$value), as.character(em$MainCity))
+expect_equivalent(as.character(mm$MainCity), as.character(em$MainCity))
 expect_equivalent(mm$estimate, em$emmean, tol = 0.01) # not sure why tolerance is not good
 expect_equivalent(mm$std.error, em$SE, tol = 0.001)
 
 
-mm <- marginal_means(mod, type = "link", variables = "MainCity", transform = plogis) |> dplyr::arrange(value)
+mm <- predictions(mod, type = "link", by = "MainCity", newdata = datagrid(grid_type = "balanced"), transform = plogis) |> dplyr::arrange(MainCity)
 em <- data.frame(emmeans(mod, specs = "MainCity", type = "response"))
-expect_equivalent(as.character(mm$value), as.character(em$MainCity))
+expect_equivalent(as.character(mm$MainCity), as.character(em$MainCity))
 expect_equivalent(mm$estimate, em$prob, tolerance = .01)
 expect_equivalent(mm$conf.low, em$asymp.LCL, tolerance = .01)
 expect_equivalent(mm$conf.high, em$asymp.UCL, tolerance = .01)
@@ -164,9 +166,8 @@ expect_predictions(pred, se = FALSE)
 
 # Issue #548: mlm support
 mod <- lm(cbind(mpg, cyl) ~ disp + am, data = mtcars)
-mfx <- slopes(mod)
-tid <- tidy(mfx)
-expect_inherits(mfx, "marginaleffects")
+tid <- avg_slopes(mod)
+expect_inherits(tid, "marginaleffects")
 expect_equivalent(nrow(tid), 4)
 
 
