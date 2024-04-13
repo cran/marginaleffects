@@ -3,8 +3,8 @@
 %   R/methods_MCMCglmm.R, R/methods_afex.R, R/methods_aod.R,
 %   R/methods_betareg.R, R/methods_bife.R, R/methods_biglm.R, R/methods_nnet.R,
 %   R/methods_brglm2.R, R/methods_brms.R, R/methods_crch.R, R/methods_dbarts.R,
-%   R/methods_fixest.R, R/methods_gamlss.R, R/methods_glmmTMB.R,
-%   R/methods_inferences_simulation.R, R/methods_lme4.R, R/methods_mclogit.R,
+%   R/methods_fixest.R, R/methods_flexsurv.R, R/methods_gamlss.R,
+%   R/methods_glmmTMB.R, R/methods_lme4.R, R/methods_mclogit.R,
 %   R/methods_mhurdle.R, R/methods_mlogit.R, R/methods_mlr3.R,
 %   R/methods_ordinal.R, R/methods_quantreg.R, R/methods_rms.R,
 %   R/methods_robustlmm.R, R/methods_rstanarm.R, R/methods_stats.R,
@@ -27,9 +27,9 @@
 \alias{get_predict.crch}
 \alias{get_predict.bart}
 \alias{get_predict.fixest}
+\alias{get_predict.flexsurvreg}
 \alias{get_predict.gamlss}
 \alias{get_predict.glmmTMB}
-\alias{get_predict.inferences_simulation}
 \alias{get_predict.merMod}
 \alias{get_predict.lmerModLmerTest}
 \alias{get_predict.lmerMod}
@@ -86,11 +86,17 @@ get_predict(model, newdata, type, ...)
 
 \method{get_predict}{fixest}(model, newdata = insight::get_data(model), type = "response", ...)
 
+\method{get_predict}{flexsurvreg}(model, newdata, type, ...)
+
 \method{get_predict}{gamlss}(model, newdata = insight::get_data(model), type = "response", ...)
 
-\method{get_predict}{glmmTMB}(model, newdata = insight::get_data(model), type = "response", ...)
-
-\method{get_predict}{inferences_simulation}(model, newdata, ...)
+\method{get_predict}{glmmTMB}(
+  model,
+  newdata = insight::get_data(model),
+  type = "response",
+  newparams = NULL,
+  ...
+)
 
 \method{get_predict}{merMod}(model, newdata = insight::get_data(model), type = "response", ...)
 
@@ -148,6 +154,8 @@ get_predict(model, newdata, type, ...)
 \item \code{newdata = datagrid(cyl = c(4, 6))}: \code{cyl} variable equal to 4 and 6 and other regressors fixed at their means or modes.
 \item See the Examples section and the \code{\link[=datagrid]{datagrid()}} documentation.
 }
+\item \code{\link[=subset]{subset()}} call with a single argument to select a subset of the dataset used to fit the model, ex: \code{newdata = subset(treatment == 1)}
+\item \code{\link[dplyr:filter]{dplyr::filter()}} call with a single argument to select a subset of the dataset used to fit the model, ex: \code{newdata = filter(treatment == 1)}
 \item string:
 \itemize{
 \item "mean": Marginal Effects at the Mean. Slopes when each predictor is held at its mean or mode.

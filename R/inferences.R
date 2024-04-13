@@ -141,7 +141,7 @@ inferences <- function(x,
         attr(model, "inferences_method") <- "fwb"
         attr(model, "inferences_dots") <- c(list(R = R), dots)
         attr(model, "inferences_conf_type") <- conf_type
-        if (isTRUE("wts" %in% names(attr(x, "call"))) && !is.null(attr(x, "call")[["wts"]])) {
+        if (isTRUE("wts" %in% names(attr(x, "call"))) && !isFALSE(attr(x, "call")[["wts"]])) {
             insight::format_error('The `fwb` method is not supported with the `wts` argument.')
         }
 
@@ -153,15 +153,11 @@ inferences <- function(x,
 
     } else if (method == "simulation") {
         insight::check_if_installed("MASS")
+        attr(model, "inferences_method") <- "simulation"
         attr(model, "inferences_R") <- R
-        attr(model, "inferences_simulate") <- function(R, B, V) {
-            MASS::mvrnorm(R, mu = B, Sigma = V)
-        }
-        class(model) <- c("inferences_simulation", class(model))
         # do not use simulation mean as point estimate
         # https://doi.org/10.1017/psrm.2023.8
         b <- get_coef(x)
-
     }
 
     if (isTRUE(grepl("conformal", method))) {
@@ -194,6 +190,8 @@ inferences_dispatch <- function(model, INF_FUN, ...) {
         bootstrap_boot(model = model, INF_FUN = INF_FUN, ...)
     } else if (isTRUE(attr(model, "inferences_method") == "fwb")) {
         bootstrap_fwb(model = model, INF_FUN = INF_FUN, ...)
+    } else if (isTRUE(attr(model, "inferences_method") == "simulation")) {
+        bootstrap_simulation(model = model, INF_FUN = INF_FUN, ...)
     } else {
         return(NULL)
     }

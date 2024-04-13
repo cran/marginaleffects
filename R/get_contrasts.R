@@ -5,7 +5,7 @@ get_contrasts <- function(model,
                           original,
                           lo,
                           hi,
-                          wts = NULL,
+                          wts = FALSE,
                           marginalmeans,
                           by = NULL,
                           hypothesis = NULL,
@@ -87,6 +87,7 @@ get_contrasts <- function(model,
         } else {
             pred_hi <- pred_hi$error
         }
+
     }
 
     # predict() takes up 2/3 of the wall time. This call is only useful when we
@@ -476,7 +477,7 @@ get_contrasts <- function(model,
     attr(out, "posterior_draws") <- draws
 
     # hypothesis tests using the delta method
-    out <- get_hypothesis(out, hypothesis, by = by)
+    out <- get_hypothesis(out, hypothesis, by = by, newdata = original, draws = draws)
 
     # reset settings
     settings_rm("marginaleffects_safefun_return1")

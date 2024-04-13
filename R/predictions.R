@@ -45,6 +45,8 @@
 #' + [datagrid()] call to specify a custom grid of regressors. For example:
 #'   - `newdata = datagrid(cyl = c(4, 6))`: `cyl` variable equal to 4 and 6 and other regressors fixed at their means or modes.
 #'   - See the Examples section and the [datagrid()] documentation.
+#' + [subset()] call with a single argument to select a subset of the dataset used to fit the model, ex: `newdata = subset(treatment == 1)`
+#' + [dplyr::filter()] call with a single argument to select a subset of the dataset used to fit the model, ex: `newdata = filter(treatment == 1)`
 #' @param byfun A function such as `mean()` or `sum()` used to aggregate
 #' estimates within the subgroups defined by the `by` argument. `NULL` uses the
 #' `mean()` function. Must accept a numeric vector and return a single numeric
@@ -64,6 +66,8 @@
 #' @template bayesian
 #' @template equivalence
 #' @template type
+#' @template order_of_operations
+#' @template parallel
 #' @template references
 #'
 #' @return A `data.frame` with one row per observation and several columns:
@@ -188,7 +192,7 @@ predictions <- function(model,
                         type = NULL,
                         by = FALSE,
                         byfun = NULL,
-                        wts = NULL,
+                        wts = FALSE,
                         transform = NULL,
                         hypothesis = NULL,
                         equivalence = NULL,
@@ -207,7 +211,7 @@ predictions <- function(model,
     # very early, before any use of newdata
     # if `newdata` is a call to `typical` or `counterfactual`, insert `model`
     scall <- rlang::enquo(newdata)
-    newdata <- sanitize_newdata_call(scall, newdata, model)
+    newdata <- sanitize_newdata_call(scall, newdata, model, by = by)
 
     if ("cross" %in% names(dots)) {
         insight::format_error("The `cross` argument is not available in this function.")
@@ -309,7 +313,7 @@ predictions <- function(model,
         by = by,
         byfun = byfun)
 
-    if (is.null(wts) && "marginaleffects_wts_internal" %in% colnames(newdata)) {
+    if (isFALSE(wts) && "marginaleffects_wts_internal" %in% colnames(newdata)) {
         wts <- "marginaleffects_wts_internal"
     }
 
@@ -569,7 +573,7 @@ get_predictions <- function(model,
                             byfun = byfun,
                             hypothesis = NULL,
                             verbose = TRUE,
-                            wts = NULL,
+                            wts = FALSE,
                             ...) {
 
 
@@ -624,7 +628,7 @@ get_predictions <- function(model,
     }
 
     # expensive: only do this inside the jacobian if necessary
-    if (!is.null(wts) ||
+    if (!isFALSE(wts) ||
         !isTRUE(checkmate::check_flag(by, null.ok = TRUE)) ||
         inherits(model, "mclogit")) { # not sure why sorting is so finicky here
         out <- merge_by_rowid(out, newdata)
@@ -648,7 +652,7 @@ get_predictions <- function(model,
     draws <- attr(out, "posterior_draws")
 
     # hypothesis tests using the delta method
-    out <- get_hypothesis(out, hypothesis = hypothesis, by = by)
+    out <- get_hypothesis(out, hypothesis = hypothesis, by = by, newdata = newdata, draws = draws)
 
     # WARNING: we cannot sort rows at the end because `get_hypothesis()` is
     # applied in the middle, and it must already be sorted in the final order,
@@ -672,7 +676,7 @@ avg_predictions <- function(model,
                             type = NULL,
                             by = TRUE,
                             byfun = NULL,
-                            wts = NULL,
+                            wts = FALSE,
                             transform = NULL,
                             hypothesis = NULL,
                             equivalence = NULL,
@@ -684,7 +688,7 @@ avg_predictions <- function(model,
     # order of the first few paragraphs is important
     # if `newdata` is a call to `typical` or `counterfactual`, insert `model`
     scall <- rlang::enquo(newdata)
-    newdata <- sanitize_newdata_call(scall, newdata, model)
+    newdata <- sanitize_newdata_call(scall, newdata, model, by = by)
 
     # group by focal variable automatically unless otherwise stated
     if (isTRUE(by)) {
