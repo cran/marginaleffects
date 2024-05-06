@@ -263,6 +263,7 @@ predictions <- function(model,
         newdata = newdata,
         wts = wts,
         vcov = vcov,
+        by = by,
         calling_function = "predictions",
         ...)
     tmp <- sanitize_hypothesis(hypothesis, ...)
@@ -405,6 +406,8 @@ predictions <- function(model,
     args <- utils::modifyList(args, dots)
     tmp <- do.call(get_predictions, args)
 
+    hyp_by <- attr(tmp, "hypothesis_function_by")
+
     # two cases when tmp is a data.frame
     # get_predict gets us rowid with the original rows
     if (inherits(tmp, "data.frame")) {
@@ -420,7 +423,8 @@ predictions <- function(model,
         }
     }
 
-    if (!"rowid" %in% colnames(tmp) && nrow(tmp) == nrow(newdata)) {
+    # issue #1105: hypothesis may change the meaning of rows, so we don't want to force-merge `newdata`
+    if (!"rowid" %in% colnames(tmp) && nrow(tmp) == nrow(newdata) && is.null(hypothesis)) {
         tmp$rowid <- newdata$rowid
     }
 
@@ -547,6 +551,7 @@ predictions <- function(model,
     attr(out, "conf_level") <- conf_level
     attr(out, "by") <- by
     attr(out, "call") <- call_attr
+    attr(out, "hypothesis_by") <- hyp_by
     attr(out, "transform_label") <- names(transform)[1]
     attr(out, "transform") <- transform[[1]]
     # save newdata for use in recall()
@@ -618,13 +623,19 @@ get_predictions <- function(model,
     # unpad factors before averaging
     # trust `newdata` rowid more than `out` because sometimes `get_predict()` will add a positive index even on padded data
     # HACK: the padding indexing rowid code is still a mess
-    if ("rowid" %in% colnames(newdata) && nrow(newdata) == nrow(out)) {
+    # Do not merge `newdata` with `hypothesis`, because it may have the same
+    # number of rows but represent different quantities
+    if ("rowid" %in% colnames(newdata) && nrow(newdata) == nrow(out) && is.null(hypothesis)) {
         out$rowid <- newdata$rowid
     }
     if ("rowid" %in% colnames(out)) {
         idx <- out$rowid > 0
         out <- out[idx, drop = FALSE]
         draws <- draws[idx, , drop = FALSE]
+    }
+    if ("rowid" %in% colnames(newdata)) {
+        idx <- newdata$rowid > 0
+        newdata <- newdata[idx, , drop = FALSE]
     }
 
     # expensive: only do this inside the jacobian if necessary

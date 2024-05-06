@@ -4,7 +4,7 @@ get_predict.mlogit <- function(model,
                                newdata,
                                ...) {
 
-    mat <- stats::predict(model, newdata = newdata)
+    mat <- stats::predict(model, newdata = as.data.frame(newdata))
     if (isTRUE(checkmate::check_atomic_vector(mat))) {
         out <- data.table(rowid = seq_along(mat),
                           group = names(mat),
@@ -18,6 +18,7 @@ get_predict.mlogit <- function(model,
     if ("term" %in% colnames(newdata)) {
         out[, "term" := newdata[["term"]]]
     }
+    out$group <- group_to_factor(out$group, model)
     return(out)
 }
 
