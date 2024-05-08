@@ -277,7 +277,11 @@ predictions <- function(model,
     }
 
     # if type is NULL, we backtransform if relevant
-    type_string <- sanitize_type(model = model, type = type, calling_function = "predictions")
+    type_string <- sanitize_type(
+        model = model,
+        type = type,
+        by = by,
+        calling_function = "predictions")
     if (identical(type_string, "invlink(link)")) {
         if (is.null(hypothesis)) {
             type_call <- "link"
@@ -381,7 +385,7 @@ predictions <- function(model,
     # Bootstrap
     out <- inferences_dispatch(
         INF_FUN = predictions,
-        model = model, newdata = newdata, vcov = vcov, variables = variables, type = type_call, by = by,
+        model = model, newdata = newdata, vcov = vcov, variables = variables, type = type_string, by = by,
         conf_level = conf_level,
         byfun = byfun, wts = wts, transform = transform_original, hypothesis = hypothesis, ...)
     if (!is.null(out)) {
@@ -441,11 +445,6 @@ predictions <- function(model,
 
     # bayesian posterior draws
     draws <- attr(tmp, "posterior_draws")
-
-    # bayesian: unpad draws (done in get_predictions for frequentist)
-    if (!is.null(draws) && "rowid" %in% colnames(tmp)) {
-        draws <- draws[tmp$rowid > 0, , drop = FALSE]
-    }
 
     V <- NULL
     J <- NULL
@@ -628,15 +627,10 @@ get_predictions <- function(model,
     if ("rowid" %in% colnames(newdata) && nrow(newdata) == nrow(out) && is.null(hypothesis)) {
         out$rowid <- newdata$rowid
     }
-    if ("rowid" %in% colnames(out)) {
-        idx <- out$rowid > 0
-        out <- out[idx, drop = FALSE]
-        draws <- draws[idx, , drop = FALSE]
-    }
-    if ("rowid" %in% colnames(newdata)) {
-        idx <- newdata$rowid > 0
-        newdata <- newdata[idx, , drop = FALSE]
-    }
+    # unpad
+    if ("rowid" %in% colnames(out)) draws <- subset(draws, out$rowid > 0)
+    if ("rowid" %in% colnames(out)) out <- subset(out, rowid > 0)
+    if ("rowid" %in% colnames(newdata)) newdata <- subset(newdata, rowid > 0)
 
     # expensive: only do this inside the jacobian if necessary
     if (!isFALSE(wts) ||
@@ -670,6 +664,7 @@ get_predictions <- function(model,
     # otherwise, users cannot know for sure what is going to be the first and
     # second rows, etc.
     out <- sort_columns(out, newdata, by)
+
 
     return(out)
 }

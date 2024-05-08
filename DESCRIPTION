@@ -1,7 +1,7 @@
 Package: marginaleffects
 Title: Predictions, Comparisons, Slopes, Marginal Means, and Hypothesis
         Tests
-Version: 0.20.0
+Version: 0.20.1
 Authors@R: 
     c(person(given = "Vincent",
              family = "Arel-Bundock",
@@ -63,39 +63,39 @@ Collate: 'RcppExports.R' 'backtransform.R' 'bootstrap_boot.R'
         'get_term_labels.R' 'get_vcov.R' 'github_issue.R' 'hush.R'
         'hypotheses.R' 'hypotheses_joint.R' 'hypothesis_helper.R'
         'imputation.R' 'inferences.R' 'mean_or_mode.R' 'methods.R'
-        'set_coef.R' 'methods_MASS.R' 'methods_MCMCglmm.R'
-        'methods_Rchoice.R' 'methods_afex.R' 'methods_aod.R'
-        'methods_betareg.R' 'methods_bife.R' 'methods_biglm.R'
-        'methods_nnet.R' 'methods_brglm2.R' 'sanity_model.R'
-        'methods_brms.R' 'methods_crch.R' 'methods_dataframe.R'
-        'methods_dbarts.R' 'methods_fixest.R' 'methods_flexsurv.R'
-        'methods_gamlss.R' 'methods_glmmTMB.R' 'methods_glmx.R'
-        'methods_lme4.R' 'methods_mclogit.R' 'methods_mgcv.R'
-        'methods_mhurdle.R' 'methods_mlm.R' 'methods_mlogit.R'
-        'methods_mlr3.R' 'methods_nlme.R' 'methods_ordinal.R'
-        'methods_plm.R' 'methods_pscl.R' 'methods_quantreg.R'
-        'methods_rms.R' 'methods_robustlmm.R' 'methods_rstanarm.R'
-        'methods_sampleSelection.R' 'methods_scam.R' 'methods_stats.R'
-        'methods_survey.R' 'methods_survival.R' 'methods_tidymodels.R'
-        'methods_tobit1.R' 'modelarchive.R' 'myTryCatch.R' 'package.R'
-        'plot.R' 'plot_build.R' 'plot_comparisons.R'
-        'plot_predictions.R' 'plot_slopes.R' 'posterior_draws.R'
-        'predictions.R' 'print.R' 'recall.R' 'sanitize_comparison.R'
-        'sanitize_condition.R' 'sanitize_conf_level.R'
-        'sanitize_hypothesis.R' 'sanitize_interaction.R'
-        'sanitize_newdata.R' 'sanitize_numderiv.R' 'sanitize_type.R'
-        'sanitize_variables.R' 'sanitize_vcov.R' 'sanity.R'
-        'sanity_by.R' 'sanity_dots.R' 'settings.R' 'slopes.R' 'sort.R'
-        'tinytest.R' 'type_dictionary.R' 'unpack_matrix_cols.R'
-        'utils.R'
+        'set_coef.R' 'methods_AER.R' 'methods_MASS.R'
+        'methods_MCMCglmm.R' 'methods_Rchoice.R' 'methods_afex.R'
+        'methods_aod.R' 'methods_betareg.R' 'methods_bife.R'
+        'methods_biglm.R' 'methods_nnet.R' 'methods_brglm2.R'
+        'sanity_model.R' 'methods_brms.R' 'methods_crch.R'
+        'methods_dataframe.R' 'methods_dbarts.R' 'methods_fixest.R'
+        'methods_flexsurv.R' 'methods_gamlss.R' 'methods_glmmTMB.R'
+        'methods_glmx.R' 'methods_lme4.R' 'methods_mclogit.R'
+        'methods_mgcv.R' 'methods_mhurdle.R' 'methods_mlm.R'
+        'methods_mlogit.R' 'methods_mlr3.R' 'methods_nlme.R'
+        'methods_ordinal.R' 'methods_plm.R' 'methods_pscl.R'
+        'methods_quantreg.R' 'methods_rms.R' 'methods_robustlmm.R'
+        'methods_rstanarm.R' 'methods_sampleSelection.R'
+        'methods_scam.R' 'methods_stats.R' 'methods_survey.R'
+        'methods_survival.R' 'methods_tidymodels.R' 'methods_tobit1.R'
+        'modelarchive.R' 'myTryCatch.R' 'package.R' 'plot.R'
+        'plot_build.R' 'plot_comparisons.R' 'plot_predictions.R'
+        'plot_slopes.R' 'posterior_draws.R' 'predictions.R' 'print.R'
+        'recall.R' 'sanitize_comparison.R' 'sanitize_condition.R'
+        'sanitize_conf_level.R' 'sanitize_hypothesis.R'
+        'sanitize_interaction.R' 'sanitize_newdata.R'
+        'sanitize_numderiv.R' 'sanitize_type.R' 'sanitize_variables.R'
+        'sanitize_vcov.R' 'sanity.R' 'sanity_by.R' 'sanity_dots.R'
+        'settings.R' 'slopes.R' 'sort.R' 'tinytest.R'
+        'type_dictionary.R' 'unpack_matrix_cols.R' 'utils.R'
 Language: en-US
 Config/testthat/edition: 3
 NeedsCompilation: yes
-Packaged: 2024-05-06 00:45:18 UTC; vincent
+Packaged: 2024-05-07 19:26:15 UTC; vincent
 Author: Vincent Arel-Bundock [aut, cre, cph]
     (<https://orcid.org/0000-0003-2042-7063>),
   Noah Greifer [ctb] (<https://orcid.org/0000-0003-3067-7154>),
   Etienne Bacher [ctb] (<https://orcid.org/0000-0002-9271-5075>)
 Maintainer: Vincent Arel-Bundock <vincent.arel-bundock@umontreal.ca>
 Repository: CRAN
-Date/Publication: 2024-05-06 04:30:12 UTC
+Date/Publication: 2024-05-08 12:10:03 UTC

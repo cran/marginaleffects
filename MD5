@@ -1,12 +1,12 @@
-e64b2ab5c77068839e567ad871249d46 *DESCRIPTION
-747a253e39536cdf725f403f7a47c3b5 *NAMESPACE
-17ad6092520ced7c1d6bfec08c92f764 *NEWS.md
+b7f245e33fdcff44f2eb558d29e6b73a *DESCRIPTION
+27f7b3606227e2c7df4d92a78900f45c *NAMESPACE
+d096e708be5a585a1adb5efefc57c70e *NEWS.md
 bb1da3e78a3f5dd03af88bb04cafb8ca *R/RcppExports.R
 113931fe7bbad00cdea15dd91343a2a4 *R/backtransform.R
 215bc2e132dee432c55d0fb0329c6788 *R/bootstrap_boot.R
 11067a113f30465feac4810c73711484 *R/bootstrap_fwb.R
 d46409e0d0d2c8b1ec8ccbd5428154c2 *R/bootstrap_rsample.R
-84315177bbf9e718f5875df2c0127a82 *R/bootstrap_simulation.R
+108c3d90a5c3505b26fdb94919ec91b6 *R/bootstrap_simulation.R
 d0da17fc7cb4cc3e844f93cd7757dd40 *R/broom.R
 18ea90260881eafcec66c8c58bd046e7 *R/by.R
 5199ee5c608221d807dd6f2ab08807ce *R/ci.R
@@ -22,7 +22,7 @@ fa771a0ded49cd91d500c4be32e0f344 *R/get_coef.R
 7e1944f5f95515ab40b7e26b288e0673 *R/get_contrast_data_factor.R
 b6fd7a6f7c4b4e4e6554db17ced1cf23 *R/get_contrast_data_logical.R
 afdedd2e6a4aefcbdc7cba78ea0bbb37 *R/get_contrast_data_numeric.R
-320f3549a477db02530250853b333539 *R/get_contrasts.R
+58b8c9d7059c736896b3bcdaef043871 *R/get_contrasts.R
 1fe5ddda867059ca42687fc84d13bbb5 *R/get_group_names.R
 4a75e975449591e06a6dc6670be6c7bf *R/get_hypothesis.R
 b98786d8951edd88167d3fb4c8b62d1f *R/get_jacobian.R
@@ -39,9 +39,10 @@ ba91a987205e717587704726a59e68a1 *R/hush.R
 799dbaab89da1aa2027907bfbaa74550 *R/hypotheses_joint.R
 1e14e43f6b6c1b13c46a4424a3b4c198 *R/hypothesis_helper.R
 6b57e2e69afd8fae53020f083993fcef *R/imputation.R
-b434e8fec9ef414ff9a930592066dbaa *R/inferences.R
+b0466415371fccd052f56cb7bb6cb50c *R/inferences.R
 ca9964357eb3917f6691bccbda59fe69 *R/mean_or_mode.R
 b16f4dd6e06ae13bf66e18a081640de9 *R/methods.R
+254b94170fa5b09d5dea427e29543c44 *R/methods_AER.R
 45da88d5337089b487cde2bb95734a24 *R/methods_MASS.R
 ee0d2b56a5cb611f02ce49a581dff154 *R/methods_MCMCglmm.R
 0c32a2964e96f693ad8b9ad87249479c *R/methods_Rchoice.R
@@ -80,7 +81,7 @@ d0a4a6b4d611fa455a249d61a0d482f8 *R/methods_pscl.R
 d6a009aa1aadeff7d5f8af72bcea8120 *R/methods_scam.R
 d24518f21b90784835bf98d4faeb0e50 *R/methods_stats.R
 bb023be6679451ffe7a7da6dac708674 *R/methods_survey.R
-04105804c7393e4870f6ef63c85a0ede *R/methods_survival.R
+8c5832b33925e1ea1b49e84eb7a56611 *R/methods_survival.R
 66cb56aaeb95f4f6de1a6cf8548464e7 *R/methods_tidymodels.R
 30eec5e50ebb75eee60314d0e3c75249 *R/methods_tobit1.R
 576257c245e9b2f490349fbd70f8d218 *R/modelarchive.R
@@ -92,7 +93,7 @@ b1048c67700e975ab7afbb3c607370a6 *R/plot_comparisons.R
 4ab457ad8aafe8e56f3f1ea5183370da *R/plot_predictions.R
 86f4356f95003d82d12a2ebde3df961b *R/plot_slopes.R
 4d464795da0e9545fe351881ffad23c1 *R/posterior_draws.R
-4acf5c4c7280335130089568435a7d92 *R/predictions.R
+6b6d2b4a168f2e1112c68d4fd8959686 *R/predictions.R
 5d34f628c6e556f2e86247ec98362733 *R/print.R
 f5c51615c1504792626a320c347bd90d *R/recall.R
 4a25bcc2e217714332bf3209106ee1db *R/sanitize_comparison.R
@@ -102,8 +103,8 @@ e11199a8dd9d0fffa640878dca772f4c *R/sanitize_hypothesis.R
 f092223ee4603fe29b5cadcf8a7455cd *R/sanitize_interaction.R
 c8995e5319661a854de58999c31c211d *R/sanitize_newdata.R
 faa70a06a3428b56c5dd7b773667673d *R/sanitize_numderiv.R
-fdc6cef5cbf6ff2229e479c4758fa58a *R/sanitize_type.R
-bd844ce55ea8189e79ea751fc08b4fd1 *R/sanitize_variables.R
+3cefc60dac44476adcf7c812626d58c9 *R/sanitize_type.R
+05c88e0325af6df4ff190d08cbd74057 *R/sanitize_variables.R
 e40df5bbcc4d88eb52cd261482c5a8fe *R/sanitize_vcov.R
 56a607380a56072ec5b4f91f497b5700 *R/sanity.R
 6385876a8a17b4a1e32d65af31e41976 *R/sanity_by.R
@@ -153,7 +154,7 @@ e0d5fb6b3f62c462489f31f120311f8f *man/predictions.Rd
 99ebcba951af82f5a357de3d47e7c8d3 *man/print.marginaleffects.Rd
 1e18cfe170451992ed72e3a2e6313dee *man/reexports.Rd
 86bca5f23f9808f0af7b0b19630a084f *man/sanitize_model_specific.Rd
-48c7e6b6b799fd44921eae2c75a32f9b *man/set_coef.Rd
+e340e21dada566786a8e6bd967eca89b *man/set_coef.Rd
 d74cb072e1e5cca3cfb84a4516b7c62f *man/slopes.Rd
 e691ad4894bb340fc8af6238c4708bf9 *man/specify_hypothesis.Rd
 e84fbde88a4134d4d943cd148c5e0a67 *src/RcppExports.cpp
