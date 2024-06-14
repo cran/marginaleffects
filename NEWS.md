@@ -1,5 +1,23 @@
 # News
 
+## 0.21.0
+
+New:
+
+* `hypothesis` accepts formulas like: `ratio ~ sequential | group`
+* Allow reverse binary contrasts: comparisons(mod, variables = list(am = 1:0, vs = 0:1)). Thanks to K. Henry for report #1137.
+* `options(marginaleffects_safe = FALSE)` disables some safety checks and allows unadvisable (but potentially) useful features like *many* pairwise comparisons. Thanks to D.Locke for the feature request.
+* `newdata="balanced"` is a shortcut to produce estimates at combinations of all categorical predictors, holding numeric predictors at their means. Equivalent to `datagrid(grid_type="balanced")`
+
+Misc:
+
+* Deprecation warning for `specify_hypothesis()`. This function was clearly marked as experimental, and has been available only for one release. It was a bad idea. Users should supply a custom function or a formula to the `hypothesis` argument. The new formula interface, in particular, makes it very easy to conduct group-wise hypothesis tests.
+
+Bugs:
+
+* Fix regression in `mlogit` models due to factor conversion. This raised an error before returning result, so there is no numerical danger.
+* `survey` package models work when `row.names(model)` is not coercible to integers. Thanks to @ngreifer for report #1131.
+
 ## 0.20.1
 
 * The `comparison` argument of the `comparisons()` function is automatically switched to the `avg` version of the function shortcuts when calling `avg_comparisons()` or setting `by=TRUE`. For example, `comparison="ratio"` becomes `comparison="ratioavg"` when calling `avg_comparisons()`. Note that `comparison="ratioavg"` is equivalent to: `comparison = \(hi,lo) mean(hi)/mean(lo)`
