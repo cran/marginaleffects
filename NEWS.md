@@ -1,17 +1,50 @@
 # News
 
+## 0.22.0
+
+Breaking changes:
+
+* `type="invlink(link)"` is no longer default in `avg_predictions()` or when calling `predictions()` with the `by` argument. It is still default in `predictions()` without the `by` argument. The backtransform strategy is still available with by setting `type="invlink(link)"` explicitly.
+* The `type` argument in `plot_comparisons()` now defaults to `NULL`, which is now consistent with `comparisons()` and `avg_comparisons()`. Before, the default was `type="response"`. Thanks to @giakhang1906 for report #1202.
+
+New models supported:
+
+* `stpm2`, `pstpm2`, `gsm`, and `aft` models from `rstpm2`. Thanks to @aghaynes and @mclements.
+* `glm_weightit`, `coxph_weightit`, `multinom_weightit`, and `ordinal_weightit` models from `Weightit`. Thanks to @ngreifer.
+* `glmmgee` from the `glmtoolbox` package. Thanks to @adrianolszewski for the request and @lhvanegasp for help with implementation.
+
+New features:
+
+* Parallel computation with `future` is more efficient by chunking tasks to avoid passing large objects to every worker for every future. Issue #1158.
+* All columns of `newdata` are passed to the `hypothesis` function when `newdata` is supplied explicitly. Thanks to @gravesti for report #1175.
+* `hypotheses(joint=TRUE)`: do not call `stats::nobs()` unless necessary.
+* `hypotheses()` supports formulas in the `hypothesis` argument: `hypotheses(model, hypothesis = ratio ~ reference)`
+* Global option: `options("marginaleffects_print_omit" = "s.value")`
+* Round significant digits for labels in `plot_predictions(mod, condition = list(x = "fivenum"))`
+* `print()` no longer prints `contrast` and `term` columns when values are unique. The labels were often very long, and the content is already explicit in the call itself, so there's no ambiguity.
+* No warning raised when `discrete` argument is used with `mgcv::bam` and `mgcv::gam` models objects. Thanks to @Aariq for the request.
+* `tidymodels` support is improved. Users can now directly feed some of them without specifying `newdata` explicitly. Thanks to @davidkane9 for the feature request.
+
+Bugs:
+
+* Average lift and average comparisons with user-supplied functions could be be calculated incorrectly when all predictors were categorical. Thanks to @Dpananos for Issue #1151.
+* Indexing bug returned `NA` for some commands in `survey` models. Thanks to @weikang9009 for report #1161.
+* Respect default `tinytable` theme.
+* Inverted confidence interval bounds with some inverse link functions. Thanks to @strengejacke for report #1204.
+
 ## 0.21.0
 
 New:
 
 * `hypothesis` accepts formulas like: `ratio ~ sequential | group`
-* Allow reverse binary contrasts: comparisons(mod, variables = list(am = 1:0, vs = 0:1)). Thanks to K. Henry for report #1137.
+* Allow reverse binary contrasts: `comparisons(mod, variables = list(am = 1:0, vs = 0:1))`. Thanks to K. Henry for report #1137.
 * `options(marginaleffects_safe = FALSE)` disables some safety checks and allows unadvisable (but potentially) useful features like *many* pairwise comparisons. Thanks to D.Locke for the feature request.
 * `newdata="balanced"` is a shortcut to produce estimates at combinations of all categorical predictors, holding numeric predictors at their means. Equivalent to `datagrid(grid_type="balanced")`
 
 Misc:
 
 * Deprecation warning for `specify_hypothesis()`. This function was clearly marked as experimental, and has been available only for one release. It was a bad idea. Users should supply a custom function or a formula to the `hypothesis` argument. The new formula interface, in particular, makes it very easy to conduct group-wise hypothesis tests.
+* Type checks are a bit looser to accommodate custom models.
 
 Bugs:
 

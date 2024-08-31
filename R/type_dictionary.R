@@ -5,9 +5,6 @@
 type_dictionary_build <- function() {
 text <-
 'class,type
-other,response
-other,class
-other,link
 bam,response
 bam,link
 bart,ev
@@ -39,6 +36,10 @@ coxph,expected
 coxph,lp
 coxph,risk
 coxph,survival
+coxph_weightit,expected
+coxph_weightit,lp
+coxph_weightit,risk
+coxph_weightit,survival
 crch,response
 crch,location
 crch,scale
@@ -84,6 +85,7 @@ glm,response
 glm,link
 glmerMod,response
 glmerMod,link
+glmgee,response
 glmrob,response
 glmrob,link
 glmmTMB,response
@@ -95,6 +97,11 @@ glmmTMB,disp
 glmmPQL,response
 glmmPQL,link
 glmx,response
+glm_weightit,invlink(link)
+glm_weightit,probs
+glm_weightit,response
+glm_weightit,lp
+glm_weightit,link
 ivreg,response
 lmerMod,response
 lmerModLmerTest,response
@@ -118,6 +125,9 @@ workflow,prob
 workflow,class
 multinom,probs
 multinom,latent
+multinom_weightit,probs
+multinom_weightit,response
+multinom_weightit,mean
 mhurdle,E
 mhurdle,Ep
 mhurdle,p
@@ -136,6 +146,11 @@ ols,lp
 orm,fitted
 orm,mean
 orm,lp
+ordinal_weightit,probs
+ordinal_weightit,response
+ordinal_weightit,link
+ordinal_weightit,lp
+ordinal_weightit,mean
 polr,probs
 rendo.base,response
 rendo.base,link

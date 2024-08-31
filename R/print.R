@@ -173,7 +173,7 @@ print.marginaleffects <- function(x,
     if (is.null(nd)) {
         nd <- attr(x, "newdata_newdata")
     }
-    tmp <- c("by",
+    explicit <- tmp <- c("by",
         attr(x, "hypothesis_by"),
         attr(nd, "variables_datagrid"),
         attr(nd, "newdata_variables_datagrid"),
@@ -200,22 +200,44 @@ print.marginaleffects <- function(x,
     # selection style
     data.table::setDT(out)
 
-    # drop useless columns
-    idx <- setdiff(unique(idx), useless)
-    idx <- intersect(idx, colnames(out))
-    out <- out[, ..idx, drop = FALSE]
-
     if ("term" %in% colnames(out) && all(out$term == "cross")) {
         out[["term"]] <- NULL
         colnames(out) <- gsub("^contrast_", "C: ", colnames(out))
+        idx <- c(grep("C: .*", colnames(out), value = TRUE), idx)
     }
+
+    print_columns_text <- print_type_text <- print_term_text <- print_contrast_text <- NULL
+    print_omit <- getOption("marginaleffects_print_omit", default = NULL)
+
+    # contrast and term can have long labels. Drop if not unique. 
+    if (length(unique(out[["contrast"]])) == 1) {
+        print_contrast_text <- sprintf("Comparison: %s\n", out[["contrast"]][1])
+        print_omit <- c(print_omit, "contrast")
+    }
+    te <- unique(out[["term"]])
+    te <- setdiff(te, explicit) # ex: polynomials where both `variables="x"` and datagrid(x)
+    if (length(te) == 1) {
+        print_omit <- c(print_omit, te)
+        print_term_text <- sprintf("Term: %s\n", out[["term"]][1])
+        print_omit <- c(print_omit, "term")
+    }
+
+    if (ncol(x) <= ncols && isTRUE(column_names)) {
+        print_columns_text <- paste("Columns:", paste(colnames(x), collapse = ", "), "\n")
+    }
+    if (isTRUE(type) && !is.null(attr(x, "type"))) {
+        print_type_text <- paste("Type: ", attr(x, "type"), "\n")
+    }
+
+    # drop useless columns
+    idx <- setdiff(unique(idx), c(useless, print_omit))
+    idx <- intersect(idx, colnames(out))
+    out <- out[, ..idx, drop = FALSE]
+
 
     for (i in seq_along(dict)) {
         colnames(out)[colnames(out) == names(dict)[i]] <- dict[i]
     }
-
-    # avoid infinite recursion by stripping marginaleffect.summary class
-    data.table::setDF(out)
 
     # recommend avg_*()
     rec <- ""
@@ -229,13 +251,8 @@ print.marginaleffects <- function(x,
         }
     }
 
-    print_columns_text <- print_type_text <- NULL
-    if (ncol(x) <= ncols && isTRUE(column_names)) {
-        print_columns_text <- paste("Columns:", paste(colnames(x), collapse = ", "), "\n")
-    }
-    if (isTRUE(type) && !is.null(attr(x, "type"))) {
-        print_type_text <- paste("Type: ", attr(x, "type"), "\n")
-    }
+    # avoid infinite recursion by stripping marginaleffect.summary class
+    data.table::setDF(out)
 
     if (style %in% c("tinytable", "html", "latex", "typst", "markdown")) {
         insight::check_if_installed("tinytable")
@@ -253,7 +270,7 @@ print.marginaleffects <- function(x,
         notes <- c(print_type_text, print_columns_text)
         if (!is.null(notes)) args$notes <- notes
         tab <- do.call(tinytable::tt, args)
-        tab <- tinytable::format_tt(tab, escape = TRUE)
+        tab <- tinytable::format_tt(i = 0, tab, escape = TRUE)
 
         if (isTRUE(splitprint)) {
           msg <- "%s rows omitted"
@@ -294,8 +311,10 @@ print.marginaleffects <- function(x,
     cat("\n")
 
 
-    cat(print_columns_text)
+    cat(print_term_text)
     cat(print_type_text)
+    cat(print_contrast_text)
+    cat(print_columns_text)
     cat("\n")
 
     ## This is tricky to extract nicely when transform_* are passed from avg_comparisons to comparisons. I could certainly figure it out, but at the same time, I don't think the print method should return information that is immediately visible from the call. This is different from `type`, where users often rely on the default value, which can change from model to model, so printing it is often
