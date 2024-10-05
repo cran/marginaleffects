@@ -1,6 +1,6 @@
-32ddf29105b3b5dbc4ad10f7df6275d4 *DESCRIPTION
-63f4c347ceb1aeca4a47a87cdd748192 *NAMESPACE
-9b3a0b8aaf689705d3d140e468bb1897 *NEWS.md
+367371532104a73d3424b46bde14da3c *DESCRIPTION
+905ae5c52018bbe567c1176444dc1010 *NAMESPACE
+fedb893cbdcdcae1cbcbf1d113c90044 *NEWS.md
 bb1da3e78a3f5dd03af88bb04cafb8ca *R/RcppExports.R
 31fc7c5c0da15a41d2a1b8b7f8279e84 *R/backtransform.R
 215bc2e132dee432c55d0fb0329c6788 *R/bootstrap_boot.R
@@ -17,7 +17,7 @@ a50e9b93189d72bf30589c4d193dabc4 *R/datagrid.R
 6f67041729f685aa14dce04a92c7cccc *R/deprecated.R
 b16a536eb2f5ee3ba2949eaa7b39c97e *R/equivalence.R
 fa771a0ded49cd91d500c4be32e0f344 *R/get_coef.R
-50679a9c83b12c73323787e18d58649e *R/get_contrast_data.R
+51dc84f23d706ac850a116198321c368 *R/get_contrast_data.R
 7b447e4021b33a63fed312c400eaa923 *R/get_contrast_data_character.R
 788ad3d3cdf551e50e01ee8a6d812388 *R/get_contrast_data_factor.R
 b6fd7a6f7c4b4e4e6554db17ced1cf23 *R/get_contrast_data_logical.R
@@ -35,8 +35,8 @@ f0b1082406dff4052ebf0ac5d353b579 *R/get_se_delta.R
 0bac9600b963f965fb789ec4349da551 *R/get_vcov.R
 7078102a5eaa8e8d5d49b707411d52a4 *R/github_issue.R
 ba91a987205e717587704726a59e68a1 *R/hush.R
-508256386dc5ece285ce9f2d3a1b0596 *R/hypotheses.R
-50c21670432e9b6b227e41b833fb1c3c *R/hypotheses_joint.R
+12355d707aedf20ca415a02469d5c7f6 *R/hypotheses.R
+a7f38a8fbe4418e179e3ebf27d48fa2f *R/hypotheses_joint.R
 b97f365e3455fbf8588808cb7f9591ef *R/hypothesis_helper.R
 6b57e2e69afd8fae53020f083993fcef *R/imputation.R
 b0466415371fccd052f56cb7bb6cb50c *R/inferences.R
@@ -46,6 +46,7 @@ b16f4dd6e06ae13bf66e18a081640de9 *R/methods.R
 45da88d5337089b487cde2bb95734a24 *R/methods_MASS.R
 ee0d2b56a5cb611f02ce49a581dff154 *R/methods_MCMCglmm.R
 0c32a2964e96f693ad8b9ad87249479c *R/methods_Rchoice.R
+ecb622dee059373a91c4dedc05e8f16e *R/methods_WeightIt.R
 153ec50b032f6000bf8634efb38a5a39 *R/methods_afex.R
 280937dd0ed963c112778e9e55a2cde9 *R/methods_aod.R
 1639448040715888da590fdef0eda402 *R/methods_betareg.R
@@ -59,7 +60,7 @@ b405afd1dac4df9c5f2100f25e73347f *R/methods_biglm.R
 16c6859ad75215a6fae3c401dbc3c383 *R/methods_fixest.R
 26e622dac03a30a2fc2c40a6e96a2b82 *R/methods_flexsurv.R
 1a73e6963e8e2bef2b962f3b9206cf83 *R/methods_gamlss.R
-45b36b49d26d2540517f9ae69d133ef9 *R/methods_glmmTMB.R
+53f8a176f36d34eef79da28f2f6be430 *R/methods_glmmTMB.R
 88ea4ac4cd0790b45ea3f11aa0c62a63 *R/methods_glmtoolbox.R
 3746a261e273e70d27edddbfbdc7b18c *R/methods_glmx.R
 03bc1209c2e32db1035e01653a37ba32 *R/methods_lme4.R
@@ -67,7 +68,7 @@ de5f408473610b110f14afb6165a74e2 *R/methods_mclogit.R
 96bdd95b493e263675e7e131c13af0b3 *R/methods_mgcv.R
 bdd287c114120dfd86a13790736be008 *R/methods_mhurdle.R
 d2cf8244bd4de0eca23a15da9e3813a7 *R/methods_mlm.R
-cb3f2511197b0c73af44d18fce594e4b *R/methods_mlogit.R
+614ff46a1c9af52d5df6729c29536f08 *R/methods_mlogit.R
 969f759880202a3adad0fddcc9a0627c *R/methods_mlr3.R
 7bc9665f23cbe12b51cccb54c666f097 *R/methods_nlme.R
 14e88eac0a877c212da14f7d5afb2ba8 *R/methods_nnet.R
@@ -84,7 +85,7 @@ d6a009aa1aadeff7d5f8af72bcea8120 *R/methods_scam.R
 d24518f21b90784835bf98d4faeb0e50 *R/methods_stats.R
 d1f505aef2d36d9ef8ada6593c62b31f *R/methods_survey.R
 8c5832b33925e1ea1b49e84eb7a56611 *R/methods_survival.R
-66cb56aaeb95f4f6de1a6cf8548464e7 *R/methods_tidymodels.R
+fc6941d8685d215b641eaf943e4974ce *R/methods_tidymodels.R
 30eec5e50ebb75eee60314d0e3c75249 *R/methods_tobit1.R
 576257c245e9b2f490349fbd70f8d218 *R/modelarchive.R
 970b67d14246cb1f71b95f90f9f54b93 *R/myTryCatch.R
@@ -96,7 +97,7 @@ f56d7e29d4c224bb882b016f56f2cdad *R/plot_comparisons.R
 b67ea34ee1677a790a7e7487b8d1811c *R/plot_slopes.R
 4d464795da0e9545fe351881ffad23c1 *R/posterior_draws.R
 5e0a204f2d44f57644e38a63a5c66ac2 *R/predictions.R
-69af24695d1b6d4c960e4d5aa764b35c *R/print.R
+3f078a5e3be228cb1af562ce293bd941 *R/print.R
 f5c51615c1504792626a320c347bd90d *R/recall.R
 3106542e68b2ce42efc1b01f71268153 *R/sanitize_comparison.R
 caf9a716c5468581515a460789804991 *R/sanitize_condition.R
@@ -123,9 +124,9 @@ ea92d41c8bf841b80ab1419426c1fbdc *R/type_dictionary.R
 9a25c83773827c6e030459ddb31379a5 *R/utils.R
 d7e8b180541cbf62fe8b08a228fbc8b1 *README.md
 adb8fba9ecceb33c27dc8576f5a3ff98 *inst/CITATION
-7388d57168b866210b551329420431f6 *inst/COPYRIGHTS
+25103ae6eccd9cfd933da722d9ffdb9e *inst/COPYRIGHTS
 46fef9fed075d8707839474f6e26c2ca *inst/WORDLIST
-4f1757d2904643ae964b84361855565d *man/comparisons.Rd
+5afe94c5d3e36426cb155168c7ba48bb *man/comparisons.Rd
 84668bf4b7fa8fc8e3c6351e1bad4e03 *man/complete_levels.Rd
 1b589aca82a899e2aa49028bb85c2bcc *man/datagrid.Rd
 26f5dc2b3a87bba04de66e5d373f7ba9 *man/datagridcf.Rd
@@ -137,10 +138,10 @@ de8f79175b481378d9d98bc0acd2ef6c *man/figures/marginaleffects_logo_word.svg
 8d9cba50f58cde710d8e44dac6187156 *man/figures/mfx_slopes.png
 2b0a7cc5ceb04acdb70d81087f214a8a *man/figures/zoo_banner.png
 db7705987ad953d73a55c9e1465cb027 *man/figures/zoo_header.png
-7fdfc7f6a3e40de390eaafcec5f1bd94 *man/get_coef.Rd
+d907a5f7dcd944717f0c10bbe41d2c5e *man/get_coef.Rd
 564e21c7b44d04c5306b076f8a7b8a0c *man/get_group_names.Rd
 c8d368f547a63eb8446980f9048fea32 *man/get_model_matrix.Rd
-15d90ef9326ea4882c7144b4a2f41be3 *man/get_predict.Rd
+dd5a4b77ffad13de3bc74bc67094d469 *man/get_predict.Rd
 4804d3eb1f99e47e526c464acfb7f8d6 *man/get_varcov_args.Rd
 8aa5654db9170a10c7b6cdb58a867a2a *man/get_vcov.Rd
 452ab5b649a2f1fa08aa27e99a8b3cfc *man/hypotheses.Rd
@@ -155,12 +156,12 @@ f5eee91998298d050863f946e8d5573f *man/meffects.Rd
 5f2757546c35d0e2acb5f551fce35379 *man/plot_slopes.Rd
 281a145bb93056f6201b86f985857c98 *man/posterior_draws.Rd
 bb6528442188174f54cb4c0abfbb469b *man/posteriordraws.Rd
-56b0ec1e6ca72b2a2c870ac8e2390318 *man/predictions.Rd
+291b39eb0b8f942eaeb1989bb9763b13 *man/predictions.Rd
 99ebcba951af82f5a357de3d47e7c8d3 *man/print.marginaleffects.Rd
 1e18cfe170451992ed72e3a2e6313dee *man/reexports.Rd
 91ff16c1be878e50bb4853e7c2a92965 *man/sanitize_model_specific.Rd
 d64ea408c15c34818fa5adc77241c315 *man/set_coef.Rd
-1e3110a20d6102ab51c6072e09bfc1d9 *man/slopes.Rd
+1b6e484de163a95a0a1b8d22eb89afe6 *man/slopes.Rd
 5610fede2c344e79bf255894567a9bc2 *man/specify_hypothesis.Rd
 e84fbde88a4134d4d943cd148c5e0a67 *src/RcppExports.cpp
 52bfe4eb70930b6c30ac049945bb3d8a *src/eigen.cpp
