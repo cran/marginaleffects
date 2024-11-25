@@ -3,7 +3,7 @@
 %   R/methods_afex.R, R/methods_aod.R, R/methods_biglm.R, R/methods_brms.R,
 %   R/methods_dbarts.R, R/methods_gamlss.R, R/methods_glmmTMB.R,
 %   R/methods_mhurdle.R, R/methods_mlr3.R, R/methods_rms.R, R/methods_rstpm2.R,
-%   R/methods_scam.R, R/methods_tidymodels.R
+%   R/methods_scam.R, R/methods_systemfit.R, R/methods_tidymodels.R
 \name{get_vcov}
 \alias{get_vcov}
 \alias{get_vcov.default}
@@ -23,9 +23,10 @@
 \alias{get_vcov.gsm}
 \alias{get_vcov.aft}
 \alias{get_vcov.scam}
+\alias{get_vcov.systemfit}
 \alias{get_vcov.model_fit}
 \alias{get_vcov.workflow}
-\title{Get a named variance-covariance matrix from a model object (internal function)}
+\title{Get a named variance-covariance matrix from a model object}
 \usage{
 get_vcov(model, ...)
 
@@ -62,6 +63,8 @@ get_vcov(model, ...)
 \method{get_vcov}{aft}(model, ...)
 
 \method{get_vcov}{scam}(model, vcov = NULL, ...)
+
+\method{get_vcov}{systemfit}(model, ...)
 
 \method{get_vcov}{model_fit}(model, type = NULL, ...)
 
@@ -106,6 +109,6 @@ first entry in the error message is used by default.}
 A named square matrix of variance and covariances. The names must match the coefficient names.
 }
 \description{
-Get a named variance-covariance matrix from a model object (internal function)
+Get a named variance-covariance matrix from a model object
 }
 \keyword{internal}

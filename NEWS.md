@@ -1,5 +1,30 @@
 # News
 
+## 0.24.0
+
+Breaking change:
+
+* Rows are now sorted when using the `by` argument. This may change the order of estimates, which can affect hypothesis tests using positional indices like `b1-b2=0`. 
+
+Bugs:
+
+* Intercept only model now works with `avg_predictions()`. Thanks to @vbrazao for report #1230.
+* `systemfit` models returned no standard errors when the same variables entered in different parts of the model. Thanks to @mronkko for report #1233.
+
+New features:
+
+* Users can reduce the size of `marginaleffects` objects by setting the new global option `options(marginaleffects_lean = TRUE)`. This will strip the return objects of all information about the original model and data, as well ancillary attributes. The benefit of dramatically smaller return objects comes at the cost of not being able to run some post-processing inference functions like `hypotheses()` on these lean objects. Thanks to @grantmcdermott for the suggestion and code contribution #1267. 
+
+Misc:
+
+* Using positional indices with `hypothesis="b1=b2"` can be dangerous if row order is modified. A warning is now issued once per session with detailed advice. This warning can be disabled with `options(marginaleffects_safe=FALSE)`.
+* The `ggplot2` object returned by `plot_*()` functions now includes the estimates as a default object. This allows things like: `plot_predictions(model, condition="x")+geom_line()`. Thanks to @mattansb for code contribution #1259.
+* Be less strict about combining columns of different types. This allows us to handle types like `haven_labelled`. Thanks to @mwindzio for report #1238.
+* In `lme4` and `glmmTMB` models, warnings are now silenced when the user specifically passes `re.form=NULL`. Thanks to @mattansb for the feature request.
+* New startup message appears once per 24hr period and can be suppressed using `options(marginaleffects_startup_message = FALSE)`.
+* `posterior_draws()` is renamed `get_draws()` because it also applies to bootstrap and simulation-based inference draws.
+* `get_coef()` and `get_vcov()` are now documented on the main website, as they are useful helper functions.
+
 ## 0.23.0
 
 Breaking change:

@@ -223,9 +223,9 @@ first entry in the error message is used by default.}
 \item Accepts an argument \code{x}: object produced by a \code{marginaleffects} function or a data frame with column \code{rowid} and \code{estimate}
 \item Returns a data frame with columns \code{term} and \code{estimate} (mandatory) and \code{rowid} (optional).
 \item The function can also accept optional input arguments: \code{newdata}, \code{by}, \code{draws}.
-\item This function approach will not work for Bayesian models or with bootstrapping. In those cases, it is easy to use \code{posterior_draws()} to extract and manipulate the draws directly.
+\item This function approach will not work for Bayesian models or with bootstrapping. In those cases, it is easy to use \code{get_draws()} to extract and manipulate the draws directly.
 }
-\item See the Examples section below and the vignette: https://marginaleffects.com/vignettes/hypothesis.html
+\item See the Examples section below and the vignette: https://marginaleffects.com/chapters/hypothesis.html
 }}
 
 \item{equivalence}{Numeric vector of length 2: bounds used for the two-one-sided test (TOST) of equivalence, and for the non-inferiority and non-superiority tests. See Details section below.}
@@ -290,7 +290,7 @@ slopes, elasticities, etc.
 
 See the comparisons vignette and package website for worked examples and case studies:
 \itemize{
-\item \url{https://marginaleffects.com/vignettes/comparisons.html}
+\item \url{https://marginaleffects.com/chapters/comparisons.html}
 \item \url{https://marginaleffects.com/}
 }
 }
@@ -498,15 +498,33 @@ To disable parallelism in \code{marginaleffects} altogether, you can set a globa
 
 The behavior of \code{marginaleffects} functions can be modified by setting global options.
 
-Disable some safety checks:
+Disable some safety checks and warnings:
+\itemize{
+\item \code{options(marginaleffects_startup_message = FALSE)}
+\itemize{
+\item Disable the startup message printed on \code{library(marginaleffects)}.
+}
+\item \code{options(marginaleffects_safe = FALSE)}
+\itemize{
+\item Disable safety checks and warnings.
+}
+\item \code{options(marginaleffects_print_omit = c("p.value", "s.value"))}
+\itemize{
+\item Omit some columns from the printed output.
+}
+}
 
-\if{html}{\out{<div class="sourceCode r">}}\preformatted{options(marginaleffects_safe = FALSE)
+Enforce lean return objects, sans information about the original model and
+data, and other ancillary attributes. Note that this will disable some
+advanced post-processing features and functions like \link{hypotheses}.
+
+\if{html}{\out{<div class="sourceCode r">}}\preformatted{options(marginaleffects_lean = TRUE)`
 }\if{html}{\out{</div>}}
 
-Omit some columns from the printed output:
-
-\if{html}{\out{<div class="sourceCode r">}}\preformatted{options(marginaleffects_print_omit = c("p.value", "s.value"))`
-}\if{html}{\out{</div>}}
+Other options:
+\itemize{
+\item \code{marginaleffects_plot_gray}: logical. If \code{TRUE}, the default color of the plot is gray. Default is \code{FALSE}.
+}
 }
 
 \examples{
@@ -562,9 +580,9 @@ avg_comparisons(mod, comparison = "lnratioavg", transform = exp)
 
 # Adjusted Risk Ratio: Manual specification of the `comparison`
 avg_comparisons(
-     mod,
-     comparison = function(hi, lo) log(mean(hi) / mean(lo)),
-     transform = exp)
+  mod,
+  comparison = function(hi, lo) log(mean(hi) / mean(lo)),
+  transform = exp)
 # cross contrasts
 mod <- lm(mpg ~ factor(cyl) * factor(gear) + hp, data = mtcars)
 avg_comparisons(mod, variables = c("cyl", "gear"), cross = TRUE)
@@ -576,31 +594,32 @@ avg_comparisons(mod, variables = list(gear = "sequential", hp = 10))
 mod <- lm(mpg ~ wt + drat, data = mtcars)
 
 comparisons(
-    mod,
-    newdata = "mean",
-    hypothesis = "wt = drat")
+  mod,
+  newdata = "mean",
+  hypothesis = "wt = drat")
 
 # same hypothesis test using row indices
 comparisons(
-    mod,
-    newdata = "mean",
-    hypothesis = "b1 - b2 = 0")
+  mod,
+  newdata = "mean",
+  hypothesis = "b1 - b2 = 0")
 
 # same hypothesis test using numeric vector of weights
 comparisons(
-    mod,
-    newdata = "mean",
-    hypothesis = c(1, -1))
+  mod,
+  newdata = "mean",
+  hypothesis = c(1, -1))
 
 # two custom contrasts using a matrix of weights
-lc <- matrix(c(
+lc <- matrix(
+  c(
     1, -1,
     2, 3),
-    ncol = 2)
+  ncol = 2)
 comparisons(
-    mod,
-    newdata = "mean",
-    hypothesis = lc)
+  mod,
+  newdata = "mean",
+  hypothesis = lc)
 
 # Effect of a 1 group-wise standard deviation change
 # First we calculate the SD in each group of `cyl`
@@ -608,11 +627,11 @@ comparisons(
 library(dplyr)
 mod <- lm(mpg ~ hp + factor(cyl), mtcars)
 tmp <- mtcars \%>\%
-    group_by(cyl) \%>\%
-    mutate(hp_sd = sd(hp))
-avg_comparisons(mod, 
-    variables = list(hp = function(x) data.frame(x, x + tmp$hp_sd)),
-    by = "cyl")
+  group_by(cyl) \%>\%
+  mutate(hp_sd = sd(hp))
+avg_comparisons(mod,
+  variables = list(hp = function(x) data.frame(x, x + tmp$hp_sd)),
+  by = "cyl")
 
 # `by` argument
 mod <- lm(mpg ~ hp * am * vs, data = mtcars)
@@ -624,14 +643,15 @@ avg_comparisons(mod, variables = "hp", by = c("vs", "am"))
 library(nnet)
 mod <- multinom(factor(gear) ~ mpg + am * vs, data = mtcars, trace = FALSE)
 by <- data.frame(
-    group = c("3", "4", "5"),
-    by = c("3,4", "3,4", "5"))
+  group = c("3", "4", "5"),
+  by = c("3,4", "3,4", "5"))
 comparisons(mod, type = "probs", by = by)
 
 }
 \references{
 \itemize{
+\item Arel-Bundock V, Greifer N, Heiss A (2024). “How to Interpret Statistical Models Using marginaleffects for R and Python.” \emph{Journal of Statistical Software}, \emph{111}(9), 1-32. doi:10.18637/jss.v111.i09 \doi{10.18637/jss.v111.i09}
 \item Greenland S. 2019. "Valid P-Values Behave Exactly as They Should: Some Misleading Criticisms of P-Values and Their Resolution With S-Values." The American Statistician. 73(S1): 106–114.
-\item Cole, Stephen R, Jessie K Edwards, and Sander Greenland. 2020. "Surprise!" American Journal of Epidemiology 190 (2): 191–93. https://doi.org/10.1093/aje/kwaa136
+\item Cole, Stephen R, Jessie K Edwards, and Sander Greenland. 2020. "Surprise!" American Journal of Epidemiology 190 (2): 191–93. \doi{10.1093/aje/kwaa136}
 }
 }

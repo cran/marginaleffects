@@ -188,9 +188,9 @@ levels. See examples section.}
 \item Accepts an argument \code{x}: object produced by a \code{marginaleffects} function or a data frame with column \code{rowid} and \code{estimate}
 \item Returns a data frame with columns \code{term} and \code{estimate} (mandatory) and \code{rowid} (optional).
 \item The function can also accept optional input arguments: \code{newdata}, \code{by}, \code{draws}.
-\item This function approach will not work for Bayesian models or with bootstrapping. In those cases, it is easy to use \code{posterior_draws()} to extract and manipulate the draws directly.
+\item This function approach will not work for Bayesian models or with bootstrapping. In those cases, it is easy to use \code{get_draws()} to extract and manipulate the draws directly.
 }
-\item See the Examples section below and the vignette: https://marginaleffects.com/vignettes/hypothesis.html
+\item See the Examples section below and the vignette: https://marginaleffects.com/chapters/hypothesis.html
 }}
 
 \item{equivalence}{Numeric vector of length 2: bounds used for the two-one-sided test (TOST) of equivalence, and for the non-inferiority and non-superiority tests. See Details section below.}
@@ -243,7 +243,7 @@ The \code{newdata} argument and the \code{datagrid()} function can be used to co
 
 See the predictions vignette and package website for worked examples and case studies:
 \itemize{
-\item \url{https://marginaleffects.com/vignettes/predictions.html}
+\item \url{https://marginaleffects.com/chapters/predictions.html}
 \item \url{https://marginaleffects.com/}
 }
 }
@@ -417,15 +417,33 @@ To disable parallelism in \code{marginaleffects} altogether, you can set a globa
 
 The behavior of \code{marginaleffects} functions can be modified by setting global options.
 
-Disable some safety checks:
+Disable some safety checks and warnings:
+\itemize{
+\item \code{options(marginaleffects_startup_message = FALSE)}
+\itemize{
+\item Disable the startup message printed on \code{library(marginaleffects)}.
+}
+\item \code{options(marginaleffects_safe = FALSE)}
+\itemize{
+\item Disable safety checks and warnings.
+}
+\item \code{options(marginaleffects_print_omit = c("p.value", "s.value"))}
+\itemize{
+\item Omit some columns from the printed output.
+}
+}
 
-\if{html}{\out{<div class="sourceCode r">}}\preformatted{options(marginaleffects_safe = FALSE)
+Enforce lean return objects, sans information about the original model and
+data, and other ancillary attributes. Note that this will disable some
+advanced post-processing features and functions like \link{hypotheses}.
+
+\if{html}{\out{<div class="sourceCode r">}}\preformatted{options(marginaleffects_lean = TRUE)`
 }\if{html}{\out{</div>}}
 
-Omit some columns from the printed output:
-
-\if{html}{\out{<div class="sourceCode r">}}\preformatted{options(marginaleffects_print_omit = c("p.value", "s.value"))`
-}\if{html}{\out{</div>}}
+Other options:
+\itemize{
+\item \code{marginaleffects_plot_gray}: logical. If \code{TRUE}, the default color of the plot is gray. Default is \code{FALSE}.
+}
 }
 
 \examples{
@@ -474,31 +492,32 @@ nrow(p)
 mod <- lm(mpg ~ wt + drat, data = mtcars)
 
 predictions(
-    mod,
-    newdata = datagrid(wt = 2:3),
-    hypothesis = "b1 = b2")
+  mod,
+  newdata = datagrid(wt = 2:3),
+  hypothesis = "b1 = b2")
 
 # same hypothesis test using row indices
 predictions(
-    mod,
-    newdata = datagrid(wt = 2:3),
-    hypothesis = "b1 - b2 = 0")
+  mod,
+  newdata = datagrid(wt = 2:3),
+  hypothesis = "b1 - b2 = 0")
 
 # same hypothesis test using numeric vector of weights
 predictions(
-    mod,
-    newdata = datagrid(wt = 2:3),
-    hypothesis = c(1, -1))
+  mod,
+  newdata = datagrid(wt = 2:3),
+  hypothesis = c(1, -1))
 
 # two custom contrasts using a matrix of weights
-lc <- matrix(c(
+lc <- matrix(
+  c(
     1, -1,
     2, 3),
-    ncol = 2)
+  ncol = 2)
 predictions(
-    mod,
-    newdata = datagrid(wt = 2:3),
-    hypothesis = lc)
+  mod,
+  newdata = datagrid(wt = 2:3),
+  hypothesis = lc)
 
 
 # `by` argument
@@ -515,22 +534,23 @@ predictions(nom, type = "probs") |> head()
 avg_predictions(nom, type = "probs", by = "group")
 
 by <- data.frame(
-    group = c("3", "4", "5"),
-    by = c("3,4", "3,4", "5"))
+  group = c("3", "4", "5"),
+  by = c("3,4", "3,4", "5"))
 
 predictions(nom, type = "probs", by = by)
 
 # sum of predicted probabilities for combined response levels
 mod <- multinom(factor(cyl) ~ mpg + am, data = mtcars, trace = FALSE)
 by <- data.frame(
-    by = c("4,6", "4,6", "8"),
-    group = as.character(c(4, 6, 8)))
+  by = c("4,6", "4,6", "8"),
+  group = as.character(c(4, 6, 8)))
 predictions(mod, newdata = "mean", byfun = sum, by = by)
 
 }
 \references{
 \itemize{
+\item Arel-Bundock V, Greifer N, Heiss A (2024). “How to Interpret Statistical Models Using marginaleffects for R and Python.” \emph{Journal of Statistical Software}, \emph{111}(9), 1-32. doi:10.18637/jss.v111.i09 \doi{10.18637/jss.v111.i09}
 \item Greenland S. 2019. "Valid P-Values Behave Exactly as They Should: Some Misleading Criticisms of P-Values and Their Resolution With S-Values." The American Statistician. 73(S1): 106–114.
-\item Cole, Stephen R, Jessie K Edwards, and Sander Greenland. 2020. "Surprise!" American Journal of Epidemiology 190 (2): 191–93. https://doi.org/10.1093/aje/kwaa136
+\item Cole, Stephen R, Jessie K Edwards, and Sander Greenland. 2020. "Surprise!" American Journal of Epidemiology 190 (2): 191–93. \doi{10.1093/aje/kwaa136}
 }
 }
