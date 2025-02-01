@@ -2,7 +2,7 @@
 #'
 #' @keywords internal
 #' @return A string with class `knit_asis` to be printed in Rmarkdown or Quarto documents.
-#' @exportS3Method knitr::knit_print
+#' @rawNamespace S3method(knitr::knit_print, marginaleffects)
 knit_print.marginaleffects <- function(x, ...) {
   if (isTRUE(getOption("marginaleffects_print_style") == "tinytable")) {
     insight::check_if_installed("tinytable")
@@ -56,7 +56,7 @@ print.marginaleffects <- function(x,
                                   nrows = getOption("marginaleffects_print_nrows", default = 30),
                                   ncols = getOption("marginaleffects_print_ncols", default = 30),
                                   type = getOption("marginaleffects_print_type", default = TRUE),
-                                  column_names = getOption("marginaleffects_print_column_names", default = TRUE),
+                                  column_names = getOption("marginaleffects_print_column_names", default = FALSE),
                                   ...) {
   checkmate::assert_number(digits)
   checkmate::assert_number(topn)
@@ -70,6 +70,8 @@ print.marginaleffects <- function(x,
     print(as.data.frame(x))
     return(invisible(x))
   }
+
+  print_columns_text <- print_type_text <- print_term_text <- print_contrast_text <- NULL
 
   out <- x
 
@@ -107,11 +109,6 @@ print.marginaleffects <- function(x,
     alpha <- 100 * (1 - attr(x, "conf_level"))
   }
 
-  # contrast is sometimes useless
-  if ("contrast" %in% colnames(out) && all(out$contrast == "")) {
-    out$contrast <- NULL
-  }
-
   statistic_label <- attr(x, "statistic_label")
   if (is.null(statistic_label)) {
     if (any(out[["df"]] < Inf)) {
@@ -123,8 +120,8 @@ print.marginaleffects <- function(x,
 
   # rename
   dict <- c(
-    "group" = "Group",
     "term" = "Term",
+    "group" = "Group",
     "contrast" = "Contrast",
     "hypothesis" = "Hypothesis",
     "value" = "Value",
@@ -154,104 +151,65 @@ print.marginaleffects <- function(x,
     "p.value.equiv" = "p (Equiv)",
     "df" = "Df",
     "df1" = "Df 1",
-    "df2" = "Df 2"
+    "df2" = "Df 2",
+    "rvar" = "rvar"
   )
 
+  # explicitly given by user in `datagrid()` or `by` or `newdata`
+  explicit <- get_explicit(x)
 
-  if (inherits(x, "marginalmeans")) {
-    dict["estimate"] <- "Mean"
+  # useless columns should not be printed
+  useless <- c(
+    # indices
+    "rowid", "rowidcf",
+    # user-supplied omissions
+    getOption("marginaleffects_print_omit", default = NULL),
+    # response variable
+    tryCatch(
+      unlist(insight::find_response(attr(x, "model"), combine = TRUE), use.names = FALSE),
+      error = function(e) NULL)
+  )
+
+  if ("term" %in% colnames(out) && length(unique(out$term)) == 1) {
+    print_term_text <- sprintf("Term: %s\n", out[["term"]][1])
+    useless <- c(useless, "term")
+  }
+
+  if ("contrast" %in% colnames(out) && length(unique(out$contrast)) == 1) {
+    print_contrast_text <- sprintf("Comparison: %s\n", out[["contrast"]][1])
+    useless <- c(useless, "contrast")
   }
 
   # Subset columns
+  implicit <- attr(attr(x, "newdata"), "implicit")
   idx <- c(
+    explicit,
     names(dict),
     grep("^contrast_", colnames(x), value = TRUE))
+  start <- grep("term|^contrast|group", c(names(dict), colnames(x)), value = TRUE)
+  middle <- explicit
+  end <- setdiff(intersect(names(dict), colnames(x)), c(start, middle))
+  end <- c(end, implicit)
+  idx <- c(start, middle, end)
+  idx <- intersect(idx, colnames(out))
+  idx <- setdiff(idx, useless)
+  idx <- unique(idx)
+  out <- data.table(out)[, ..idx, drop = FALSE]
 
-  # explicitly given by user in `datagrid()` or `by` or `newdata`
-  nd <- attr(x, "newdata")
-  if (is.null(nd)) {
-    nd <- attr(x, "newdata_newdata")
-  }
-  explicit <- tmp <- c(
-    "by",
-    attr(x, "hypothesis_by"),
-    attr(nd, "variables_datagrid"),
-    attr(nd, "newdata_variables_datagrid"),
-    attr(x, "variables_datagrid"),
-    attr(x, "newdata_variables_datagrid")
-  )
-  if (isTRUE(checkmate::check_character(attr(x, "by")))) {
-    bycols <- attr(x, "by")
-    tmp <- c(tmp, attr(x, "by"))
-  } else {
-    bycols <- NULL
-  }
-  idx <- c(idx[1:grep("by", idx)], tmp, idx[(grep("by", idx) + 1):length(idx)])
-  if (isTRUE(attr(nd, "newdata_newdata_explicit")) || isTRUE(attr(nd, "newdata_explicit"))) {
-    idx <- c(idx, colnames(nd))
-  }
+  # rename columns
+  old <- colnames(out)
+  new <- gsub("^contrast_", "C: ", old)
+  idx_match <- match(old, names(dict))
+  new[!is.na(idx_match)] <- dict[idx_match[!is.na(idx_match)]]
+  data.table::setnames(out, old = old, new = new)
 
-  # drop useless columns: rowid
-  useless <- c("rowid", "rowidcf")
-
-  # drop useless columns: dv
-  dv <- tryCatch(
-    unlist(insight::find_response(attr(x, "model"), combine = TRUE), use.names = FALSE),
-    error = function(e) NULL)
-  useless <- c(useless, dv)
-
-  # selection style
-  data.table::setDT(out)
-
-  if ("term" %in% colnames(out) && all(out$term == "cross")) {
-    out[["term"]] <- NULL
-    colnames(out) <- gsub("^contrast_", "C: ", colnames(out))
-    idx <- c(grep("C: .*", colnames(out), value = TRUE), idx)
-  }
-
-  print_columns_text <- print_type_text <- print_term_text <- print_contrast_text <- NULL
-  print_omit <- getOption("marginaleffects_print_omit", default = NULL)
-
-  # contrast and term can have long labels. Drop if not unique.
-  if (length(unique(out[["contrast"]])) == 1) {
-    print_contrast_text <- sprintf("Comparison: %s\n", out[["contrast"]][1])
-    print_omit <- c(print_omit, "contrast")
-  }
-  te <- unique(out[["term"]])
-  te <- setdiff(te, explicit) # ex: polynomials where both `variables="x"` and datagrid(x)
-  if (length(te) == 1 && length(bycols) == 0) {
-    print_omit <- c(print_omit, te)
-    print_term_text <- sprintf("Term: %s\n", out[["term"]][1])
-    print_omit <- c(print_omit, "term")
-  }
-
+  # Footnotes
   if (ncol(x) <= ncols && isTRUE(column_names)) {
     print_columns_text <- paste("Columns:", paste(colnames(x), collapse = ", "), "\n")
   }
+
   if (isTRUE(type) && !is.null(attr(x, "type"))) {
     print_type_text <- paste("Type: ", attr(x, "type"), "\n")
-  }
-
-  # drop useless columns
-  idx <- setdiff(unique(idx), c(useless, print_omit))
-  idx <- intersect(idx, colnames(out))
-  out <- out[, ..idx, drop = FALSE]
-
-
-  for (i in seq_along(dict)) {
-    colnames(out)[colnames(out) == names(dict)[i]] <- dict[i]
-  }
-
-  # recommend avg_*()
-  rec <- ""
-  if (isFALSE(attr(x, "by"))) {
-    if (inherits(x, "predictions")) {
-      rec <- "?avg_predictions and "
-    } else if (inherits(x, "comparisons")) {
-      rec <- "?avg_comparisons and "
-    } else if (inherits(x, "slopes")) {
-      rec <- "?avg_slopes and "
-    }
   }
 
   # avoid infinite recursion by stripping marginaleffect.summary class
@@ -265,9 +223,6 @@ print.marginaleffects <- function(x,
     if (isTRUE(splitprint)) {
       tab <- rbind(utils::head(tab, topn), utils::tail(tab, topn))
     }
-
-    # at <- attributes(tab)
-    # attributes(tab) <- at[names(at) %in% c("row.names", "names", "class")]
 
     args <- list(x = tab)
     notes <- c(print_type_text, print_columns_text)
@@ -301,8 +256,8 @@ print.marginaleffects <- function(x,
   # some commands do not generate average contrasts/mfx. E.g., `lnro` with `by`
   if (splitprint) {
     print(utils::head(out, n = topn), row.names = FALSE)
-    msg <- "--- %s rows omitted. See %s?print.marginaleffects ---"
-    msg <- sprintf(msg, nrow(x) - 2 * topn, rec)
+    msg <- "--- %s rows omitted. See ?print.marginaleffects ---"
+    msg <- sprintf(msg, nrow(x) - 2 * topn)
     cat(msg, "\n")
     # remove colnames
     tmp <- utils::capture.output(print(utils::tail(out, n = topn), row.names = FALSE))
@@ -367,3 +322,24 @@ knit_print.comparisons <- knit_print.marginaleffects
 #' @noRd
 #' @exportS3Method knitr::knit_print
 knit_print.slopes <- knit_print.marginaleffects
+
+
+get_explicit <- function(x) {
+  bycols <- "by"
+
+  by <- attr(x, "by")
+  if (isTRUE(checkmate::check_character(by))) {
+    bycols <- c(by, bycols)
+  }
+
+  explicit <- c(
+    bycols,
+    attr(attr(x, "newdata"), "explicit"),
+    attr(x, "hypothesis_by"),
+    attr(x, "newdata_explicit"),
+    attr(x, "hypothesis_function_by")
+  )
+
+  return(explicit)
+}
+

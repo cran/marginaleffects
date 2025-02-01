@@ -1,4 +1,6 @@
 unpack_matrix_cols <- function(x) {
+    data.table::setDF(x)
+
     # what data types are we working with
     dcs <- sapply(x, function(x) class(x)[1])
 
@@ -17,7 +19,19 @@ unpack_matrix_cols <- function(x) {
         return(x)
     }
 
+    data.table::setDT(out)
+
     out
+}
+
+
+unpack_matrix_1col <- function(x) {
+    for (i in seq_along(x)) {
+        if (inherits(x[[i]], "matrix") && ncol(x[[i]]) == 1) {
+            x[[i]] <- drop(x[[i]])
+        }
+    }
+    return(x)
 }
 
 

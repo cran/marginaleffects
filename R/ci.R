@@ -5,7 +5,6 @@ get_ci <- function(
     draws = NULL,
     vcov = TRUE,
     null_hypothesis = 0,
-    p_adjust = NULL,
     model = NULL,
     ...) {
 
@@ -61,8 +60,7 @@ get_ci <- function(
                    p_overwrite
 
     ci_overwrite <- !"conf.low" %in% colnames(x) &&
-                    "std.error" %in% colnames(x) &&
-                    is.null(p_adjust)
+                    "std.error" %in% colnames(x)
 
     if (z_overwrite) {
         x[["statistic"]] <- (x[["estimate"]] - null_hypothesis) / x[["std.error"]]
@@ -83,10 +81,6 @@ get_ci <- function(
         x[["conf.low"]] <- x[["estimate"]] - critical * x[["std.error"]]
         x[["conf.high"]] <- x[["estimate"]] + critical * x[["std.error"]]
     }
-    
-    if (!is.null(p_adjust) && "p.value" %in% colnames(x)) {
-        x$p.value <- stats::p.adjust(x$p.value, method = p_adjust)
-    }
 
     # s-value
     if ("p.value" %in% colnames(x)) {
@@ -99,6 +93,7 @@ get_ci <- function(
 
 get_ci_draws <- function(x, conf_level, draws, model = NULL) {
     
+
     checkmate::check_number(conf_level, lower = 1e-10, upper = 1 - 1e-10)
     critical <- (1 - conf_level) / 2
 
@@ -160,6 +155,9 @@ get_ci_draws <- function(x, conf_level, draws, model = NULL) {
     } else if (identical(FUN_CENTER, "median")) {
         FUN_CENTER <- stats::median
     }
+
+    # necessary for `hypothesis_apply()` when attributes are added by collapse::BY or collapse::dapply
+    colnames(draws) <- row.names(draws) <- NULL
 
     CIs <- t(apply(draws, 1, FUN_INTERVAL, credMass = conf_level))
     Bs <- apply(draws, 1, FUN_CENTER)

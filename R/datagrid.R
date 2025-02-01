@@ -105,6 +105,8 @@ datagrid <- function(
     checkmate::assert_data_frame(newdata, null.ok = TRUE)
     checkmate::assert_flag(response)
 
+    explicit <- c(names(dots), by)
+
     if (grid_type == "mean_or_mode") {
         if (is.null(FUN_character)) FUN_character <- get_mode
         if (is.null(FUN_logical)) FUN_logical <- get_mode
@@ -168,19 +170,10 @@ datagrid <- function(
             newdata_list[[i]] <- do.call(datagrid_engine, args)
         }
 
-        # Issue 1058: missing attributes with `by`
-        at <- attributes(newdata_list[[1]])
-
         out <- data.table::rbindlist(newdata_list)
         data.table::setDF(out)
 
-        # Issue 1058: missing attributes with `by`
-        # overwriting everything corrupts the data frame
-        for (n in names(at)) {
-            if (!n %in% names(attributes(out))) {
-                attr(out, n) <- at[[n]]
-            }
-        }
+        attr(out, "explicit") <- explicit
 
         return(out)
     }
@@ -201,6 +194,7 @@ datagrid <- function(
         out$rowid <- seq_len(nrow(out))
     }
 
+    attr(out, "explicit") <- explicit
     return(out)
 }
 
@@ -306,16 +300,8 @@ datagrid_engine <- function(
     args <- c(out, list(sorted = FALSE))
     out <- do.call("fun", args)
 
-    # na.omit destroys attributes, and we need the "factor" attribute
-    # created by insight::get_data
-    for (n in names(out)) {
-        attr(out, "marginaleffects_variable_class") <- attr(dat, "marginaleffects_variable_class")
-    }
-
     # better to assume "standard" class as output
     data.table::setDF(out)
-
-    attr(out, "variables_datagrid") <- names(dots)
 
     return(out)
 }
@@ -400,7 +386,7 @@ prep_datagrid <- function(..., model = NULL, newdata = NULL, by = NULL) {
         variables_all <- colnames(newdata)
         newdata <- set_variable_class(modeldata = newdata, model = model)
     } else if (!is.null(model)) {
-        variables_list <- insight::find_variables(model)
+        variables_list <- insight::find_variables(model, verbose = FALSE)
         variables_all <- unlist(variables_list, recursive = TRUE)
         # weights are not extracted by default
         variables_all <- c(variables_all, insight::find_weights(model))
@@ -419,7 +405,7 @@ prep_datagrid <- function(..., model = NULL, newdata = NULL, by = NULL) {
     # subset columns, otherwise it can be ultra expensive to compute summaries for every variable. But do the expensive thing anyway if `newdata` is supplied explicitly by the user, or in counterfactual grids.
     if (!is.null(model) && is.null(newdata)) {
         variables_sub <- c(
-            hush(insight::find_variables(model, flatten = TRUE)),
+            hush(insight::find_variables(model, flatten = TRUE, verbose = FALSE)),
             hush(unlist(insight::find_weights(model), use.names = FALSE))) # glmmTMB needs weights column for predictions
         variables_sub <- c(variables_sub, variables_manual)
         variables_sub <- c(variables_sub, c("marginaleffects_wts_internal", "rowid_dedup"))
@@ -479,7 +465,7 @@ prep_datagrid <- function(..., model = NULL, newdata = NULL, by = NULL) {
     
     # cluster identifiers will eventually be treated as factors
     if (!is.null(model)) {
-        v <- insight::find_variables(model)
+        v <- insight::find_variables(model, verbose = FALSE)
         v <- unlist(v[names(v) %in% c("cluster", "strata")], recursive = TRUE)
         variables_cluster <- c(v, insight::find_random(model, flatten = TRUE))
     } else {

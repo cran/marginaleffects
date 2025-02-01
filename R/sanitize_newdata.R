@@ -1,9 +1,12 @@
 sanitize_newdata_call <- function(scall, newdata = NULL, model, by = NULL) {
     if (rlang::quo_is_call(scall)) {
+        df <- FALSE
         if (grepl("^datagrid", rlang::call_name(scall))) {
             if (!"model" %in% rlang::call_args_names(scall)) {
                 scall <- rlang::call_modify(scall, model = model)
             }
+        } else if (isTRUE(rlang::call_name(scall) == "data.frame")) {
+            df <- TRUE
         } else if (isTRUE(rlang::call_name(scall) == "subset")) {
             argnames <- rlang::call_args_names(scall)
             if (!"x" %in% argnames && length(argnames) == 1) {
@@ -22,6 +25,10 @@ sanitize_newdata_call <- function(scall, newdata = NULL, model, by = NULL) {
             }
         }
         out <- rlang::eval_tidy(scall)
+        # newdata=data.frame() all columns must be printed as explicit in print.R
+        if (isTRUE(df)) {
+            attr(out, "implicit") <- unique(c(attr(out, "implicit"), colnames(out)))
+        }
     } else {
         out <- newdata
     }
@@ -62,7 +69,7 @@ build_newdata <- function(model, newdata, by, modeldata) {
         newdata <- do.call("datagrid", args)
 
         # grid with all unique values of categorical variables, and numerics at their means
-    } else if (isTRUE(newdata %in% c("balanced", "marginalmeans"))) {
+    } else if (identical(newdata, "balanced")) {
         args[["grid_type"]] <- "balanced"
         newdata <- do.call("datagrid", args)
         # Issue #580: outcome should not duplicate grid rows
@@ -79,20 +86,9 @@ build_newdata <- function(model, newdata, by, modeldata) {
         insight::format_error(msg)
     }
 
-    # otherwise we get a warning in setDT()
-    if (inherits(model, "mlogit") && isTRUE(inherits(modeldata[["idx"]], "idx"))) {
-        modeldata$idx <- NULL
-    }
-
-    # required by some model-fitting functions
-    data.table::setDT(modeldata)
-
-    # required for the type of column indexing to follow
-    data.table::setDF(newdata)
-
     out <- list(
         "newdata" = newdata,
-        "newdata_explicit" = newdata_explicit,
+        "explicit" = newdata_explicit,
         "modeldata" = modeldata
     )
     return(out)
@@ -137,61 +133,27 @@ add_wts_column <- function(wts, newdata, model) {
 }
 
 
-set_newdata_attributes <- function(model, modeldata, newdata, newdata_explicit) {
-    attr(newdata, "newdata_explicit") <- newdata_explicit
+sanitize_newdata <- function(model, newdata, by, modeldata, wts) {
+    checkmate::assert(
+        checkmate::check_data_frame(newdata, null.ok = TRUE),
+        checkmate::check_choice(newdata, choices = c("mean", "median", "tukey", "grid", "balanced")),
+        combine = "or")
 
-    # column classes
-    mc <- Filter(function(x) is.matrix(modeldata[[x]]), colnames(modeldata))
-    cl <- Filter(function(x) is.character(modeldata[[x]]), colnames(modeldata))
-    cl <- lapply(modeldata[, ..cl], unique)
-    vc <- attributes(modeldata)$marginaleffects_variable_class
-    column_attributes <- list(
-        "matrix_columns" = mc,
-        "character_levels" = cl,
-        "variable_class" = vc)
-    newdata <- set_marginaleffects_attributes(newdata, column_attributes, prefix = "newdata_")
+    tmp <- build_newdata(
+        model = model,
+        newdata = newdata,
+        by = by,
+        modeldata = modeldata)
+    newdata <- tmp[["newdata"]]
+    modeldata <- tmp[["modeldata"]]
 
-    # {modelbased} sometimes attaches useful attributes
-    exclude <- c("class", "row.names", "names", "data", "reference")
-    modelbased_attributes <- get_marginaleffects_attributes(newdata, exclude = exclude)
-    newdata <- set_marginaleffects_attributes(newdata, modelbased_attributes, prefix = "newdata_")
+    # Issue #1327: matrix columns with single column breaks rbindlist(). See `scale()`
+    newdata <- unpack_matrix_1col(newdata)
 
-    # original data
-    attr(newdata, "newdata_modeldata") <- modeldata
-
-    if (is.null(attr(newdata, "marginaleffects_variable_class"))) {
-        newdata <- set_variable_class(newdata, model = model)
-    }
-
-    return(newdata)
-}
-
-
-clean_newdata <- function(model, newdata) {
-    # rbindlist breaks on matrix columns
-    idx <- sapply(newdata, function(x) class(x)[1] == "matrix")
-    if (any(idx)) {
-        # Issue #363
-        # unpacking matrix columns works with {mgcv} but breaks {mclogit}
-        if (inherits(model, "gam")) {
-            newdata <- unpack_matrix_cols(newdata)
-        } else {
-            newdata <- newdata[, !idx, drop = FALSE]
-        }
-    }
-
-    # we will need this to merge the original data back in, and it is better to
-    # do it in a centralized upfront way.
-    if (!"rowid" %in% colnames(newdata)) {
-        newdata$rowid <- seq_len(nrow(newdata))
-    }
-
-    # mlogit: each row is an individual-choice, but the index is not easily
-    # trackable, so we pre-sort it here, and the sort in `get_predict()`. We
-    # need to cross our fingers, but this probably works.
-    if (inherits(model, "mlogit") && isTRUE(inherits(newdata[["idx"]], "idx"))) {
-        idx <- list(newdata[["idx"]][, 1], newdata[["idx"]][, 2])
-        newdata <- newdata[order(newdata[["idx"]][, 1], newdata[["idx"]][, 2]), ]
+    # Issue #363
+    # unpacking matrix columns works with {mgcv} but breaks {mclogit}
+    if (inherits(model, "gam")) {
+        newdata <- unpack_matrix_cols(newdata)
     }
 
     # placeholder response
@@ -204,53 +166,47 @@ clean_newdata <- function(model, newdata) {
             newdata[[resp]] <- y[1]
         }
     }
-    return(newdata)
-}
 
-
-sanitize_newdata <- function(model, newdata, by, modeldata, wts) {
-    if (!identical(newdata, "marginalmeans")) { # soft deprecation trick
-        checkmate::assert(
-            checkmate::check_data_frame(newdata, null.ok = TRUE),
-            checkmate::check_choice(newdata, choices = c("mean", "median", "tukey", "grid", "balanced")),
-            combine = "or")
+    # we will need this to merge the original data back in, and it is better to
+    # do it in a centralized upfront way.
+    if (!"rowid" %in% colnames(newdata)) {
+        newdata$rowid <- seq_len(nrow(newdata))
     }
-    tmp <- build_newdata(model = model, newdata = newdata, by = by, modeldata = modeldata)
-    newdata <- tmp[["newdata"]]
-    modeldata <- tmp[["modeldata"]]
-    newdata_explicit <- tmp[["newdata_explicit"]]
-    newdata <- clean_newdata(model, newdata)
+
+    # add weights column if available
     if (is.null(wts)) wts <- FALSE
     newdata <- add_wts_column(newdata = newdata, wts = wts, model = model)
-    newdata <- set_newdata_attributes(
-        model = model,
-        modeldata = modeldata,
-        newdata = newdata,
-        newdata_explicit = newdata_explicit)
 
-    # # sort rows of output when the user explicitly calls `by` or `datagrid()`
-    # # otherwise, we return the same data frame in the same order, but
-    # # here it makes sense to sort for a clean output.
-    # sortcols <- attr(newdata, "newdata_variables_datagrid")
-    # if (isTRUE(checkmate::check_character(by))) {
-    #     sortcols <- c(by, sortcols)
-    # }
-    # sortcols <- intersect(sortcols, colnames(newdata))
-    out <- data.table::copy(newdata)
-    # if (length(sortcols) > 0) {
-    #     data.table::setorderv(out, cols = sortcols)
-    # }
-    #
-    return(out)
+    data.table::setDT(newdata)
+
+    # attributes: misc
+    attr(newdata, "explicit") <- attr(tmp$newdata, "explicit")
+    attr(newdata, "newdata_modeldata") <- modeldata
+
+    # attributes: column classes
+    if (!is.null(modeldata)) {
+        mc <- Filter(function(x) is.matrix(modeldata[[x]]), colnames(modeldata))
+        cl <- Filter(function(x) is.character(modeldata[[x]]), colnames(modeldata))
+        modeldata <- subset(modeldata, select = cl)
+        cl <- lapply(modeldata, unique)
+        vc <- attributes(modeldata)$marginaleffects_variable_class
+        column_attributes <- list(
+            "matrix_columns" = mc,
+            "character_levels" = cl,
+            "variable_class" = vc)
+        newdata <- set_marginaleffects_attributes(newdata, column_attributes)
+    }
+
+    return(newdata)
 }
 
 
 dedup_newdata <- function(model, newdata, by, wts, comparison = "difference", cross = FALSE, byfun = NULL) {
     # issue #1113: elasticities or custom functions should skip dedup because it is difficult to align x and y
     elasticities <- c("eyexavg", "eydxavg", "dyexavg")
-    if (isTRUE(checkmate::check_choice(comparison, elasticities)) || 
+    if (isTRUE(checkmate::check_choice(comparison, elasticities)) ||
         isTRUE(checkmate::check_function(comparison))) {
-        return(data.table(newdata))
+        return(newdata)
     }
 
     elasticities <- c("eyex", "eydx", "dyex")
@@ -291,7 +247,6 @@ dedup_newdata <- function(model, newdata, by, wts, comparison = "difference", cr
 
     cols <- colnames(out)
     out <- out[, .("marginaleffects_wts_internal" = .N), by = cols]
-    data.table::setDF(out)
 
     out[["rowid_dedup"]] <- seq_len(nrow(out))
     attr(out, "marginaleffects_variable_class") <- vclass

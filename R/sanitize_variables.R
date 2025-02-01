@@ -27,10 +27,11 @@ sanitize_variables <- function(variables,
   if (is.null(variables)) {
     # mhurdle names the variables weirdly
     if (inherits(model, "mhurdle")) {
-      predictors <- insight::find_predictors(model, flatten = TRUE)
+      predictors <- insight::find_predictors(model, flatten = TRUE, verbose = FALSE)
       predictors <- list(conditional = predictors)
     } else {
-      predictors <- insight::find_variables(model)
+      predictors <- insight::find_variables(model, verbose = FALSE)
+      predictors <- predictors[!names(predictors) %in% "response"]
     }
 
     # unsupported models like pytorch
@@ -102,7 +103,7 @@ sanitize_variables <- function(variables,
 
 
   # matrix predictors
-  mc <- attr(newdata, "newdata_matrix_columns")
+  mc <- attr(newdata, "matrix_columns")
   if (length(mc) > 0 && any(names(predictors) %in% mc)) {
     predictors <- predictors[!names(predictors) %in% mc]
     insight::format_warning("Matrix columns are not supported. Use the `variables` argument to specify valid predictors, or use a function like `drop()` to convert your matrix columns into vectors.")
@@ -326,6 +327,10 @@ sanitize_variables <- function(variables,
       predictors[[v]][["eps"]] <- eps
     } else if (is.numeric(modeldata[[v]])) {
       predictors[[v]][["eps"]] <- 1e-4 * diff(range(modeldata[[v]], na.rm = TRUE, finite = TRUE))
+      # 1-row grid has 0 range
+      if (predictors[[v]][["eps"]] == 0) {
+        predictors[[v]][["eps"]] <- 1e-4
+      }
     } else {
       predictors[[v]]["eps"] <- list(NULL)
     }

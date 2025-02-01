@@ -12,7 +12,9 @@ get_modeldata <- function(model, additional_variables = FALSE, modeldata = NULL,
         if ("fit" %in% names(model)) {
             tmp <- try(get_modeldata(model$fit), silent = TRUE)
             if (inherits(tmp, "data.frame")) {
-                return(tmp)
+                out <- unpack_matrix_1col(tmp)
+                data.table::setDT(out)
+                return(out)
             }
         }
         return(NULL)
@@ -21,6 +23,8 @@ get_modeldata <- function(model, additional_variables = FALSE, modeldata = NULL,
     # otherwise, insight::get_data can sometimes return only the the outcome variable
     if (inherits(model, "bart")) {
         modeldata <- insight::get_data(model, additional_variables = TRUE)
+        modeldata <- unpack_matrix_1col(modeldata)
+        data.table::setDT(modeldata)
         return(modeldata)
     }
 
@@ -43,6 +47,11 @@ get_modeldata <- function(model, additional_variables = FALSE, modeldata = NULL,
     if (inherits(model, "fixest")) {
         fwts <- tryCatch(all.vars(model$call$weights), error = function(e) NULL)
         additional_variables <- c(additional_variables, fwts)
+    }
+
+    # always need weights in this model class
+    if (any(c("svylm", "svyglm") %in% class(model))) {
+        wts <- TRUE
     }
 
     # after by
@@ -96,7 +105,8 @@ get_modeldata <- function(model, additional_variables = FALSE, modeldata = NULL,
         out <- evalup(attr(model, "call")$data)
     }
 
-    out <- as.data.frame(out)
+    out <- unpack_matrix_1col(out)
+    data.table::setDT(out)
     out <- set_variable_class(out, model = model)
     return(out)
 }

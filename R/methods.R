@@ -1,7 +1,7 @@
 #' @noRd
 #' @export
 vcov.comparisons <- function(object, ...) {
-    attr(object, "jacobian") %*% attr(object, "vcov") %*% t(attr(object, "jacobian"))
+  attr(object, "jacobian") %*% attr(object, "vcov") %*% t(attr(object, "jacobian"))
 }
 
 
@@ -20,18 +20,13 @@ vcov.hypotheses <- vcov.comparisons
 vcov.slopes <- vcov.comparisons
 
 
-#' @noRd
-#' @export
-vcov.marginalmeans <- vcov.comparisons
-
-
 #' @export
 #' @noRd
 coef.comparisons <- function(object, ...) {
   if (!is.null(object$estimate)) {
     out <- object$estimate
     if (is.null(names(out))) {
-      lab <- tryCatch(get_term_labels(object), error = function(e) NULL)
+      lab <- tryCatch(get_labels(object), error = function(e) NULL)
       if (length(lab) == length(out)) {
         out <- stats::setNames(out, lab)
       }
@@ -48,10 +43,6 @@ coef.comparisons <- function(object, ...) {
 coef.slopes <- coef.comparisons
 
 
-#' @export
-#' @noRd
-coef.marginalmeans <- coef.comparisons
-
 
 #' @export
 #' @noRd
@@ -61,3 +52,22 @@ coef.predictions <- coef.comparisons
 #' @export
 #' @noRd
 coef.hypotheses <- coef.comparisons
+
+
+#' @export
+#' @noRd
+df.residual.comparisons <- function(object, ...) {
+  out <- tryCatch(stats::df.residual(attr(object, "model")), error = function(e) NULL)
+  if (is.null(out)) out <- Inf
+  return(out)
+}
+
+
+#' @export
+#' @noRd
+df.residual.predictions <- df.residual.comparisons
+
+
+#' @export
+#' @noRd
+df.residual.slopes <- df.residual.comparisons

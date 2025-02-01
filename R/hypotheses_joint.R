@@ -69,7 +69,6 @@ joint_test <- function(object, joint_index = NULL, hypothesis = 0, joint_test = 
 
   # Degrees of freedom
   if (is.null(df)) {
-
     df1 <- dim(R)[1] # Q
 
     if (joint_test == "f") {
@@ -130,10 +129,10 @@ joint_test <- function(object, joint_index = NULL, hypothesis = 0, joint_test = 
       print_head <- paste0(print_head, i, sprintf(" = %s\n", hypothesis))
     }
   } else if (inherits(object, c("marginaleffects", "comparisons", "slopes", "marginal_means"))) {
-    tmp <- paste0(get_term_labels(object, joint_index), sprintf(" = %s\n", hypothesis))
+    tmp <- paste0(get_labels(object, idx = joint_index), sprintf(" = %s\n", hypothesis))
     print_head <- c(print_head, tmp)
   } else {
-    tmp <- paste0(get_term_labels(stats::coef(object), joint_index), sprintf(" = %s\n", hypothesis))
+    tmp <- paste0(get_labels(stats::coef(object), idx = joint_index), sprintf(" = %s\n", hypothesis))
     print_head <- c(print_head, tmp)
   }
   attr(out, "print_head") <- print_head

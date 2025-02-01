@@ -70,22 +70,8 @@
 #' @template order_of_operations
 #' @template parallel
 #' @template options
-#'
-#' @return A `data.frame` with one row per observation and several columns:
-#' * `rowid`: row number of the `newdata` data frame
-#' * `type`: prediction type, as defined by the `type` argument
-#' * `group`: (optional) value of the grouped outcome (e.g., categorical outcome models)
-#' * `estimate`: predicted outcome
-#' * `std.error`: standard errors computed using the delta method.
-#' * `p.value`: p value associated to the `estimate` column. The null is determined by the `hypothesis` argument (0 by default), and p values are computed before applying the `transform` argument. For models of class `feglm`, `Gam`, `glm` and `negbin`, p values are computed on the link scale by default unless the `type` argument is specified explicitly.
-#' * `s.value`: Shannon information transforms of p values. How many consecutive "heads" tosses would provide the same amount of evidence (or "surprise") against the null hypothesis that the coin is fair? The purpose of S is to calibrate the analyst's intuition about the strength of evidence encoded in p against a well-known physical phenomenon. See Greenland (2019) and Cole et al. (2020).
-#' * `conf.low`: lower bound of the confidence interval (or equal-tailed interval for bayesian models)
-#' * `conf.high`: upper bound of the confidence interval (or equal-tailed interval for bayesian models)
-#'
-#' See `?print.marginaleffects` for printing options.
-#'
+#' @template return
 #' @examplesIf interactive() || isTRUE(Sys.getenv("R_DOC_BUILD") == "true")
-#' @examples
 #' # Adjusted Prediction for every row of the original dataset
 #' mod <- lm(mpg ~ hp + factor(cyl), data = mtcars)
 #' pred <- predictions(mod)
@@ -198,7 +184,6 @@ predictions <- function(model,
                         transform = NULL,
                         hypothesis = NULL,
                         equivalence = NULL,
-                        p_adjust = NULL,
                         df = Inf,
                         numderiv = "fdforward",
                         ...) {
@@ -219,7 +204,6 @@ predictions <- function(model,
   }
 
   # extracting modeldata repeatedly is slow.
-  # checking dots allows marginalmeans to pass modeldata to predictions.
   if (isTRUE(by)) {
     modeldata <- get_modeldata(model,
       additional_variables = FALSE,
@@ -259,7 +243,6 @@ predictions <- function(model,
   sanity_dots(model = model, ...)
   numderiv <- sanitize_numderiv(numderiv)
   sanity_df(df, newdata)
-  sanity_equivalence_p_adjust(equivalence, p_adjust)
   model <- sanitize_model(
     model = model,
     newdata = newdata,
@@ -357,9 +340,6 @@ predictions <- function(model,
   if (inherits(model, "mlogit") && inherits(newdata[["idx"]], "idx")) {
     newdata[["idx"]] <- NULL
   }
-
-  # padding destroys `newdata` attributes, so we save them
-  newdata_attr_cache <- get_marginaleffects_attributes(newdata, include_regex = "^newdata")
 
   # mlogit uses an internal index that is very hard to track, so we don't
   # support `newdata` and assume no padding the `idx` column is necessary for
@@ -490,7 +470,6 @@ predictions <- function(model,
       null_hypothesis = hypothesis_null,
       df = df,
       model = model,
-      p_adjust = p_adjust,
       ...)
   }
 
@@ -540,33 +519,31 @@ predictions <- function(model,
 
   data.table::setDF(out)
   class(out) <- c("predictions", class(out))
-  out <- set_marginaleffects_attributes(out, attr_cache = newdata_attr_cache)
 
   # Global option for lean return object
-  lean = getOption("marginaleffects_lean", default = FALSE)
+  lean <- getOption("marginaleffects_lean", default = FALSE)
 
-  # Only add (potentially large) attributes if lean isn't TRUE
+  # Only add (potentially large) attributes if lean is FALSE
+  # extra attributes needed for print method, even with lean return object
+  attr(out, "conf_level") <- conf_level
+  attr(out, "by") <- by
+  attr(out, "lean") <- lean
+  attr(out, "type") <- type_string
   if (isTRUE(lean)) {
-    for (a in setdiff(aa, c("names", "row.names", "class"))) attr(mfx, a) = NULL
-    attr(out, "lean") <- TRUE
+    for (a in setdiff(names(attributes(out)), c("names", "row.names", "class"))) {
+      attr(out, a) <- NULL
+    }
   } else {
     # other attributes
-    attr(out, "model") <- model
-    attr(out, "type") <- type_string
+    attr(out, "newdata") <- newdata
+    attr(out, "call") <- call_attr
     attr(out, "model_type") <- class(model)[1]
-    attr(out, "vcov.type") <- get_vcov_label(vcov)
+    attr(out, "model") <- model
     attr(out, "jacobian") <- J
     attr(out, "vcov") <- V
-    attr(out, "newdata") <- newdata
     attr(out, "weights") <- marginaleffects_wts_internal
-    attr(out, "conf_level") <- conf_level
-    attr(out, "by") <- by
-    attr(out, "call") <- call_attr
-    attr(out, "hypothesis_by") <- hyp_by
-    attr(out, "transform_label") <- names(transform)[1]
     attr(out, "transform") <- transform[[1]]
-    # save newdata for use in recall()
-    attr(out, "newdata") <- newdata
+    attr(out, "hypothesis_by") <- hyp_by
 
     if (inherits(model, "brmsfit")) {
       insight::check_if_installed("brms")
@@ -695,7 +672,6 @@ avg_predictions <- function(model,
                             transform = NULL,
                             hypothesis = NULL,
                             equivalence = NULL,
-                            p_adjust = NULL,
                             df = Inf,
                             numderiv = "fdforward",
                             ...) {
@@ -736,7 +712,6 @@ avg_predictions <- function(model,
     transform = transform,
     hypothesis = hypothesis,
     equivalence = equivalence,
-    p_adjust = p_adjust,
     df = df,
     ...)
 

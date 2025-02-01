@@ -7,6 +7,8 @@
 #' * "PxD": Matrix with draws as rows and parameters as columns
 #' * "rvar": Random variable datatype (see `posterior` package documentation).
 #' @return A data.frame with `drawid` and `draw` columns.
+#' @details
+#' If DxP and PxD and the names returned by `coef(x)` are unique, `marginaleffects` sets parameter names to those names. Otherwise, it sets them to `b1`, `b2`, etc.
 #' @export
 get_draws <- function(x, shape = "long") {
   checkmate::assert_choice(shape, choices = c("long", "DxP", "PxD", "rvar"))
@@ -28,7 +30,11 @@ get_draws <- function(x, shape = "long") {
   }
 
   if (shape %in% c("PxD", "DxP")) {
-    row.names(draws) <- paste0("b", seq_len(nrow(draws)))
+    parnames <- names(stats::coef(x))
+    if (length(parnames) != nrow(draws) || anyDuplicated(parnames) > 0) {
+      parnames <- paste0("b", seq_len(nrow(draws)))
+    }
+    row.names(draws) <- parnames
     colnames(draws) <- paste0("draw", seq_len(ncol(draws)))
   }
 
@@ -72,7 +78,7 @@ get_draws <- function(x, shape = "long") {
 
 
 average_draws <- function(data, index, draws, byfun = NULL) {
-  insight::check_if_installed("collapse", minimum_version = "1.9.0")
+  insight::check_if_installed("collapse", minimum_version = "2.0.18")
 
   w <- data[["marginaleffects_wts_internal"]]
   if (all(is.na(w))) {
@@ -84,6 +90,9 @@ average_draws <- function(data, index, draws, byfun = NULL) {
   }
 
   if (length(index) > 0) {
+    if ("term" %in% colnames(data)) {
+      Encoding(data[["term"]]) <- "UTF-8"
+    }
     g <- collapse::GRP(data, by = index)
 
     if (is.null(byfun)) {
@@ -126,7 +135,7 @@ average_draws <- function(data, index, draws, byfun = NULL) {
 
 
 
-#' alias to `get_draws()` for backward compatibility with JSS
+#' alias to `get_draws()` keep forever for backward compatibility with JSS
 #'
 #' @inherit posterior_draws
 #' @keywords internal

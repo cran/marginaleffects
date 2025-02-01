@@ -14,8 +14,8 @@
 #'
 #' See the comparisons vignette and package website for worked examples and case studies:
 #'
-#' * <https://marginaleffects.com/chapters/comparisons.html>
-#' * <https://marginaleffects.com/>
+#' * [https://marginaleffects.com/chapters/comparisons.html](https://marginaleffects.com/chapters/comparisons.html)
+#' * [https://marginaleffects.com/](https://marginaleffects.com/)
 #'
 #' @inheritParams slopes
 #' @inheritParams predictions
@@ -95,23 +95,9 @@
 #' @template order_of_operations
 #' @template parallel
 #' @template options
-#'
-#' @return A `data.frame` with one row per observation (per term/group) and several columns:
-#' * `rowid`: row number of the `newdata` data frame
-#' * `type`: prediction type, as defined by the `type` argument
-#' * `group`: (optional) value of the grouped outcome (e.g., categorical outcome models)
-#' * `term`: the variable whose marginal effect is computed
-#' * `dydx`: slope of the outcome with respect to the term, for a given combination of predictor values
-#' * `std.error`: standard errors computed by via the delta method.
-#' * `p.value`: p value associated to the `estimate` column. The null is determined by the `hypothesis` argument (0 by default), and p values are computed before applying the `transform` argument.
-#' * `s.value`: Shannon information transforms of p values. How many consecutive "heads" tosses would provide the same amount of evidence (or "surprise") against the null hypothesis that the coin is fair? The purpose of S is to calibrate the analyst's intuition about the strength of evidence encoded in p against a well-known physical phenomenon. See Greenland (2019) and Cole et al. (2020).
-#' * `conf.low`: lower bound of the confidence interval (or equal-tailed interval for bayesian models)
-#' * `conf.high`: upper bound of the confidence interval (or equal-tailed interval for bayesian models)
-#'
-#' See `?print.marginaleffects` for printing options.
+#' @template return
 #'
 #' @examplesIf interactive() || isTRUE(Sys.getenv("R_DOC_BUILD") == "true")
-#' @examples
 #' library(marginaleffects)
 #'
 #' # Linear model
@@ -131,7 +117,7 @@
 #' comparisons(mod, newdata = "mean")
 #'
 #' # Contrasts between marginal means
-#' comparisons(mod, newdata = "marginalmeans")
+#' comparisons(mod, newdata = "balanced")
 #'
 #' # Contrasts at user-specified values
 #' comparisons(mod, newdata = datagrid(am = 0, gear = tmp$gear))
@@ -243,7 +229,6 @@ comparisons <- function(model,
                         wts = FALSE,
                         hypothesis = NULL,
                         equivalence = NULL,
-                        p_adjust = NULL,
                         df = Inf,
                         eps = NULL,
                         numderiv = "fdforward",
@@ -256,7 +241,6 @@ comparisons <- function(model,
   newdata <- sanitize_newdata_call(scall, newdata, model, by = by)
 
   # extracting modeldata repeatedly is slow.
-  # checking dots allows marginalmeans to pass modeldata to predictions.
   if (isTRUE(by)) {
     modeldata <- get_modeldata(model,
       additional_variables = FALSE,
@@ -287,7 +271,6 @@ comparisons <- function(model,
       wts = wts,
       hypothesis = hypothesis,
       equivalence = equivalence,
-      p_adjust = p_adjust,
       df = df),
     dots)
   if ("modeldata" %in% names(dots)) {
@@ -305,7 +288,6 @@ comparisons <- function(model,
   conf_level <- sanitize_conf_level(conf_level, ...)
   checkmate::assert_number(eps, lower = 1e-10, null.ok = TRUE)
   numderiv <- sanitize_numderiv(numderiv)
-  sanity_equivalence_p_adjust(equivalence, p_adjust)
   model <- sanitize_model(
     model = model,
     newdata = newdata,
@@ -337,8 +319,6 @@ comparisons <- function(model,
     transform <- sanitize_transform(transform)
     transform_label <- names(transform)
   }
-
-  marginalmeans <- isTRUE(checkmate::check_choice(newdata, choices = "marginalmeans"))
 
 
   newdata <- sanitize_newdata(
@@ -424,7 +404,6 @@ comparisons <- function(model,
     newdata = newdata,
     variables = predictors,
     cross = cross,
-    marginalmeans = marginalmeans,
     modeldata = modeldata)
   dots[["modeldata"]] <- NULL # dont' pass twice
   args <- c(args, dots)
@@ -439,7 +418,6 @@ comparisons <- function(model,
     lo = contrast_data[["lo"]],
     wts = contrast_data[["original"]][["marginaleffects_wts_internal"]],
     by = by,
-    marginalmeans = marginalmeans,
     cross = cross,
     hypothesis = hypothesis,
     modeldata = modeldata)
@@ -464,7 +442,6 @@ comparisons <- function(model,
       newdata = newdata,
       index = idx,
       variables = predictors,
-      marginalmeans = marginalmeans,
       hypothesis = hypothesis,
       hi = contrast_data$hi,
       lo = contrast_data$lo,
@@ -511,7 +488,6 @@ comparisons <- function(model,
     draws = draws,
     estimate = "estimate",
     null_hypothesis = hypothesis_null,
-    p_adjust = p_adjust,
     model = model)
 
   # clean rows and columns
@@ -547,12 +523,16 @@ comparisons <- function(model,
     get_marginaleffects_attributes(newdata, include_regex = "^newdata.*class|explicit|matrix|levels"))
 
   # Global option for lean return object
-  lean = getOption("marginaleffects_lean", default = FALSE)
+  lean <- getOption("marginaleffects_lean", default = FALSE)
 
   # Only add (potentially large) attributes if lean is FALSE
+  # extra attributes needed for print method, even with lean return object
+  attr(out, "conf_level") <- conf_level
+  attr(out, "by") <- by
+  attr(out, "lean") <- lean
+  attr(out, "vcov.type") <- vcov.type
   if (isTRUE(lean)) {
-    for (a in setdiff(names(attributes(out)), c("names", "row.names", "class"))) attr(out, a) = NULL
-    attr(out, "lean") <- TRUE
+    for (a in setdiff(names(attributes(out)), c("names", "row.names", "class"))) attr(out, a) <- NULL
   } else {
     # other attributes
     attr(out, "newdata") <- newdata
@@ -570,8 +550,6 @@ comparisons <- function(model,
     attr(out, "comparison_label") <- comparison_label
     attr(out, "hypothesis_by") <- hyp_by
     attr(out, "transform_label") <- transform_label
-    attr(out, "conf_level") <- conf_level
-    attr(out, "by") <- by
 
     if (inherits(model, "brmsfit")) {
       insight::check_if_installed("brms")
@@ -601,7 +579,6 @@ avg_comparisons <- function(model,
                             wts = FALSE,
                             hypothesis = NULL,
                             equivalence = NULL,
-                            p_adjust = NULL,
                             df = Inf,
                             eps = NULL,
                             numderiv = "fdforward",
@@ -636,7 +613,6 @@ avg_comparisons <- function(model,
     wts = wts,
     hypothesis = hypothesis,
     equivalence = equivalence,
-    p_adjust = p_adjust,
     df = df,
     eps = eps,
     ...)

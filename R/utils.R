@@ -8,7 +8,7 @@ get_unique_index <- function(x, term_only = FALSE) {
         } else {
             idx <- c(idx, by)
         }
-        explicit <- attr(x, "newdata_explicit")
+        explicit <- attr(attr(x, "newdata"), "explicit")
         if (isTRUE(checkmate::check_character(explicit))) {
             idx <- explicit
         }
@@ -56,14 +56,13 @@ set_marginaleffects_attributes <- function(x, attr_cache, prefix = "") {
 
 
 warn_once <- function(msg, id) {
-    msg <- c(msg, "", "This warning appears once per session.")
-    if (isTRUE(getOption(id, default = TRUE))) {
-        # insight::format_warning(msg, call. = FALSE)
-        warning(msg, call. = FALSE)
-        opts <- list(FALSE)
-        names(opts) <- id
-        options(opts)
-    }
+    if (!isTRUE(getOption(id, default = TRUE))) return(invisible())
+    msg <- paste(msg, "This warning appears once per session.")
+    # insight::format_warning(msg, call. = FALSE)
+    warning(msg, call. = FALSE)
+    opts <- list(FALSE)
+    names(opts) <- id
+    options(opts)
 }
 
 

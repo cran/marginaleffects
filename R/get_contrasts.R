@@ -6,7 +6,6 @@ get_contrasts <- function(model,
                           lo,
                           hi,
                           wts = FALSE,
-                          marginalmeans,
                           by = NULL,
                           hypothesis = NULL,
                           cross = FALSE,
@@ -179,9 +178,11 @@ get_contrasts <- function(model,
 
         if (length(tmp) == 0) {
             if (all(colnames(by) %in% c("by", colnames(newdata)))) {
-                nd <- c("rowid", setdiff(colnames(by), "by"))
-                nd <- newdata[, nd, drop = FALSE]
-                out <- merge(out, nd, by = "rowid", sort = FALSE)
+                nd <- c("rowid", "rowid_dedup", setdiff(colnames(by), "by"))
+                nd <- intersect(nd, colnames(newdata))
+                nd <- newdata[, ..nd, drop = FALSE]
+                bycol <- intersect(c("rowid", "rowid_dedup"), colnames(nd))
+                out <- merge(out, nd, by = bycol, sort = FALSE)
                 tmp <- setdiff(intersect(colnames(out), colnames(by)), "by")
             } else {
                 insight::format_error("The column in `by` must be present in `newdata`.")
@@ -305,15 +306,6 @@ get_contrasts <- function(model,
     # we feed these columns to safefun(), even if they are useless for categoricals
     if (!"marginaleffects_wts_internal" %in% colnames(out))  out[, "marginaleffects_wts_internal" := NA]
 
-    if (isTRUE(marginalmeans)) {
-        out <- out[, .(
-            predicted_lo = mean(predicted_lo),
-            predicted_hi = mean(predicted_hi),
-            predicted = mean(predicted),
-            marginaleffects_wts_internal = mean(marginaleffects_wts_internal)),
-        keyby = idx]
-    }
-
     # safe version of comparison
     # unknown arguments
     # singleton vs vector
@@ -374,7 +366,7 @@ get_contrasts <- function(model,
         draws <- draws[idx_na, , drop = FALSE]
 
         if (isTRUE(checkmate::check_character(by, min.len = 1))) {
-            by_idx <- subset(out, select = intersect(by, colnames(out)))
+            by_idx <- out[, ..by]
             by_idx <- do.call(paste, c(by_idx, sep = "|"))
         } else {
             by_idx <- out$term

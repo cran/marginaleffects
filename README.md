@@ -40,7 +40,8 @@ To cite marginaleffects in publications use:
 
 Arel-Bundock V, Greifer N, Heiss A (2024). “How to Interpret Statistical
 Models Using marginaleffects for R and Python.” *Journal of Statistical
-Software*, *111*(9), 1-32. 
+Software*, *111*(9), 1-32. doi:10.18637/jss.v111.i09
+<https://doi.org/10.18637/jss.v111.i09>.
 
 A BibTeX entry for LaTeX users is
 
