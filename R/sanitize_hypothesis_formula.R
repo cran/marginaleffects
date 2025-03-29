@@ -1,5 +1,4 @@
 sanitize_hypothesis_formula <- function(hypothesis) {
-  insight::check_if_installed("Formula")
   hypothesis <- Formula::Formula(hypothesis)
 
   if (!length(hypothesis)[1] %in% 0:1) {
@@ -38,7 +37,7 @@ sanitize_hypothesis_formula <- function(hypothesis) {
     }
   }
 
-  valid <- c("reference", "sequential", "pairwise", "revpairwise", "meandev", "meanotherdev", "poly", "helmert", "trt_vs_ctrl")
+  valid <- c("reference", "revreference", "sequential", "pairwise", "revpairwise", "meandev", "meanotherdev", "poly", "helmert", "trt_vs_ctrl")
   checkmate::assert_choice(rhs, valid, .var.name = "Right-hand side of `hypothesis` formula")
 
   # dot product weights

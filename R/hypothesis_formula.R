@@ -9,6 +9,16 @@ hypothesis_formula_list <- list(
             label = function(x) sprintf("(%s) - (%s)", x, x[1])[2:length(x)]
         )
     ),
+    revreference = list(
+        ratio = list(
+            comparison = function(x) (x[1] / x)[2:length(x)],
+            label = function(x) sprintf("(%s) / (%s)", x[1], x)[2:length(x)]
+        ),
+        difference = list(
+            comparison = function(x) (x[1] - x)[2:length(x)],
+            label = function(x) sprintf("(%s) - (%s)", x[1], x)[2:length(x)]
+        )
+    ),
     sequential = list(
         ratio = list(
             comparison = function(x) (x / data.table::shift(x))[2:length(x)],
@@ -181,7 +191,6 @@ hypothesis_formula_list <- list(
 #' @noRd
 #' @keywords internal
 hypothesis_formula <- function(x, hypothesis, newdata, by) {
-    insight::check_if_installed("collapse")
     # default values
     draws <- attr(x, "posterior_draws")
 
@@ -194,7 +203,6 @@ hypothesis_formula <- function(x, hypothesis, newdata, by) {
             newdata <- NULL
         }
     }
-
 
     form <- sanitize_hypothesis_formula(hypothesis)
 

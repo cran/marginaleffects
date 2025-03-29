@@ -1,6 +1,6 @@
 ## ----include = FALSE----------------------------------------------------------
 knitr::opts_chunk$set(
-  collapse = TRUE,
-  comment = "#>"
+   collapse = TRUE,
+   comment = "#>"
 )
 

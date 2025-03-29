@@ -94,15 +94,16 @@
 #' library(dplyr)
 #' library(MASS)
 #' library(dplyr)
+#' library(magrittr)
 #'
 #' dat <- transform(mtcars, gear = factor(gear))
 #' mod <- polr(gear ~ factor(cyl) + hp, dat)
 #'
 #' aggregation_fun <- function(x) {
-#'   predictions(x, vcov = FALSE) |>
-#'     mutate(group = ifelse(group %in% c("3", "4"), "3 & 4", "5")) |>
-#'     summarize(estimate = sum(estimate), .by = c("rowid", "cyl", "group")) |>
-#'     summarize(estimate = mean(estimate), .by = c("cyl", "group")) |>
+#'   predictions(x, vcov = FALSE) %>%
+#'     mutate(group = ifelse(group %in% c("3", "4"), "3 & 4", "5")) %>%
+#'     summarize(estimate = sum(estimate), .by = c("rowid", "cyl", "group")) %>%
+#'     summarize(estimate = mean(estimate), .by = c("cyl", "group")) %>%
 #'     rename(term = cyl)
 #' }
 #'
@@ -157,6 +158,13 @@ hypotheses <- function(
     ...) {
   hypothesis_is_formula <- isTRUE(checkmate::check_formula(hypothesis))
 
+  if (inherits(model, c("predictions", "comparisons", "slopes", "hypotheses"))) {
+    if (!is.null(vcov)) {
+      msg <- "The `vcov` argument is not available when `model` is a `predictions`, `comparisons`, `slopes`, or `hypotheses` object. Please specify the type of standard errors in the initial `marginaleffects` call."
+      stop(msg, call. = FALSE)
+    }
+  }
+
   checkmate::assert_number(conf_level, null.ok = TRUE, lower = 0, upper = 1)
   if (is.null(conf_level)) {
     # inherit conf_level from marginaleffects objects
@@ -166,30 +174,28 @@ hypotheses <- function(
     }
   }
 
+  # I don't know how to adjust p values for a different null in `multcomp::glht()`
+  if (!isFALSE(multcomp) && isTRUE(checkmate::check_number(hypothesis))) {
+    msg <- "The `multcomp` argument is not available when `hypothesis` is a number."
+    stop(msg, call. = FALSE)
+  }
+
   if (!isFALSE(multcomp) && !isFALSE(joint)) {
     msg <- "The `multcomp` argument cannot be used with the `joint` argument."
     insight::format_error(msg)
   }
 
-  dots <- list(...)
+  call_attr <- construct_call(model, "hypotheses")
 
-  call_attr <- c(
-    list(
-      name = "hypotheses",
-      model = model,
-      hypothesis = hypothesis,
-      vcov = vcov,
-      conf_level = conf_level,
-      df = df,
-      equivalence = equivalence,
-      joint = joint,
-      joint_test = joint_test,
-      numderiv = numderiv),
-    dots)
-  if ("modeldata" %in% names(dots)) {
-    call_attr[["modeldata"]] <- dots[["modeldata"]]
+  if ("modeldata" %in% ...names()) {
+    call_attr[["modeldata"]] <- ...elt(match("modeldata", ...names())[1L])
   }
-  call_attr <- do.call("call", call_attr)
+
+  # multiple imputation
+  if (inherits(model, c("mira", "amest"))) {
+    out <- process_imputation(model, call_attr)
+    return(out)
+  }
 
   ###### Bootstrap
   # restore an already sanitized hypothesis if necessary
@@ -245,8 +251,8 @@ hypotheses <- function(
   # keep this NULL in case `hypothesis` was used in the previous call
   args[["hypothesis"]] <- hypothesis
 
-  if (length(dots) > 0) {
-    args <- c(args, dots)
+  if (...length() > 0) {
+    args <- utils::modifyList(args, list(...))
   }
 
   xcall <- substitute(model)
@@ -265,8 +271,12 @@ hypotheses <- function(
   hypothesis_null <- tmp$hypothesis_null
 
   vcov_false <- isFALSE(vcov)
-  vcov <- get_vcov(model = model, vcov = vcov)
-  vcov.type <- get_vcov_label(vcov = vcov)
+  if (!isTRUE(checkmate::check_matrix(vcov))) {
+    vcov <- get_vcov(model = model, vcov = vcov)
+    vcov.type <- get_vcov_label(vcov = vcov)
+  } else {
+    vcov.type <- "matrix"
+  }
 
   FUNouter <- function(model, hypothesis, newparams = NULL, ...) {
     if (isTRUE(checkmate::check_numeric(model))) {
@@ -347,7 +357,9 @@ hypotheses <- function(
       hypothesis = hypothesis,
       FUN = FUNouter,
       numderiv = numderiv)
-    args <- c(args, dots)
+    if (...length() > 0) {
+      args <- utils::modifyList(args, list(...))
+    }
     se <- do.call("get_se_delta", args)
     J <- attr(se, "jacobian")
     attr(se, "jacobian") <- NULL
@@ -419,7 +431,7 @@ hypotheses <- function(
 
   attr(out, "posterior_draws") <- draws
   attr(out, "model") <- model
-  attr(out, "model_type") <- class(model)[1]
+  attr(out, "model_type") <- class(model)[1L]
   attr(out, "jacobian") <- J
   attr(out, "call") <- call_attr
   attr(out, "vcov") <- vcov
@@ -428,7 +440,7 @@ hypotheses <- function(
   attr(out, "hypothesis_function_by") <- attr(b, "hypothesis_function_by")
 
   # must be after attributes for vcov
-  out <- multcomp_test(out, multcomp = multcomp, conf_level = conf_level)
+  out <- multcomp_test(out, multcomp = multcomp, conf_level = conf_level, df = df)
 
   # Issue #1102: hypotheses() should not be called twice on the same object
   attr(out, "hypotheses_call") <- TRUE
