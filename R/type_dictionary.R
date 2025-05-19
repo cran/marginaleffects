@@ -1,10 +1,9 @@
-
 #' internal function to build the type dictionary
 #'
 #' @noRd
 type_dictionary_build <- function() {
-text <-
-'class,type
+    text <-
+        'class,type
 bam,response
 bam,link
 bart,ev
@@ -131,7 +130,6 @@ multinom_weightit,mean
 mhurdle,E
 mhurdle,Ep
 mhurdle,p
-mlogit,response
 mvgam,response
 mvgam,link
 mvgam,expected
@@ -177,13 +175,14 @@ zeroinfl,response
 zeroinfl,prob
 zeroinfl,count
 zeroinfl,zero'
-out <- utils::read.csv(
-    text = text,
-    colClasses = c("character", "character"))
-for (i in 1:2) {
-    out[[i]] <- trimws(out[[i]])
-}
-return(out)
+    out <- utils::read.csv(
+        text = text,
+        colClasses = c("character", "character")
+    )
+    for (i in 1:2) {
+        out[[i]] <- trimws(out[[i]])
+    }
+    return(out)
 }
 
 

@@ -46,6 +46,8 @@
 #'    - Heteroskedasticity and autocorrelation consistent: `"HAC"`
 #'    - Mixed-Models degrees of freedom: "satterthwaite", "kenward-roger"
 #'    - Other: `"NeweyWest"`, `"KernHAC"`, `"OPG"`. See the `sandwich` package documentation.
+#'    - "rsample", "boot", "fwb", and "simulation" are passed to the `method` argument of the `inferences()` function. To customize the bootstrap or simulation process, call `inferences()` directly.
+#'
 #'  * One-sided formula which indicates the name of cluster variables (e.g., `~unit_id`). This formula is passed to the `cluster` argument of the `sandwich::vcovCL` function.
 #'  * Square covariance matrix
 #'  * Function which returns a covariance matrix (e.g., `stats::vcov(model)`)
@@ -69,15 +71,18 @@
 #' + TRUE: Extract weights from the fitted object with `insight::find_weights()` and use them when taking weighted averages of estimates. Warning: `newdata=datagrid()` returns a single average weight, which is equivalent to using `wts=FALSE`
 #' @param hypothesis specify a hypothesis test or custom contrast using a number , formula, string equation, vector, matrix, or function.
 #' + Number: The null hypothesis used in the computation of Z and p (before applying `transform`).
-#' + String: Equation to specify linear or non-linear hypothesis tests. If the terms in `coef(object)` uniquely identify estimates, they can be used in the formula. Otherwise, use `b1`, `b2`, etc. to identify the position of each parameter. The `b*` wildcard can be used to test hypotheses on all estimates. If a named vector is used, the names are used as labels in the output. Examples:
+#' + String: Equation to specify linear or non-linear hypothesis tests. Two-tailed tests must include an equal `=` sign. One-tailed tests must start with `<` or `>`. If the terms in `coef(object)` uniquely identify estimates, they can be used in the formula. Otherwise, use `b1`, `b2`, etc. to identify the position of each parameter. The `b*` wildcard can be used to test hypotheses on all estimates. When the hypothesis string represents a two-sided equation, the `estimate` column holds the value of the left side minus the right side of the equation. If a named vector is used, the names are used as labels in the output. Examples:
 #'   - `hp = drat`
 #'   - `hp + drat = 12`
 #'   - `b1 + b2 + b3 = 0`
 #'   - `b* / b1 = 1`
+#'   - `<= 0`
+#'   - `>= -3.5`
+#'   - `b1 >= 10`
 #' + Formula: `lhs ~ rhs | group`
 #'   + `lhs`
-#'     - `ratio`
-#'     - `difference`
+#'     - `ratio` (null = 1)
+#'     - `difference` (null = 0)
 #'     - Leave empty for default value
 #'   + `rhs`
 #'     - `pairwise` and `revpairwise`: pairwise differences between estimates in each row.
@@ -106,7 +111,11 @@
 #'   - The function can also accept optional input arguments: `newdata`, `by`, `draws`.
 #'   - This function approach will not work for Bayesian models or with bootstrapping. In those cases, it is easy to use `get_draws()` to extract and manipulate the draws directly.
 #' + See the Examples section below and the vignette: [https://marginaleffects.com/chapters/hypothesis.html](https://marginaleffects.com/chapters/hypothesis.html)
-#' @param df Degrees of freedom used to compute p values and confidence intervals. A single numeric value between 1 and `Inf`. When `df` is `Inf`, the normal distribution is used. When `df` is finite, the `t` distribution is used. See [insight::get_df] for a convenient function to extract degrees of freedom. Ex: `slopes(model, df = insight::get_df(model))`
+#' + Warning: When calling `predictions()` with `type="invlink(link)"` (the default in some models), `hypothesis` is tested and p values are computed on the link scale.
+#' @param df Degrees of freedom used to compute p values and confidence intervals.
+#'   - A single numeric value between 1 and `Inf`, or a numeric vector with length equal to the number of rows in the output. When `df` is `Inf`, the normal distribution is used. When `df` is finite, the `t` distribution is used.
+#'   - "residual": Calls [insight::get_df] to extract degrees of freedom from the model automatically.
+#'   - "satterthwaite" or "kenward-roger": Use the Satterthwaite or Kenward-Roger approximation to compute degrees of freedom in mixed effects models.
 #' @param eps NULL or numeric value which determines the step size to use when
 #' calculating numerical derivatives: (f(x+eps)-f(x))/eps. When `eps` is
 #' `NULL`, the step size is 0.0001 multiplied by the difference between
@@ -214,22 +223,23 @@
 #'   hypothesis = lc)
 #'
 #' @export
-slopes <- function(model,
-                   newdata = NULL,
-                   variables = NULL,
-                   type = NULL,
-                   by = FALSE,
-                   vcov = TRUE,
-                   conf_level = 0.95,
-                   slope = "dydx",
-                   wts = FALSE,
-                   hypothesis = NULL,
-                   equivalence = NULL,
-                   df = Inf,
-                   eps = NULL,
-                   numderiv = "fdforward",
-                   ...) {
-
+slopes <- function(
+    model,
+    newdata = NULL,
+    variables = NULL,
+    type = NULL,
+    by = FALSE,
+    vcov = TRUE,
+    conf_level = 0.95,
+    slope = "dydx",
+    wts = FALSE,
+    hypothesis = NULL,
+    equivalence = NULL,
+    df = Inf,
+    eps = NULL,
+    numderiv = "fdforward",
+    ...
+) {
     call_attr <- construct_call(model, "slopes")
 
     # very early, before any use of newdata
@@ -260,26 +270,30 @@ slopes <- function(model,
     checkmate::assert_character(variables, null.ok = TRUE)
 
     # slope
-    valid <- c("dydx", "eyex", "eydx", "dyex", "dydxavg", "eyexavg", "eydxavg", "dyexavg")
+    valid <- c(
+        "dydx",
+        "eyex",
+        "eydx",
+        "dyex",
+        "dydxavg",
+        "eyexavg",
+        "eydxavg",
+        "dyexavg"
+    )
     checkmate::assert_choice(slope, choices = valid)
 
     # sanity checks and pre-processing
-    model <- sanitize_model(model = model, wts = wts, vcov = vcov, by = by, calling_function = "marginaleffects", ...)
-    sanity_dots(model = model, calling_function = "marginaleffects", ...)
-    type <- sanitize_type(model = model, type = type, calling_function = "slopes")
+    model <- sanitize_model(
+        model = model,
+        wts = wts,
+        vcov = vcov,
+        by = by,
+        calling_function = "slopes",
+        ...
+    )
+    sanity_dots(model = model, calling_function = "slopes", ...)
 
     ############### sanity checks are over
-
-    # Bootstrap
-    out <- inferences_dispatch(
-        INF_FUN = slopes,
-        model = model, newdata = newdata, vcov = vcov, variables = variables, type = type,
-        conf_level = conf_level,
-        by = by,
-        wts = wts, slope = slope, hypothesis = hypothesis, ...)
-    if (!is.null(out)) {
-        return(out)
-    }
 
     call_attr_c <- call_attr
     call_attr_c[[1L]] <- quote(marginaleffects::comparisons)
@@ -324,43 +338,32 @@ slopes <- function(model,
 }
 
 
-
-
 #' Average slopes (aka Average partial derivatives, marginal effects, or trends)
 #' @describeIn slopes Average slopes
 #' @export
 #'
-avg_slopes <- function(model,
-                       newdata = NULL,
-                       variables = NULL,
-                       type = NULL,
-                       by = TRUE,
-                       vcov = TRUE,
-                       conf_level = 0.95,
-                       slope = "dydx",
-                       wts = FALSE,
-                       hypothesis = NULL,
-                       equivalence = NULL,
-                       df = Inf,
-                       eps = NULL,
-                       numderiv = "fdforward",
-                       ...) {
+avg_slopes <- function(
+    model,
+    newdata = NULL,
+    variables = NULL,
+    type = NULL,
+    by = TRUE,
+    vcov = TRUE,
+    conf_level = 0.95,
+    slope = "dydx",
+    wts = FALSE,
+    hypothesis = NULL,
+    equivalence = NULL,
+    df = Inf,
+    eps = NULL,
+    numderiv = "fdforward",
+    ...
+) {
     # order of the first few paragraphs is important
     # if `newdata` is a call to `typical` or `counterfactual`, insert `model`
     # should probably not be nested too deeply in the call stack since we eval.parent() (not sure about this)
     # scall <- rlang::enquo(newdata)
     # newdata <- sanitize_newdata_call(scall, newdata, model, by = by)
-
-
-    # Bootstrap
-    out <- inferences_dispatch(
-        INF_FUN = avg_slopes,
-        model = model, newdata = newdata, vcov = vcov, variables = variables, type = type,
-        conf_level = conf_level, by = by,
-        wts = wts, slope = slope, hypothesis = hypothesis, ...)
-    if (!is.null(out)) {
-        return(out)
-    }
 
     #Construct comparisons() call
     call_attr <- construct_call(model, "slopes")

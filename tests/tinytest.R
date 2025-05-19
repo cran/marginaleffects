@@ -1,7 +1,6 @@
-NOT_CRAN <- isTRUE(Sys.getenv("R_NOT_CRAN") == "true")
-TINYTEST <- requireNamespace("tinytest", quietly = TRUE)
-LOCAL_TESTS <- dir.exists("inst/tinytest")
-
-if (TINYTEST && NOT_CRAN && LOCAL_TESTS) {
+run <- FALSE
+pkg <- requireNamespace("tinytest", quietly = TRUE)
+home <- grepl("(?i)vince", Sys.info()["nodename"]) || identical(Sys.getenv("R_NOT_CRAN"), "true")
+if (pkg && home && run) {
     tinytest::test_package("marginaleffects")
 }

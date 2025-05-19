@@ -146,6 +146,7 @@ first entry in the error message is used by default.}
 \item Heteroskedasticity and autocorrelation consistent: \code{"HAC"}
 \item Mixed-Models degrees of freedom: "satterthwaite", "kenward-roger"
 \item Other: \code{"NeweyWest"}, \code{"KernHAC"}, \code{"OPG"}. See the \code{sandwich} package documentation.
+\item "rsample", "boot", "fwb", and "simulation" are passed to the \code{method} argument of the \code{inferences()} function. To customize the bootstrap or simulation process, call \code{inferences()} directly.
 }
 \item One-sided formula which indicates the name of cluster variables (e.g., \code{~unit_id}). This formula is passed to the \code{cluster} argument of the \code{sandwich::vcovCL} function.
 \item Square covariance matrix
@@ -182,19 +183,22 @@ first entry in the error message is used by default.}
 \item{hypothesis}{specify a hypothesis test or custom contrast using a number , formula, string equation, vector, matrix, or function.
 \itemize{
 \item Number: The null hypothesis used in the computation of Z and p (before applying \code{transform}).
-\item String: Equation to specify linear or non-linear hypothesis tests. If the terms in \code{coef(object)} uniquely identify estimates, they can be used in the formula. Otherwise, use \code{b1}, \code{b2}, etc. to identify the position of each parameter. The \verb{b*} wildcard can be used to test hypotheses on all estimates. If a named vector is used, the names are used as labels in the output. Examples:
+\item String: Equation to specify linear or non-linear hypothesis tests. Two-tailed tests must include an equal \code{=} sign. One-tailed tests must start with \code{<} or \code{>}. If the terms in \code{coef(object)} uniquely identify estimates, they can be used in the formula. Otherwise, use \code{b1}, \code{b2}, etc. to identify the position of each parameter. The \verb{b*} wildcard can be used to test hypotheses on all estimates. When the hypothesis string represents a two-sided equation, the \code{estimate} column holds the value of the left side minus the right side of the equation. If a named vector is used, the names are used as labels in the output. Examples:
 \itemize{
 \item \code{hp = drat}
 \item \code{hp + drat = 12}
 \item \code{b1 + b2 + b3 = 0}
 \item \verb{b* / b1 = 1}
+\item \verb{<= 0}
+\item \verb{>= -3.5}
+\item \code{b1 >= 10}
 }
 \item Formula: \code{lhs ~ rhs | group}
 \itemize{
 \item \code{lhs}
 \itemize{
-\item \code{ratio}
-\item \code{difference}
+\item \code{ratio} (null = 1)
+\item \code{difference} (null = 0)
 \item Leave empty for default value
 }
 \item \code{rhs}
@@ -233,11 +237,17 @@ first entry in the error message is used by default.}
 \item This function approach will not work for Bayesian models or with bootstrapping. In those cases, it is easy to use \code{get_draws()} to extract and manipulate the draws directly.
 }
 \item See the Examples section below and the vignette: \url{https://marginaleffects.com/chapters/hypothesis.html}
+\item Warning: When calling \code{predictions()} with \code{type="invlink(link)"} (the default in some models), \code{hypothesis} is tested and p values are computed on the link scale.
 }}
 
 \item{equivalence}{Numeric vector of length 2: bounds used for the two-one-sided test (TOST) of equivalence, and for the non-inferiority and non-superiority tests. See Details section below.}
 
-\item{df}{Degrees of freedom used to compute p values and confidence intervals. A single numeric value between 1 and \code{Inf}. When \code{df} is \code{Inf}, the normal distribution is used. When \code{df} is finite, the \code{t} distribution is used. See \link[insight:get_df]{insight::get_df} for a convenient function to extract degrees of freedom. Ex: \code{slopes(model, df = insight::get_df(model))}}
+\item{df}{Degrees of freedom used to compute p values and confidence intervals.
+\itemize{
+\item A single numeric value between 1 and \code{Inf}, or a numeric vector with length equal to the number of rows in the output. When \code{df} is \code{Inf}, the normal distribution is used. When \code{df} is finite, the \code{t} distribution is used.
+\item "residual": Calls \link[insight:get_df]{insight::get_df} to extract degrees of freedom from the model automatically.
+\item "satterthwaite" or "kenward-roger": Use the Satterthwaite or Kenward-Roger approximation to compute degrees of freedom in mixed effects models.
+}}
 
 \item{eps}{NULL or numeric value which determines the step size to use when
 calculating numerical derivatives: (f(x+eps)-f(x))/eps. When \code{eps} is
@@ -319,13 +329,9 @@ Standard errors for all quantities estimated by \code{marginaleffects} can be ob
 \item \code{options(marginaleffects_numDeriv = NULL)}
 }
 
-See the "Standard Errors and Confidence Intervals" vignette on the \code{marginaleffects} website for more details on the computation of standard errors:
+See the "Uncertainty" chapter on the \code{marginaleffects} website for more details on the computation of standard errors, bootstrapping, and more:
 
-https://marginaleffects.com/vignettes/uncertainty.html
-
-Note that the \code{inferences()} function can be used to compute uncertainty estimates using a bootstrap or simulation-based inference. See the vignette:
-
-https://marginaleffects.com/vignettes/bootstrap.html
+https://marginaleffects.com/chapters/uncertainty.html
 }
 
 \section{Model-Specific Arguments}{
@@ -486,11 +492,19 @@ and the dataset is relatively small.
 Warning: In many cases, parallel processing will not be useful at all.
 
 To activate parallel computation, users must load the \code{future.apply} package,
-call \code{plan()} function, and set a global option. For example:
+call \code{plan()} function, and set a global option.
+
+\code{options(marginaleffects_parallel = TRUE)}: parallelize delta method computation of standard errors.
+\code{options(marginaleffects_parallel_inferences = TRUE)}: parallelize \code{"rsample"} or \code{"fwb"} bootstrap computation in \code{inferences()}.
+\code{options(marginaleffects_parallel_packages = TRUE)}: vector of strings with the names of modeling packages used to fit the model, ex: c("survival", "splines")
+
+For example:
 
 \if{html}{\out{<div class="sourceCode r">}}\preformatted{library(future.apply)
-plan("multicore", workers = 4)
-options(marginaleffects_parallel = TRUE)
+plan("multisession", workers = 4)
+options(marginaleffects_parallel = FALSE)
+options(marginaleffects_parallel_inferences = TRUE)
+options(marginaleffects_parallel_packages = c("survival", "splines"))
 
 slopes(model)
 }\if{html}{\out{</div>}}

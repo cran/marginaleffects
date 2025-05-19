@@ -1,7 +1,7 @@
 Package: marginaleffects
 Title: Predictions, Comparisons, Slopes, Marginal Means, and Hypothesis
         Tests
-Version: 0.25.1
+Version: 0.26.0
 Authors@R: 
     c(person(given = "Vincent",
              family = "Arel-Bundock",
@@ -46,28 +46,27 @@ Suggests: AER, Amelia, afex, aod, bench, betareg, BH, bife, biglm,
         fwb, gam, gamlss, gamlss.dist, geepack, ggdist, ggokabeito,
         ggplot2, ggrepel, glmmTMB, glmtoolbox, glmx, haven, here,
         itsadug, ivreg, kableExtra, lme4, lmerTest, logistf, magrittr,
-        MatchIt, MASS, mclogit, MCMCglmm, missRanger, mgcv, mice,
-        miceadds, mlogit, mlr3verse, modelbased, modelsummary,
-        multcomp, nanoparquet, nlme, nnet, numDeriv, nycflights13,
-        optmatch, ordbetareg, ordinal, parameters, parsnip, partykit,
-        patchwork, pkgdown, phylolm, plm, polspline, posterior, pscl,
-        purrr, quantreg, Rchoice, REndo, rcmdcheck, remotes,
-        reticulate, rmarkdown, rms, robust, robustbase, robustlmm,
-        rsample, rstanarm, rstantools, rstpm2, rstudioapi, rsvg,
-        sampleSelection, sandwich, scam, spelling, speedglm, survey,
-        survival, svglite, systemfit, systemfonts, tibble, tictoc,
-        tidymodels, tidyr, tidyverse, tinysnapshot (>= 0.0.7),
-        tinytable (>= 0.6.1), tinytest, titanic, truncreg, tsModel,
-        withr, workflows, yaml, xgboost, testthat (>= 3.0.0), altdoc,
-        knitr, quarto
-Collate: 'RcppExports.R' 'backtransform.R' 'bootstrap_boot.R'
-        'bootstrap_fwb.R' 'bootstrap_rsample.R'
-        'bootstrap_simulation.R' 'broom.R' 'by.R' 'ci.R'
-        'comparisons.R' 'complete_levels.R' 'config.R' 'conformal.R'
-        'construct_call.R' 'datagrid.R' 'equivalence.R' 'get_coef.R'
-        'get_contrast_data.R' 'get_contrast_data_character.R'
-        'get_contrast_data_factor.R' 'get_contrast_data_logical.R'
-        'get_contrast_data_numeric.R' 'get_contrasts.R' 'get_dataset.R'
+        MatchIt, MASS, mclogit, MCMCglmm, mhurdle, missRanger, mgcv,
+        mice, miceadds, mlogit, mlr3verse, modelbased, modelsummary,
+        multcomp, mvtnorm, nanoparquet, nlme, nnet, numDeriv,
+        nycflights13, optmatch, ordbetareg, ordinal, parameters,
+        parsnip, partykit, patchwork, pkgdown, phylolm, pbapply, plm,
+        polspline, posterior, pscl, purrr, quantreg, Rchoice, REndo,
+        rcmdcheck, remotes, reticulate, rmarkdown, rms, robust,
+        robustbase, robustlmm, rsample, rstanarm, rstantools, rstpm2,
+        rstudioapi, rsvg, sampleSelection, sandwich, scam, spelling,
+        speedglm, splines, survey, survival, svglite, systemfit,
+        systemfonts, tibble, tictoc, tidymodels, tidyr, tidyverse,
+        tinysnapshot (>= 0.0.7), tinytable (>= 0.6.1), tinytest,
+        titanic, truncreg, tsModel, withr, workflows, yaml, xgboost,
+        testthat (>= 3.0.0), altdoc, knitr, quarto
+Collate: 'RcppExports.R' 'backtransform.R' 'broom.R' 'by.R'
+        'comparisons.R' 'complete_levels.R' 'config.R'
+        'construct_call.R' 'datagrid.R' 'equivalence.R' 'get_ci.R'
+        'get_coef.R' 'get_contrast_data.R'
+        'get_contrast_data_character.R' 'get_contrast_data_factor.R'
+        'get_contrast_data_logical.R' 'get_contrast_data_numeric.R'
+        'get_contrasts.R' 'get_dataset.R' 'get_degrees_of_freedom.R'
         'get_draws.R' 'get_group_names.R' 'get_jacobian.R'
         'get_labels.R' 'get_model_matrix.R'
         'get_model_matrix_attribute.R' 'get_modeldata.R'
@@ -75,8 +74,10 @@ Collate: 'RcppExports.R' 'backtransform.R' 'bootstrap_boot.R'
         'hush.R' 'hypotheses.R' 'hypotheses_joint.R' 'hypothesis.R'
         'hypothesis_formula.R' 'hypothesis_function.R'
         'hypothesis_matrix.R' 'hypothesis_string.R' 'imputation.R'
-        'inferences.R' 'matrix_apply.R' 'mean_or_mode.R' 'methods.R'
-        'set_coef.R' 'methods_AER.R' 'methods_MASS.R'
+        'inferences.R' 'inferences_boot.R' 'inferences_conformal.R'
+        'inferences_fwb.R' 'inferences_rsample.R'
+        'inferences_simulation.R' 'matrix_apply.R' 'mean_or_mode.R'
+        'methods.R' 'set_coef.R' 'methods_AER.R' 'methods_MASS.R'
         'methods_MCMCglmm.R' 'methods_Rchoice.R' 'methods_WeightIt.R'
         'methods_afex.R' 'methods_aod.R' 'methods_betareg.R'
         'methods_bife.R' 'methods_biglm.R' 'methods_nnet.R'
@@ -107,13 +108,13 @@ Language: en-US
 Config/testthat/edition: 3
 VignetteBuilder: knitr, quarto
 NeedsCompilation: yes
-Packaged: 2025-03-29 17:28:57 UTC; vincent
-Author: Vincent Arel-Bundock [aut, cre, cph]
-    (<https://orcid.org/0000-0003-2042-7063>),
-  Noah Greifer [ctb] (<https://orcid.org/0000-0003-3067-7154>),
-  Etienne Bacher [ctb] (<https://orcid.org/0000-0002-9271-5075>),
-  Grant McDermott [ctb] (<https://orcid.org/0000-0001-7883-8573>),
-  Andrew Heiss [ctb] (<https://orcid.org/0000-0002-3948-3914>)
+Packaged: 2025-05-19 14:56:20 UTC; vincent
+Author: Vincent Arel-Bundock [aut, cre, cph] (ORCID:
+    <https://orcid.org/0000-0003-2042-7063>),
+  Noah Greifer [ctb] (ORCID: <https://orcid.org/0000-0003-3067-7154>),
+  Etienne Bacher [ctb] (ORCID: <https://orcid.org/0000-0002-9271-5075>),
+  Grant McDermott [ctb] (ORCID: <https://orcid.org/0000-0001-7883-8573>),
+  Andrew Heiss [ctb] (ORCID: <https://orcid.org/0000-0002-3948-3914>)
 Maintainer: Vincent Arel-Bundock <vincent.arel-bundock@umontreal.ca>
 Repository: CRAN
-Date/Publication: 2025-03-29 18:10:02 UTC
+Date/Publication: 2025-05-19 17:50:06 UTC

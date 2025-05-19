@@ -1,5 +1,32 @@
 # News {.unnumbered}
 
+## 0.26.0
+
+Breaking change:
+
+* `datagrid()` now sorts values of variables that are not explicitly supplied. This may change the row order of some results. Thanks to @mattansb for feature request #1439.
+* The default null hypothesis with `hypothesis=ratio~` is now 1. With `hypothesis=difference~` it is still 0. Thanks to Uffe Heide-Jørgensen for report #1453.
+
+New:
+
+* The `hypothesis` argument can specify 1-tailed tests with strings: `avg_predictions(model, hypothesis = "b1 <= 3")`
+* `get_dataset()` no longer requires the user to specify the `package` argument. It automatically searches the data index for a unique matching dataset.
+* `hypotheses()` adds response names to term names. This allows `hypothesis="groupa_var1=groupb_var1"`. Thanks to @mattansb for report #1432.
+* `vcov` accepts "rsample", "boot", "fwb", and "simulation". The object is automatically passed to `inferences(method=)` with default arguments. This is only meant as a shortcut.  To customize the bootstrap strategy, users should use `inferences()`.
+* `get_dataset()` downloads Parquet files instead of CSV. Faster.
+* `inferences()` methods "fwb" and "rsample" can now be parallelized using the global `options(marginaleffects_parallel_inferences=TRUE)`
+* `df="residual"` calls `insight::get_df(model)` to get degrees of freedom for the p value computation. This usually delegates extraction to `df.residual()`.
+* `datagrid()` ensures integers stay integers. Thanks to @mattansb for report #1439.
+* `inferences()` now uses the `mvtnorm` package instead of `MASS` to draw multivariate normal numbers for simulation-based inference.
+
+Bugs:
+
+* `rms` package now allows tibbles. Thanks to @stephenrho for report #1428.
+* `get_vcov()` workaround when vcov does not match dimensions of jacobian. Thanks to @fisher-j for report #1439.
+
+Misc:
+
+
 ## 0.25.1
 
 Bugs:
@@ -12,6 +39,7 @@ Bugs:
 * `conformal_score="residual_sq"` incorrectly added the score to the prediction instead of absolute residual. Coverage was probably incorrect, with wider intervals than necessary. Issue #1407.
 * `hypotheses()` supports multiple imputation objects from `mice`. Thanks to @ASKurz for raising issue #1420.
 * `tidymodels()` reshape bug.
+* `revreference` is available again in the `hypothesis` argument.
 
 Miscellaneous:
 

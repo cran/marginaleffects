@@ -3,7 +3,7 @@
 %   R/sanity_model.R, R/methods_brms.R, R/methods_dbarts.R, R/methods_glmmTMB.R,
 %   R/methods_lme4.R, R/methods_mclogit.R, R/methods_mlogit.R,
 %   R/methods_ordinal.R, R/methods_plm.R, R/methods_quantreg.R,
-%   R/methods_survey.R
+%   R/methods_survey.R, R/methods_survival.R
 \name{sanitize_model_specific.glimML}
 \alias{sanitize_model_specific.glimML}
 \alias{sanitize_model_specific.betareg}
@@ -20,6 +20,7 @@
 \alias{sanitize_model_specific.rqs}
 \alias{sanitize_model_specific.svyolr}
 \alias{sanitize_model_specific.svyglm}
+\alias{sanitize_model_specific.coxph}
 \title{Method to raise model-specific warnings and errors}
 \usage{
 \method{sanitize_model_specific}{glimML}(model, ...)
@@ -58,6 +59,8 @@ sanitize_model_specific(model, ...)
 \method{sanitize_model_specific}{svyolr}(model, wts = FALSE, by = FALSE, ...)
 
 \method{sanitize_model_specific}{svyglm}(model, wts = FALSE, by = FALSE, ...)
+
+\method{sanitize_model_specific}{coxph}(model, vcov, ...)
 }
 \arguments{
 \item{model}{Model object}
@@ -81,6 +84,7 @@ arguments.}
 \item Heteroskedasticity and autocorrelation consistent: \code{"HAC"}
 \item Mixed-Models degrees of freedom: "satterthwaite", "kenward-roger"
 \item Other: \code{"NeweyWest"}, \code{"KernHAC"}, \code{"OPG"}. See the \code{sandwich} package documentation.
+\item "rsample", "boot", "fwb", and "simulation" are passed to the \code{method} argument of the \code{inferences()} function. To customize the bootstrap or simulation process, call \code{inferences()} directly.
 }
 \item One-sided formula which indicates the name of cluster variables (e.g., \code{~unit_id}). This formula is passed to the \code{cluster} argument of the \code{sandwich::vcovCL} function.
 \item Square covariance matrix

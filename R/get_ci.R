@@ -4,18 +4,20 @@ get_ci <- function(
     df = NULL,
     draws = NULL,
     vcov = TRUE,
-    null_hypothesis = 0,
+    hypothesis_null = 0,
+    hypothesis_direction = "=",
     model = NULL,
-    ...) {
-
-    checkmate::assert_number(null_hypothesis)
+    ...
+) {
+    checkmate::assert_number(hypothesis_null)
 
     if (!is.null(draws)) {
         out <- get_ci_draws(
             x,
             conf_level = conf_level,
             draws = draws,
-            model = model)
+            model = model
+        )
         return(out)
     }
 
@@ -29,12 +31,12 @@ get_ci <- function(
         if (identical(df, Inf)) {
             normal <- TRUE
 
-        # 1 or matching length
+            # 1 or matching length
         } else if (length(df) %in% c(1, nrow(x))) {
             x[["df"]] <- df
             normal <- FALSE
 
-        # multiple, such as rbind() contrast terms
+            # multiple, such as rbind() contrast terms
         } else if (length(df) < nrow(x) && "rowid" %in% colnames(x)) {
             rowids <- unique(x$rowid)
             if (length(rowids) == length(df)) {
@@ -44,30 +46,43 @@ get_ci <- function(
                 insight::format_error("The degrees of freedom argument was ignored.")
             }
 
-        # mismatch
+            # mismatch
         } else {
-            insight::format_error("Satterthwaite and Kenward-Roger corrections are not supported in this command.")
+            stop(
+                "Please report this error with a fully reproducible example at: https://github.com/vincentarelbundock/marginaleffects"
+            )
         }
     }
 
-    p_overwrite <-  !"p.value" %in% colnames(x) ||
-                    null_hypothesis != 0 ||
-                    identical(vcov, "satterthwaite") ||
-                    identical(vcov, "kenward-roger")
+    p_overwrite <- !"p.value" %in% colnames(x) ||
+        hypothesis_null != 0 ||
+        hypothesis_direction != "=" ||
+        identical(vcov, "satterthwaite") ||
+        identical(vcov, "kenward-roger")
 
     z_overwrite <- !"statistic" %in% colnames(x) ||
-                   null_hypothesis != 0 ||
-                   p_overwrite
+        hypothesis_null != 0 ||
+        p_overwrite
 
     ci_overwrite <- !"conf.low" %in% colnames(x) &&
-                    "std.error" %in% colnames(x)
+        "std.error" %in% colnames(x)
 
     if (z_overwrite) {
-        x[["statistic"]] <- (x[["estimate"]] - null_hypothesis) / x[["std.error"]]
-        if (normal) {
-            x[["p.value"]] <- 2 * stats::pnorm(-abs(x$statistic))
-        } else {
-            x[["p.value"]] <- 2 * stats::pt(-abs(x$statistic), df = x[["df"]])
+        cdf <- function(k) {
+            if (normal) {
+                out <- stats::pnorm(k)
+            } else {
+                out <- stats::pt(k, df = x[["df"]])
+            }
+            return(out)
+        }
+        x[["statistic"]] <- (x[["estimate"]] - hypothesis_null) / x[["std.error"]]
+        if (hypothesis_direction == "=") {
+            x[["p.value"]] <- 2 * cdf(-abs(x$statistic))
+        } else if (hypothesis_direction == "<=") {
+            x[["p.value"]] <- 1 - cdf(x$statistic)
+        } else if (hypothesis_direction == ">=") {
+            x[["p.value"]] <- cdf(x$statistic)
         }
     }
 
@@ -92,26 +107,41 @@ get_ci <- function(
 
 
 get_ci_draws <- function(x, conf_level, draws, model = NULL) {
-    
-
     checkmate::check_number(conf_level, lower = 1e-10, upper = 1 - 1e-10)
     critical <- (1 - conf_level) / 2
 
     # faster known case
     if (inherits(model, "inferences_simulation")) {
         insight::check_if_installed("collapse", minimum_version = "1.9.0")
-        CIs <- collapse::dapply(draws, MARGIN = 1, FUN = collapse::fquantile, probs = c(critical, 1 - critical))
+        CIs <- collapse::dapply(
+            draws,
+            MARGIN = 1,
+            FUN = collapse::fquantile,
+            probs = c(critical, 1 - critical)
+        )
         x$std.error <- collapse::dapply(draws, MARGIN = 1, FUN = collapse::fsd)
         x$conf.low <- CIs[, 1]
         x$conf.high <- CIs[, 2]
         return(x)
-
-    } else if (identical("eti", getOption("marginaleffects_posterior_interval", default = "eti")) &&
-        identical("median", getOption("marginaleffects_posterior_center", default = "median"))) {
+    } else if (
+        identical(
+            "eti",
+            getOption("marginaleffects_posterior_interval", default = "eti")
+        ) &&
+            identical(
+                "median",
+                getOption("marginaleffects_posterior_center", default = "median")
+            )
+    ) {
         insight::check_if_installed("collapse", minimum_version = "1.9.0")
         # Issue #1017
         if (nrow(draws) > 0) {
-            CIs <- collapse::dapply(draws, MARGIN = 1, FUN = collapse::fquantile, probs = c(critical, 0.5, 1 - critical))
+            CIs <- collapse::dapply(
+                draws,
+                MARGIN = 1,
+                FUN = collapse::fquantile,
+                probs = c(critical, 0.5, 1 - critical)
+            )
             x$estimate <- CIs[, 2]
             x$conf.low <- CIs[, 1]
             x$conf.high <- CIs[, 3]
@@ -120,11 +150,24 @@ get_ci_draws <- function(x, conf_level, draws, model = NULL) {
     }
 
     # faster known case
-    if (identical("eti", getOption("marginaleffects_posterior_interval", default = "eti")) &&
-        identical("mean", getOption("marginaleffects_posterior_center", default = "median"))) {
+    if (
+        identical(
+            "eti",
+            getOption("marginaleffects_posterior_interval", default = "eti")
+        ) &&
+            identical(
+                "mean",
+                getOption("marginaleffects_posterior_center", default = "median")
+            )
+    ) {
         insight::check_if_installed("collapse", minimum_version = "1.9.0")
         Bs <- collapse::dapply(draws, MARGIN = 1, FUN = collapse::fmean)
-        CIs <- collapse::dapply(draws, MARGIN = 1, FUN = collapse::fquantile, probs = c(critical, 1 - critical))
+        CIs <- collapse::dapply(
+            draws,
+            MARGIN = 1,
+            FUN = collapse::fquantile,
+            probs = c(critical, 1 - critical)
+        )
         x$estimate <- Bs
         x$conf.low <- CIs[, 1]
         x$conf.high <- CIs[, 2]
@@ -134,7 +177,10 @@ get_ci_draws <- function(x, conf_level, draws, model = NULL) {
     # option name change
     FUN_INTERVAL <- getOption("marginaleffects_posterior_interval")
     if (is.null(FUN_INTERVAL)) {
-        FUN_INTERVAL <- getOption("marginaleffects_credible_interval", default = "eti")
+        FUN_INTERVAL <- getOption(
+            "marginaleffects_credible_interval",
+            default = "eti"
+        )
     }
     checkmate::assert_choice(FUN_INTERVAL, choices = c("eti", "hdi"))
     if (FUN_INTERVAL == "hdi") {
@@ -143,7 +189,10 @@ get_ci_draws <- function(x, conf_level, draws, model = NULL) {
         FUN_INTERVAL <- get_eti
     }
 
-    FUN_CENTER <- getOption("marginaleffects_posterior_center", default = stats::median)
+    FUN_CENTER <- getOption(
+        "marginaleffects_posterior_center",
+        default = stats::median
+    )
 
     checkmate::assert(
         checkmate::check_choice(FUN_CENTER, choices = c("mean", "median")),
@@ -175,14 +224,14 @@ get_ci_draws <- function(x, conf_level, draws, model = NULL) {
 
 
 get_eti <- function(object, credMass = 0.95, ...) {
-  checkmate::assert_numeric(object)
-  checkmate::assert_number(credMass)
-  checkmate::assert_true(credMass > 0)
-  checkmate::assert_true(credMass < 1)
-  critical <- (1 - credMass) / 2
-  out <- stats::quantile(object, probs = c(critical, 1 - critical))
-  out <- stats::setNames(out, c("lower", "upper"))
-  return(out)
+    checkmate::assert_numeric(object)
+    checkmate::assert_number(credMass)
+    checkmate::assert_true(credMass > 0)
+    checkmate::assert_true(credMass < 1)
+    critical <- (1 - credMass) / 2
+    out <- stats::quantile(object, probs = c(critical, 1 - critical))
+    out <- stats::setNames(out, c("lower", "upper"))
+    return(out)
 }
 
 
