@@ -1,5 +1,12 @@
 # News {.unnumbered}
 
+## 0.27.0
+
+* `inferences()` gets an optional `estimator` argument. This should be a function that accepts a data frame and returns a `marginaleffects` object. This is especially useful when the estimation strategy involves multiple steps such as computing weights, estimating a model, and computing a treatment effect via G-computation. In that case, we specify an `estimator()` function and the `inferences()` function returns a clean `marginaleffects` object with all the draws, without having to manually process the raw output from a bootstrap package.
+* In `brms` models, the extra argument `incl_autocor` no longer raises a warning. Thanks to @robbinscalebj for report #1473.
+* Do not run `get_dataset()` examples to avoid CRAN note.
+* `mlogit` support is back for `predictions()` and `avg_predictions()`. A vignette is added to the website
+
 ## 0.26.0
 
 Breaking change:

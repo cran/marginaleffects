@@ -1,4 +1,4 @@
-inferences_rsample <- function(x, R = 1000, conf_level = 0.95, conf_type = "perc", ...) {
+inferences_rsample <- function(x, R = 1000, conf_level = 0.95, conf_type = "perc", estimator = NULL, ...) {
     out <- x
     call_mfx <- attr(x, "call")
     call_mfx[["vcov"]] <- FALSE
@@ -7,21 +7,43 @@ inferences_rsample <- function(x, R = 1000, conf_level = 0.95, conf_type = "perc
         modeldata <- get_modeldata(call_mfx[["model"]])
     }
 
-    bootfun <- function(split, ...) {
-        d <- rsample::analysis(split)
-        call_mod <- insight::get_call(call_mfx[["model"]])
-        call_mod[["data"]] <- d
-        boot_mod <- eval.parent(call_mod)
-        call_mfx[["model"]] <- boot_mod
-        call_mfx[["modeldata"]] <- d
-        boot_mfx <- eval.parent(call_mfx)
-        out <- tidy(boot_mfx)
-        out$term <- seq_len(nrow(out))
-        return(out)
+    if (!is.null(estimator)) {
+        bootfun <- function(split, ...) {
+            d <- rsample::analysis(split)
+            if (!"term" %in% colnames(result)) {
+            }
+            # Validate output
+            if (!inherits(result, c("hypotheses", "predictions", "slopes", "comparisons"))) {
+                stop_sprintf(
+                    "The `estimator` function must return an object of class 'hypotheses', 'predictions', 'slopes', or 'comparisons', but it returned an object of class: %s",
+                    paste(class(result), collapse = ", ")
+                )
+            }
+            if (!"term" %in% colnames(result)) {
+                result$term <- as.character(seq_len(nrow(result)))
+            }
+            return(result)
+        }
+    } else {
+        bootfun <- function(split, ...) {
+            d <- rsample::analysis(split)
+            call_mod <- insight::get_call(call_mfx[["model"]])
+            call_mod[["data"]] <- d
+            boot_mod <- eval.parent(call_mod)
+            call_mfx[["model"]] <- boot_mod
+            call_mfx[["modeldata"]] <- d
+            boot_mfx <- eval.parent(call_mfx)
+            out <- tidy(boot_mfx)
+            if (!"term" %in% colnames(out)) {
+                out$term <- as.character(seq_len(nrow(out)))
+            }
+            return(out)
+        }
     }
 
     args <- list("data" = modeldata, "apparent" = TRUE)
     args[["times"]] <- R
+    args <- c(args, list(...))
     splits <- do.call(rsample::bootstraps, args)
     if (isTRUE(getOption("marginaleffects_parallel_inferences", default = FALSE))) {
         insight::check_if_installed("future.apply")
@@ -57,6 +79,10 @@ inferences_rsample <- function(x, R = 1000, conf_level = 0.95, conf_type = "perc
 
     cols <- setdiff(names(out), c("p.value", "std.error", "statistic", "s.value", "df"))
     out <- out[, cols, drop = FALSE]
+
+    if (all(out$term == seq_len(nrow(out)))) {
+        out$term <- NULL
+    }
 
     attr(out, "inferences") <- splits
     draws <- lapply(
