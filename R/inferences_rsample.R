@@ -10,18 +10,7 @@ inferences_rsample <- function(x, R = 1000, conf_level = 0.95, conf_type = "perc
     if (!is.null(estimator)) {
         bootfun <- function(split, ...) {
             d <- rsample::analysis(split)
-            if (!"term" %in% colnames(result)) {
-            }
-            # Validate output
-            if (!inherits(result, c("hypotheses", "predictions", "slopes", "comparisons"))) {
-                stop_sprintf(
-                    "The `estimator` function must return an object of class 'hypotheses', 'predictions', 'slopes', or 'comparisons', but it returned an object of class: %s",
-                    paste(class(result), collapse = ", ")
-                )
-            }
-            if (!"term" %in% colnames(result)) {
-                result$term <- as.character(seq_len(nrow(result)))
-            }
+            result <- estimator(d)
             return(result)
         }
     } else {
@@ -33,12 +22,24 @@ inferences_rsample <- function(x, R = 1000, conf_level = 0.95, conf_type = "perc
             call_mfx[["model"]] <- boot_mod
             call_mfx[["modeldata"]] <- d
             boot_mfx <- eval.parent(call_mfx)
-            out <- tidy(boot_mfx)
-            if (!"term" %in% colnames(out)) {
-                out$term <- as.character(seq_len(nrow(out)))
-            }
+            out <- data.frame(boot_mfx)
             return(out)
         }
+    }
+
+    # rsample::int_bca/pctl collapse estimates when term is duplicated because of term/contrast/by unique
+    bootfun_term <- function(split, ...) {
+        out <- bootfun(split, ...)
+        # This is a hack to avoid the issue of rsample::int_bca/pctl collapsing estimates when term is duplicated because of term/contrast/by unique
+        # Warning: assumes that we always return estimates in the same order as the original {marginaleffects} call.
+        # data.frame() to remove super heavy attributes (model, data, etc.)
+        # as.character() because `rsample` assumes character `term`. Reported here: 
+        # https://github.com/tidymodels/rsample/issues/574
+        out <- data.frame(
+            term = as.character(seq_len(nrow(out))), 
+            estimate = out$estimate
+        )
+        return(out)
     }
 
     args <- list("data" = modeldata, "apparent" = TRUE)
@@ -49,30 +50,35 @@ inferences_rsample <- function(x, R = 1000, conf_level = 0.95, conf_type = "perc
         insight::check_if_installed("future.apply")
         pkg <- getOption("marginaleffects_parallel_packages", default = NULL)
         pkg <- unique(c("marginaleffects", pkg))
-        splits$estimates <- future.apply::future_lapply(
+        splits$results <- future.apply::future_lapply(
             splits$splits,
-            bootfun,
+            bootfun_term,
             future.seed = TRUE,
             future.packages = pkg
         )
     } else {
-        splits$estimates <- lapply(splits$splits, bootfun)
+        splits$results <- lapply(splits$splits, bootfun_term)
     }
 
     if (isTRUE(conf_type == "bca")) {
         ci <- rsample::int_bca(
             splits,
-            statistics = estimates,
-            .fn = bootfun,
+            statistics = results,
+            .fn = bootfun_term,
             alpha = 1 - conf_level
         )
     } else {
         ci <- rsample::int_pctl(
             splits,
-            statistics = estimates,
+            statistics = results,
             alpha = 1 - conf_level
         )
     }
+
+    # hack: rsample only supports character `term`
+    # https://github.com/tidymodels/rsample/issues/574
+    ci$term <- as.numeric(ci$term)
+    ci <- ci[order(ci$term),]
 
     out$conf.low <- ci$.lower
     out$conf.high <- ci$.upper
@@ -86,7 +92,7 @@ inferences_rsample <- function(x, R = 1000, conf_level = 0.95, conf_type = "perc
 
     attr(out, "inferences") <- splits
     draws <- lapply(
-        splits$estimates,
+        splits$results,
         function(x) as.matrix(x[, "estimate", drop = FALSE])
     )
     draws[[length(draws)]] <- NULL # apparent=TRUE appended the original estimates to the end

@@ -444,7 +444,8 @@ predictions <- function(
                     hypothesis = hypothesis,
                     by = by,
                     byfun = byfun,
-                    numderiv = numderiv
+                    numderiv = numderiv,
+                    calling_function = "predictions"
                 )
                 args <- utils::modifyList(args, dots)
                 se <- do.call(get_se_delta, args)
@@ -585,6 +586,9 @@ get_predictions <- function(
     hypothesis = NULL,
     verbose = TRUE,
     wts = FALSE,
+    hi = NULL, # sink hole for shared comparisons/predictions call
+    lo = NULL, # sink hole
+    original = NULL, # sink hole
     ...
 ) {
     out <- myTryCatch(get_predict(
@@ -651,9 +655,15 @@ get_predictions <- function(
         out$rowid <- newdata$rowid
     }
     # unpad
-    if ("rowid" %in% colnames(out)) draws <- subset(draws, out$rowid > 0)
-    if ("rowid" %in% colnames(out)) out <- subset(out, rowid > 0)
-    if ("rowid" %in% colnames(newdata)) newdata <- subset(newdata, rowid > 0)
+    if ("rowid" %in% colnames(out)) {
+        draws <- draws[out$rowid > 0, , drop = FALSE]
+    }
+    if ("rowid" %in% colnames(out)) {
+        out <- out[out$rowid > 0, , drop = FALSE]
+    }
+    if ("rowid" %in% colnames(newdata)) {
+        newdata <- newdata[newdata$rowid > 0, , drop = FALSE]
+    }
 
     # expensive: only do this inside the jacobian if necessary
     if (

@@ -35,6 +35,9 @@ get_se_delta_contrasts <- function(
     hi,
     original,
     cross,
+    comparison,
+    by,
+    byfun,
     ...
 ) {
     get_contrasts(
@@ -49,6 +52,8 @@ get_se_delta_contrasts <- function(
         cross = cross,
         verbose = FALSE,
         deltamethod = TRUE,
+        by = by,
+        byfun = byfun,
         ...
     )$estimate
 }
@@ -73,6 +78,13 @@ get_se_delta <- function(
     J = NULL,
     hypothesis = NULL,
     numderiv = NULL,
+    calling_function = NULL,
+    comparison = NULL,
+    by = NULL,
+    byfun = NULL,
+    hi = NULL,
+    lo = NULL,
+    original = NULL,
     ...
 ) {
     # delta method does not work for these models
@@ -98,19 +110,69 @@ get_se_delta <- function(
         coefs <- coefs[bnames]
     }
 
+    # user-supplied jacobian machine (e.g. JAX)
+    if (is.null(J)) {
+        fun <- getOption("marginaleffects_jacobian_function", default = function(...) NULL)
+        if (!isTRUE(checkmate::check_function(fun))) {
+            msg <- "The `marginaleffects_jacobian_function` option must be a function."
+            stop_sprintf(msg)
+        }
+        if (!"..." %in% names(formals(fun))) {
+            msg <- "The `marginaleffects_jacobian_function` option must accept the ... argument."
+            stop_sprintf(msg)
+        }
+        J <- fun(
+            coefs = coefs,
+            newdata = newdata,
+            model = model,
+            hypothesis = hypothesis,
+            type = type,
+            by = by,
+            byfun = byfun,
+            hi = hi,
+            lo = lo,
+            original = original,
+            comparison = comparison,
+            calling_function = calling_function
+        )
+        checkmate::assert_matrix(J, mode = "numeric", ncols = length(coefs), null.ok = TRUE)
+    }
+
     # input: named vector of coefficients
     # output: gradient
     inner <- function(x) {
         names(x) <- names(coefs)
         model_tmp <- set_coef(model, x, ...)
         # do not pass NULL arguments. Important for `deltam` to allow users to supply FUN without ...
-        args <- c(list(model = model_tmp, hypothesis = hypothesis), list(...))
-        if (inherits(model, "gamlss")) args[["safe"]] <- FALSE
-        if (!is.null(eps)) args[["eps"]] <- eps
-        if (!is.null(type)) args[["type"]] <- type
-        if (!is.null(newdata)) args[["newdata"]] <- newdata
-        if (!is.null(J)) args[["J"]] <- J
-        if (!is.null(eps)) args[["eps"]] <- eps
+        args <- list(
+            model = model_tmp,
+            hypothesis = hypothesis,
+            type = type,
+            hi = hi,
+            lo = lo,
+            original = original,
+            by = by,
+            byfun = byfun
+        )
+        args <- c(args, list(...))
+        if (inherits(model, "gamlss")) {
+            args[["safe"]] <- FALSE
+        }
+        if (!is.null(eps)) {
+            args[["eps"]] <- eps
+        }
+        if (!is.null(type)) {
+            args[["type"]] <- type
+        }
+        if (!is.null(newdata)) {
+            args[["newdata"]] <- newdata
+        }
+        if (!is.null(J)) {
+            args[["J"]] <- J
+        }
+        if (!is.null(eps)) {
+            args[["eps"]] <- eps
+        }
 
         if (inherits(model, "glmmTMB")) {
             args$newparams <- x
@@ -142,7 +204,9 @@ get_se_delta <- function(
     # Var(dydx) = J Var(beta) J'
     # computing the full matrix is memory-expensive, and we only need the diagonal
     # algebra trick: https://stackoverflow.com/a/42569902/342331
-    se <- sqrt(rowSums(tcrossprod(J, V) * J))
+    # keep old code for transparency and reference
+    # se <- sqrt(rowSums(tcrossprod(J, V) * J))
+    se <- eigen_J_V_SE(J, V)
     se[se == 0] <- NA_real_
     attr(se, "jacobian") <- J
 

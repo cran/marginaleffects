@@ -1,5 +1,28 @@
 # News {.unnumbered}
 
+## 0.28.0
+
+Breaking changes:
+
+* `marginaleffects` can no longer compute standard errors for `fixest` models in the following configurations (see Issue #1487):
+  - `predictions()` in all model.
+  - `slopes()` and `comparisons()` in models with non-linear link (ex: `fepois`), that is, with a `$family` component.
+* The syntax for the `estimator` argument of the `inferences()` function is simpler:
+  - Old: `inferences(est_fun(data), estimator = est_fun, method = "rsample")`
+  - New: `inferences(data, estimator = est_fun, method = "rsample")`
+
+Bugs:
+
+* No warning emitted when `vcov=FALSE` in `lme4` and `glmmTMB` models. Thanks to @ASKurz for report #1460.
+* `inferences()` passes extra arguments to `boot()`, as documented.
+* `inferences(method="rsample")` should not collapse estimates when `term` is not unique (ex: contrast, by, etc.)
+* `inferences(method="rsample")` does not retain all attributes (data, model, etc.) in every iteration.
+* `inferences(method="rsample")` alignment bug between estimates and CIs.
+
+Misc:
+
+* Performance improvements.
+
 ## 0.27.0
 
 * `inferences()` gets an optional `estimator` argument. This should be a function that accepts a data frame and returns a `marginaleffects` object. This is especially useful when the estimation strategy involves multiple steps such as computing weights, estimating a model, and computing a treatment effect via G-computation. In that case, we specify an `estimator()` function and the `inferences()` function returns a clean `marginaleffects` object with all the draws, without having to manually process the raw output from a bootstrap package.

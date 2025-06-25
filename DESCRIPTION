@@ -1,7 +1,7 @@
 Package: marginaleffects
 Title: Predictions, Comparisons, Slopes, Marginal Means, and Hypothesis
         Tests
-Version: 0.27.0
+Version: 0.28.0
 Authors@R: 
     c(person(given = "Vincent",
              family = "Arel-Bundock",
@@ -97,18 +97,19 @@ Collate: 'RcppExports.R' 'backtransform.R' 'broom.R' 'by.R'
         'plot.R' 'plot_build.R' 'plot_comparisons.R'
         'plot_predictions.R' 'plot_slopes.R' 'predictions.R' 'print.R'
         'recall.R' 'sanitize_comparison.R' 'sanitize_condition.R'
-        'sanitize_conf_level.R' 'sanitize_hypothesis.R'
-        'sanitize_hypothesis_formula.R' 'sanitize_interaction.R'
-        'sanitize_newdata.R' 'sanitize_numderiv.R'
-        'sanitize_reserved.R' 'sanitize_type.R' 'sanitize_variables.R'
-        'sanitize_vcov.R' 'sanity.R' 'sanity_by.R' 'sanity_dots.R'
-        'settings.R' 'slopes.R' 'sort.R' 'tinytest.R'
-        'type_dictionary.R' 'unpack_matrix_cols.R' 'utils.R' 'zzz.R'
+        'sanitize_conf_level.R' 'sanitize_estimator.R'
+        'sanitize_hypothesis.R' 'sanitize_hypothesis_formula.R'
+        'sanitize_interaction.R' 'sanitize_newdata.R'
+        'sanitize_numderiv.R' 'sanitize_reserved.R' 'sanitize_type.R'
+        'sanitize_variables.R' 'sanitize_vcov.R' 'sanity.R'
+        'sanity_by.R' 'sanity_dots.R' 'settings.R' 'slopes.R' 'sort.R'
+        'tinytest.R' 'type_dictionary.R' 'unpack_matrix_cols.R'
+        'utils.R' 'zzz.R'
 Language: en-US
 Config/testthat/edition: 3
 VignetteBuilder: knitr, quarto
 NeedsCompilation: yes
-Packaged: 2025-06-04 17:08:24 UTC; vincent
+Packaged: 2025-06-24 23:39:50 UTC; vincent
 Author: Vincent Arel-Bundock [aut, cre, cph] (ORCID:
     <https://orcid.org/0000-0003-2042-7063>),
   Noah Greifer [ctb] (ORCID: <https://orcid.org/0000-0003-3067-7154>),
@@ -117,4 +118,4 @@ Author: Vincent Arel-Bundock [aut, cre, cph] (ORCID:
   Andrew Heiss [ctb] (ORCID: <https://orcid.org/0000-0002-3948-3914>)
 Maintainer: Vincent Arel-Bundock <vincent.arel-bundock@umontreal.ca>
 Repository: CRAN
-Date/Publication: 2025-06-04 17:50:02 UTC
+Date/Publication: 2025-06-25 11:50:02 UTC
