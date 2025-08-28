@@ -5,10 +5,11 @@
 get_predict.Learner <- function(model, newdata, type = NULL, ...) {
     if (!is.null(type) && !type %in% model$predict_types) {
         msg <- sprintf("Valid `type` values: %s", toString(model$predict_types))
-        insight::format_error(msg)
+        stop_sprintf(msg)
     }
     out <- drop(stats::predict(model, newdata = newdata, predict_type = type))
-    out <- data.frame(rowid = seq_along(out), estimate = out)
+    out <- data.table(estimate = out)
+    out <- add_rowid(out, newdata)
     return(out)
 }
 
@@ -18,4 +19,16 @@ get_predict.Learner <- function(model, newdata, type = NULL, ...) {
 #' @export
 get_vcov.Learner <- function(model, ...) {
     return(FALSE)
+}
+
+
+#' @include sanity_model.R
+#' @rdname sanitize_model_specific
+#' @export
+sanitize_model_specific.Learner <- function(model, calling_function, ...) {
+    if (calling_function == "hypotheses") {
+        msg <- "`marginaleffects` does not support hypothesis tests for models of this class."
+        stop_sprintf(msg)
+    }
+    return(model)
 }

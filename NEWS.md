@@ -1,5 +1,39 @@
 # News {.unnumbered}
 
+## 0.29.0
+
+New functions:
+
+* `prune()` deletes internal information from a `marginaleffects` object to save memory space.
+* `components()` returns internal information from a `marginaleffects` object.
+
+New features:
+
+* Group bootstrap is now possible by specifying: `inferences(method = "rsample", group = ...)`. Issue #1528.
+* `datagrid()` gains a new `grid_type = "dataframe"` option that binds columns element-wise rather than creating cross-products, requiring all explicit vectors to have the same length.
+* `datagrid()` gains a `FUN` argument to apply the same function to all variable types, overriding `grid_type` defaults but not specific `FUN_*` arguments.
+* `equivalence` argument is now supported for bayesian models. It returns the share of posterior draws in the `equivalence` interval.
+
+Misc:
+
+* `AER::tobit()` can use `type="link"`
+* Support `systemfit` models.
+* `tidymodels()` can now do conformal prediction with `inferences()`.
+* Better error message for bayesian/bootstrap models when `hypotheses()` attempts to post-process a previous `marginaleffects` call.
+* Model matrix is attached to more `newdata`. Useful for Issue #6 in `marginaleffectsJAX`.
+* Better error messages for unsupported custom classes with `inferences()`. Unfortunately, we cannot support them because they are not guaranteed to come with an appropriate `update()` class.
+* `inferences()` new computes p-values for `method = "fwb"`. `conf_type` can now be `"perc"` or `"wald"` for `method = "simulation"`.
+* Documentation improvements.
+* `get_dataset()` now delegates most of the work to the `Rdatasets` package (optional dependency).
+* Major internal refactoring to simplify the code base and make maintenance easier. We use fewer attributes and store internal information in a single S4 object stored as `attr(x, "marginaleffects")`.
+* More efficient `inferences()` by avoiding repeated calls to `get_modeldata()`
+* Support `vcov="HC0"` for `glmmTMB` models. Requires 1.1.12 of `glmmTMB` and >1.4.0 of `insight`. Thanks to @strengejacke for report #1562.
+
+Bugs:
+
+* Fixed bug in `sampleSelection` models.
+* Fixed `betareg` models with Log(nu) parameter. Thanks to @strengejacke for report #1568.
+ 
 ## 0.28.0
 
 Breaking changes:

@@ -4,7 +4,7 @@
 \alias{expect_predictions}
 \title{\code{tinytest} helper}
 \usage{
-expect_predictions(object, se = TRUE, n_row = NULL, n_col = NULL)
+expect_predictions(object, se = TRUE, n_row = NULL, n_col = NULL, ...)
 }
 \description{
 \code{tinytest} helper

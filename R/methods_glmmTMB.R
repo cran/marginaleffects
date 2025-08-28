@@ -6,13 +6,9 @@ get_predict.glmmTMB <- function(
     model,
     newdata = insight::get_data(model),
     type = "response",
+    mfx = NULL,
     newparams = NULL,
-    ...
-) {
-    if (inherits(vcov, "vcov.glmmTMB")) {
-        vcov <- vcov[[1]]
-    }
-
+    ...) {
     # hack to avoid re-optimization
     # see https://github.com/vincentarelbundock/marginaleffects/issues/1064
     b_vec <- model$obj$env$parList()$b
@@ -33,7 +29,6 @@ get_predict.glmmTMB <- function(
         newparams = np,
         ...
     )
-
     return(out)
 }
 
@@ -41,11 +36,11 @@ get_predict.glmmTMB <- function(
 #' @include get_vcov.R
 #' @rdname get_vcov
 #' @export
-get_vcov.glmmTMB <- function(model, ...) {
+get_vcov.glmmTMB <- function(model, vcov, ...) {
     vcov <- sanitize_vcov(model, vcov)
 
     # Extract the full covariance matrix
-    out <- stats::vcov(model, full = TRUE)
+    out <- insight::get_varcov(model, vcov = vcov, component = "full")
 
     # Extract the fixed-effect coefficient names from get_coef
     coef_names <- names(get_coef.glmmTMB(model))
@@ -104,10 +99,14 @@ set_coef.glmmTMB <- function(model, coefs, ...) {
 
 #' @rdname sanitize_model_specific
 sanitize_model_specific.glmmTMB <- function(model, vcov = TRUE, re.form, ...) {
+    if (identical(vcov, "HC0")) {
+        insight::check_if_installed("glmmTMB", minimum_version = "1.1.12")
+    }
+
     # re.form=NA
-    if (!isTRUE(checkmate::check_flag(vcov))) {
-        msg <- "For this model type, `vcov` must be `TRUE` or `FALSE`."
-        insight::format_error(msg)
+    if (!isTRUE(checkmate::check_flag(vcov)) && !identical(vcov, "HC0")) {
+        msg <- 'For this model type, `vcov` must be `TRUE`, `FALSE`, `"HC0"`.'
+        stop_sprintf(msg)
     }
 
     if (!isFALSE(vcov) && (missing(re.form) || (!isTRUE(is.na(re.form))))) {

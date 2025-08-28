@@ -18,27 +18,29 @@
 #' @param R Number of resamples, simulations, or cross-validation folds.
 #' @param conf_type String: type of bootstrap interval to construct.
 #' + `boot`: "perc", "norm", "basic", or "bca"
-#' + `fwb`: "perc", "norm", "basic", "bc", or "bca"
+#' + `fwb`: "perc", "norm", "wald", "basic", "bc", or "bca"
 #' + `rsample`: "perc" or "bca"
-#' + `simulation`: argument ignored.
+#' + `simulation`: "perc" or "wald"
 #' @param conformal_test Data frame of test data for conformal prediction.
 #' @param conformal_calibration Data frame of calibration data for split conformal prediction (`method="conformal_split`).
 #' @param conformal_score String. Warning: The `type` argument in `predictions()` must generate predictions which are on the same scale as the outcome variable. Typically, this means that `type` must be "response" or "probs".
 #'   + "residual_abs" or "residual_sq" for regression tasks (numeric outcome)
 #'   + "softmax" for classification tasks (when `predictions()` returns a `group` columns, such as multinomial or ordinal logit models.
-#' @param estimator Function that accepts a data frame, fits a model, applies a marginaleffects function, and returns the object. Only supported with method="rsample" or method="boot". When method="rsample", the output must include a "term" column. This is not always the case for predictions(), in which case users may have to create the column manually.
+#' @param estimator Function that accepts a data frame, fits a model, applies a `marginaleffects` function, and returns the object. Only supported with `method = "rsample"` or `method = "boot"`. When `method = "rsample"`, the output must include a "term" column. This is not always the case for `predictions()`, in which case users may have to create the column manually.
 #' @param ...
-#' + If `method="boot"`, additional arguments are passed to `boot::boot()`.
-#' + If `method="fwb"`, additional arguments are passed to `fwb::fwb()`.
-#' + If `method="rsample"`, additional arguments are passed to `rsample::bootstraps()`.
+#' + If `method = "boot"`, additional arguments are passed to `boot::boot()`.
+#' + If `method = "fwb"`, additional arguments are passed to `fwb::fwb()`.
+#' + If `method = "rsample"`, additional arguments are passed to `rsample::bootstraps()`, unless the user supplies a `group` argument, in which case all arguments are passed to `rsample::group_bootstraps()`.
 #' + Additional arguments are ignored for all other methods.
 #' @details
-#' When `method="simulation"`, we conduct simulation-based inference following the method discussed in Krinsky & Robb (1986):
+#' When `method = "simulation"`, we conduct simulation-based inference following the method discussed in Krinsky & Robb (1986):
 #' 1. Draw `R` sets of simulated coefficients from a multivariate normal distribution with mean equal to the original model's estimated coefficients and variance equal to the model's variance-covariance matrix (classical, "HC3", or other).
 #' 2. Use the `R` sets of coefficients to compute `R` sets of estimands: predictions, comparisons, slopes, or hypotheses.
-#' 3. Take quantiles of the resulting distribution of estimands to obtain a confidence interval and the standard deviation of simulated estimates to estimate the standard error.
+#' 3. Take quantiles of the resulting distribution of estimands to obtain a confidence interval (when `conf_type = "perc"`) and the standard deviation of simulated estimates to estimate the standard error (which is used for a Z-test and Wald confidence intervals when `conf_type = "wald"`).
 #'
-#' When `method="fwb"`, drawn weights are supplied to the model fitting function's `weights` argument; if the model doesn't accept non-integer weights, this method should not be used. If weights were included in the original model fit, they are extracted by [weights()] and multiplied by the drawn weights. These weights are supplied to the `wts` argument of the estimation function (e.g., `comparisons()`).
+#' When `method = "fwb"`, drawn weights are supplied to the model fitting function's `weights` argument; if the model doesn't accept non-integer weights, this method should not be used. If weights were included in the original model fit, they are extracted by [weights()] and multiplied by the drawn weights. These weights are supplied to the `wts` argument of the estimation function (e.g., `comparisons()`).
+#'
+#' Warning: custom model classes are not supported by `inferences()` because they are not guaranteed to come with an appropriate `update()` method.
 #'
 #' @section References:
 #'
@@ -56,7 +58,6 @@
 #' A `marginaleffects` object with simulation or bootstrap resamples and objects attached.
 #' @examples
 #' \dontrun{
-#' library(marginaleffects)
 #' library(magrittr)
 #' set.seed(1024)
 #' mod <- lm(Sepal.Length ~ Sepal.Width * Species, data = iris)
@@ -93,7 +94,6 @@
 #'     avg_comparisons(m, variables = "treat", wts = ps, vcov = FALSE)
 #' }
 #' inferences(lalonde, method = "rsample", estimator = estimator)
-#'
 #' }
 #' @export
 inferences <- function(
@@ -106,16 +106,25 @@ inferences <- function(
     conformal_score = "residual_abs",
     estimator = NULL,
     ...) {
-    if (inherits(attr(x, "model"), c("model_fit", "workflow"))) {
-        msg <- "The `inferences()` function does not support `tidymodels` objects."
-        stop_sprintf(msg)
+    mfx <- attr(x, "marginaleffects")
+
+    # dummy mfx for `estimator` and no marginaleffects object
+    if (!inherits(mfx, "marginaleffects_internal")) {
+        mfx <- new_marginaleffects_internal(NULL, call("predictions"))
     }
+
 
     x <- sanitize_estimator(x = x, estimator = estimator, method = method)
 
+    # we cannot support custom classes because they do not come with `update()` method.
+    if (
+        !inherits(x, c("hypotheses", "slopes", "comparisons", "predictions")) && !identical(class(x)[1], "data.frame")
+    ) {
+        sanity_model_supported_class(x, custom = FALSE)
+    }
+
     # inherit conf_level from the original object
-    conf_level <- attr(x, "conf_level")
-    if (is.null(conf_level)) conf_level <- 0.95
+    conf_level <- mfx@conf_level
 
     checkmate::assert_number(conf_level, lower = 1e-10, upper = 1 - 1e-10)
     checkmate::assert_integerish(R, lower = 2)
@@ -132,7 +141,6 @@ inferences <- function(
         )
     )
 
-
     checkmate::assert(
         checkmate::check_class(x, "predictions"),
         checkmate::check_class(x, "comparisons"),
@@ -140,14 +148,34 @@ inferences <- function(
         checkmate::check_class(x, "hypotheses")
     )
 
+    if (inherits(mfx@model, "Learner")) {
+        msg <- "The inferences() function does not support models of this class."
+        stop_sprintf(msg)
+    }
+    if (inherits(mfx@model, c("model_fit", "workflow"))) {
+        if (method %in% c("boot", "rsample", "simulation")) {
+            msg <- "Bootstrap and simulation-based inferences are not supported for models of this class."
+            stop_sprintf(msg)
+        }
+    }
+
     # Issue #1501: `newdata` should only use the pre-evaluated `newdata` instead of bootstrapping datagrid()
-    call_mfx <- attr(x, "call")
+    mfx <- attr(x, "marginaleffects")
+    call_mfx <- mfx@call
+
+    # Update call with pre-evaluated newdata if available
     if (!is.null(call_mfx)) {
-        nd <- attr(x, "newdata")
-        if (inherits(nd, "data.frame")) {
+        nd <- mfx@newdata
+        # avoid error on two arguments matching `newdata`
+        if (inherits(nd, "data.frame") && !"newdata" %in% ...names()) {
             call_mfx[["newdata"]] <- nd
         }
-        attr(x, "call") <- call_mfx
+
+        # Update mfx object if available
+        if (!is.null(mfx) && inherits(nd, "data.frame")) {
+            mfx@newdata <- nd
+            attr(x, "marginaleffects") <- mfx
+        }
     }
 
     if (method == "conformal_split") {
@@ -163,29 +191,21 @@ inferences <- function(
     }
 
     if (method == "boot") {
-        insight::check_if_installed("boot")
-        out <- inferences_boot(x, R = R, conf_level = conf_level, conf_type = conf_type, estimator = estimator, ...)
+        out <- inferences_boot(x, R = R, conf_level = conf_level, conf_type = conf_type, estimator = estimator, mfx = mfx, ...)
     } else if (method == "fwb") {
-        insight::check_if_installed("fwb")
-        dots <- list(...)
-        if (!"verbose" %in% names(dots)) {
-            dots[["verbose"]] <- FALSE
-        }
         if (
-            isTRUE("wts" %in% names(attr(x, "call"))) &&
-                !isFALSE(attr(x, "call")[["wts"]])
+            isTRUE("wts" %in% names(mfx@call)) &&
+                !isFALSE(mfx@call[["wts"]])
         ) {
-            insight::format_error(
+            stop_sprintf(
                 "The `fwb` method is not supported with the `wts` argument."
             )
         }
-        out <- inferences_fwb(x, R = R, conf_level = conf_level, conf_type = conf_type, ...)
+        out <- inferences_fwb(x, R = R, conf_level = conf_level, conf_type = conf_type, mfx = mfx, ...)
     } else if (method == "rsample") {
-        insight::check_if_installed("rsample")
-        out <- inferences_rsample(x, R = R, conf_level = conf_level, conf_type = conf_type, estimator = estimator, ...)
+        out <- inferences_rsample(x, R = R, conf_level = conf_level, conf_type = conf_type, estimator = estimator, mfx = mfx, ...)
     } else if (method == "simulation") {
-        insight::check_if_installed("MASS")
-        out <- inferences_simulation(x, R = R, conf_level = conf_level, ...)
+        out <- inferences_simulation(x, R = R, conf_level = conf_level, conf_type = conf_type, mfx = mfx, ...)
     } else if (isTRUE(grepl("conformal", method))) {
         out <- conformal_fun(
             x,
@@ -193,7 +213,8 @@ inferences <- function(
             conf_level = conf_level,
             test = conformal_test,
             calibration = conformal_calibration,
-            score = conformal_score
+            score = conformal_score,
+            mfx = mfx
         )
     }
 
@@ -211,16 +232,13 @@ inferences <- function(
         "vcov",
         "weights",
         "transform",
-        "hypothesis_by",
         "nchains",
         "vcov.type",
         "variables",
-        "comparison",
-        "comparison_label",
-        "transform_label"
+        "comparison"
     )
     for (n in attrs) {
-        if (!is.null(attr(x, n))) {
+        if (n %in% names(attributes(x))) {
             attr(out, n) <- attr(x, n)
         }
     }

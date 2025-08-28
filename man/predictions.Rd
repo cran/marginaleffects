@@ -205,7 +205,7 @@ levels. See examples section.}
 \item Warning: When calling \code{predictions()} with \code{type="invlink(link)"} (the default in some models), \code{hypothesis} is tested and p values are computed on the link scale.
 }}
 
-\item{equivalence}{Numeric vector of length 2: bounds used for the two-one-sided test (TOST) of equivalence, and for the non-inferiority and non-superiority tests. See Details section below.}
+\item{equivalence}{Numeric vector of length 2: bounds used for the two-one-sided test (TOST) of equivalence, and for the non-inferiority and non-superiority tests. For bayesian models, this report the proportion of posterior draws in the interval and the ROPE. See Details section below.}
 
 \item{df}{Degrees of freedom used to compute p values and confidence intervals.
 \itemize{
@@ -247,9 +247,23 @@ Columns may include:
 \item \code{conf.high}: upper bound of the confidence (or credible) interval defined by the \code{conf_level} argument.
 \item \code{predicted_lo}: predicted outcome for the "low" value of the focal predictor in a counterfactual comparison.
 \item \code{predicted_hi}: predicted outcome for the "high" value of the focal predictor in a counterfactual comparison.
+\item \code{p.rope.unconditional}: share of posterior draws in the interval specified by the \code{equivalence} argument. This is only available for Bayesian models.
+\item \code{p.rope.conditional}: share of posterior draws in the interval specified by the \code{equivalence} argument, among draws in the confidence interval. This is only available for Bayesian models.
+\item \code{rope}: share of the posterior draws between \code{conf.low} and \code{conf.high} that are covered by the interval specified by the \code{equivalence} argument.
+\item \code{statistic.noninf}: test statistic for non-inferiority test (when \code{equivalence} argument is used).
+\item \code{statistic.nonsup}: test statistic for non-superiority test (when \code{equivalence} argument is used).
+\item \code{p.value.noninf}: p-value for non-inferiority test (when \code{equivalence} argument is used).
+\item \code{p.value.nonsup}: p-value for non-superiority test (when \code{equivalence} argument is used).
+\item \code{p.value.equiv}: p-value for equivalence test using Two One-Sided Tests (TOST) approach (when \code{equivalence} argument is used).
 }
 
 See \code{?print.marginaleffects} for printing options.
+
+The \code{data.frame}s produced by \code{marginaleffects} stores an attribute that holds many internal objects, such as the original model, data, and much other information that can be used for post-processing. This information can be inspected using the \code{components()} function.
+
+Warning: The internal attributes retrieved by \code{components()} are not considered part of the public API of the package. Their names and contents can change without warning or notice. Users should not rely on them.
+
+Warning: In some cases, the internal attributes used by \code{marginaleffects()} can use up a substantial amount of memory. To clear this data, use the \code{prune()} function or set \code{options(marginaleffects_lean=TRUE)}.
 }
 \description{
 Outcome predicted by a fitted model on a specified scale for a given combination of values of the predictor variables, such as their observed values, their means, or factor levels (a.k.a. "reference grid").
@@ -471,6 +485,7 @@ Other options:
 
 \examples{
 \dontshow{if (interactive() || isTRUE(Sys.getenv("R_DOC_BUILD") == "true")) (if (getRversion() >= "3.4") withAutoprint else force)(\{ # examplesIf}
+library("marginaleffects")
 # Adjusted Prediction for every row of the original dataset
 mod <- lm(mpg ~ hp + factor(cyl), data = mtcars)
 pred <- predictions(mod)

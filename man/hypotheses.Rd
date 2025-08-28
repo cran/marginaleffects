@@ -5,9 +5,9 @@
 \title{(Non-)Linear Tests for Null Hypotheses, Joint Hypotheses, Equivalence, Non Superiority, and Non Inferiority}
 \usage{
 hypotheses(
-  model,
+  model = NULL,
   hypothesis = NULL,
-  vcov = NULL,
+  vcov = TRUE,
   conf_level = NULL,
   df = NULL,
   equivalence = NULL,
@@ -107,7 +107,7 @@ hypotheses(
 \item When using \code{joint_test="f"}, the \code{df} argument should be a numeric vector of length 2.
 }}
 
-\item{equivalence}{Numeric vector of length 2: bounds used for the two-one-sided test (TOST) of equivalence, and for the non-inferiority and non-superiority tests. See Details section below.}
+\item{equivalence}{Numeric vector of length 2: bounds used for the two-one-sided test (TOST) of equivalence, and for the non-inferiority and non-superiority tests. For bayesian models, this report the proportion of posterior draws in the interval and the ROPE. See Details section below.}
 
 \item{joint}{Joint test of statistical significance. The null hypothesis value can be set using the \code{hypothesis} argument.
 \itemize{
@@ -144,7 +144,7 @@ arguments.}
 Uncertainty estimates are calculated as first-order approximate standard errors for linear or non-linear functions of a vector of random variables with known or estimated covariance matrix. In that sense, \code{\link{hypotheses}} emulates the behavior of the excellent and well-established \link[car:deltaMethod]{car::deltaMethod} and \link[car:linearHypothesis]{car::linearHypothesis} functions, but it supports more models; requires fewer dependencies; expands the range of tests to equivalence and superiority/inferiority; and offers convenience features like robust standard errors.
 
 To learn more, read the hypothesis tests vignette, visit the
-package website, or scroll down this page for a full list of vignettes:
+package website:
 \itemize{
 \item \url{https://marginaleffects.com/chapters/hypothesis.html}
 \item \url{https://marginaleffects.com/}
@@ -197,7 +197,6 @@ Thanks to Russell V. Lenth for the excellent \code{emmeans} package and document
 }
 
 \examples{
-library(marginaleffects)
 mod <- lm(mpg ~ hp + wt + factor(cyl), data = mtcars)
 
 hypotheses(mod)
@@ -258,11 +257,11 @@ dat <- transform(mtcars, gear = factor(gear))
 mod <- polr(gear ~ factor(cyl) + hp, dat)
 
 aggregation_fun <- function(x) {
-  predictions(x, vcov = FALSE) \%>\%
-    mutate(group = ifelse(group \%in\% c("3", "4"), "3 & 4", "5")) \%>\%
-    summarize(estimate = sum(estimate), .by = c("rowid", "cyl", "group")) \%>\%
-    summarize(estimate = mean(estimate), .by = c("cyl", "group")) \%>\%
-    rename(term = cyl)
+    predictions(x, vcov = FALSE) \%>\%
+        mutate(group = ifelse(group \%in\% c("3", "4"), "3 & 4", "5")) \%>\%
+        summarize(estimate = sum(estimate), .by = c("rowid", "cyl", "group")) \%>\%
+        summarize(estimate = mean(estimate), .by = c("cyl", "group")) \%>\%
+        rename(term = cyl)
 }
 
 hypotheses(mod, hypothesis = aggregation_fun)

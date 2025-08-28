@@ -2,9 +2,9 @@
 #'
 #' @param x An object produced by a `marginaleffects` package function, such as `predictions()`, `avg_slopes()`, `hypotheses()`, etc.
 #' @param shape string indicating the shape of the output format:
-#' * "long": long format data frame
+#' * "long" (default): long format data frame
+#' * "PxD" (fastest): Matrix with parameters as rows and draws as columns
 #' * "DxP": Matrix with draws as rows and parameters as columns
-#' * "PxD": Matrix with draws as rows and parameters as columns
 #' * "rvar": Random variable datatype (see `posterior` package documentation).
 #' @return A data.frame with `drawid` and `draw` columns.
 #' @details
@@ -14,17 +14,15 @@ get_draws <- function(x, shape = "long") {
     checkmate::assert_choice(shape, choices = c("long", "DxP", "PxD", "rvar"))
 
     # tidy.comparisons() sometimes already saves draws in a nice long format
-    draws <- attr(x, "posterior_draws")
-    if (inherits(draws, "posterior_draws")) {
-        return(draws)
-    }
+    mfx <- attr(x, "marginaleffects")
+    draws <- mfx@draws
 
-    if (is.null(attr(x, "posterior_draws"))) {
+    if (is.null(draws)) {
         warning(
-            'This object does not include a "posterior_draws" attribute. The `posterior_draws` function only supports bayesian models produced by the `marginaleffects` or `predictions` functions of the `marginaleffects` package.',
+            "This object does not include draws. The `posterior_draws` function only supports bayesian models produced by the `marginaleffects` or `predictions` functions of the `marginaleffects` package.",
             call. = FALSE
         )
-        return(x)
+        return(invisible(NULL))
     }
 
     if (nrow(draws) != nrow(x)) {
@@ -54,8 +52,8 @@ get_draws <- function(x, shape = "long") {
     if (shape == "rvar") {
         insight::check_if_installed("posterior")
         draws <- t(draws)
-        if (!is.null(attr(x, "nchains"))) {
-            x[["rvar"]] <- posterior::rvar(draws, nchains = attr(x, "nchains"))
+        if (mfx@draws_chains > 0) {
+            x[["rvar"]] <- posterior::rvar(draws, nchains = mfx@draws_chains)
         } else {
             x[["rvar"]] <- posterior::rvar(draws)
         }

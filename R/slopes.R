@@ -13,6 +13,8 @@
 #' * [https://marginaleffects.com/chapters/slopes.html](https://marginaleffects.com/chapters/slopes.html)
 #' * [https://marginaleffects.com/](https://marginaleffects.com/)
 #'
+#' Warning: Slopes and elasticities can only be calculated for continuous numeric variables. The `slopes()` functions will automatically revert to `comparisons()` for binary or categorical variables.
+#'
 #' @details
 #' A "slope" or "marginal effect" is the partial derivative of the regression equation
 #' with respect to a variable in the model. This function uses automatic
@@ -153,6 +155,7 @@
 #' @template options
 #' @template return
 #' @examplesIf interactive() || isTRUE(Sys.getenv("R_DOC_BUILD") == "true")
+#' library("marginaleffects")
 #' # Unit-level (conditional) Marginal Effects
 #' mod <- glm(am ~ hp * wt, data = mtcars, family = binomial)
 #' mfx <- slopes(mod)
@@ -181,9 +184,9 @@
 #' # original values, and the whole dataset is duplicated once for each
 #' # combination of the values in `datagrid()`
 #' mfx <- slopes(mod,
-#'   newdata = datagrid(
-#'     hp = c(100, 110),
-#'     grid_type = "counterfactual"))
+#'     newdata = datagrid(
+#'         hp = c(100, 110),
+#'         grid_type = "counterfactual"))
 #' head(mfx)
 #'
 #' # Heteroskedasticity robust standard errors
@@ -194,33 +197,33 @@
 #' mod <- lm(mpg ~ wt + drat, data = mtcars)
 #'
 #' slopes(
-#'   mod,
-#'   newdata = "mean",
-#'   hypothesis = "wt = drat")
+#'     mod,
+#'     newdata = "mean",
+#'     hypothesis = "wt = drat")
 #'
 #' # same hypothesis test using row indices
 #' slopes(
-#'   mod,
-#'   newdata = "mean",
-#'   hypothesis = "b1 - b2 = 0")
+#'     mod,
+#'     newdata = "mean",
+#'     hypothesis = "b1 - b2 = 0")
 #'
 #' # same hypothesis test using numeric vector of weights
 #' slopes(
-#'   mod,
-#'   newdata = "mean",
-#'   hypothesis = c(1, -1))
+#'     mod,
+#'     newdata = "mean",
+#'     hypothesis = c(1, -1))
 #'
 #' # two custom contrasts using a matrix of weights
 #' lc <- matrix(
-#'   c(
-#'     1, -1,
-#'     2, 3),
-#'   ncol = 2)
+#'     c(
+#'         1, -1,
+#'         2, 3),
+#'     ncol = 2)
 #' colnames(lc) <- c("Contrast A", "Contrast B")
 #' slopes(
-#'   mod,
-#'   newdata = "mean",
-#'   hypothesis = lc)
+#'     mod,
+#'     newdata = "mean",
+#'     hypothesis = lc)
 #'
 #' @export
 slopes <- function(
@@ -238,33 +241,8 @@ slopes <- function(
     df = Inf,
     eps = NULL,
     numderiv = "fdforward",
-    ...
-) {
+    ...) {
     call_attr <- construct_call(model, "slopes")
-
-    # very early, before any use of newdata
-    # if `newdata` is a call to `typical` or `counterfactual`, insert `model`
-    # scall <- rlang::enquo(newdata)
-    # newdata <- sanitize_newdata_call(scall, newdata, model, by = by)
-
-    # build call: match.call() doesn't work well in *apply()
-    # call_attr <- c(
-    #     list(
-    #         name = "slopes",
-    #         model = model,
-    #         newdata = newdata,
-    #         variables = variables,
-    #         type = type,
-    #         vcov = vcov,
-    #         by = by,
-    #         conf_level = conf_level,
-    #         slope = slope,
-    #         wts = wts,
-    #         hypothesis = hypothesis,
-    #         df = df,
-    #         eps = eps),
-    #     list(...))
-    # call_attr <- do.call("call", call_attr)
 
     # slopes() does not support a named list of variables like comparisons()
     checkmate::assert_character(variables, null.ok = TRUE)
@@ -283,14 +261,7 @@ slopes <- function(
     checkmate::assert_choice(slope, choices = valid)
 
     # sanity checks and pre-processing
-    model <- sanitize_model(
-        model = model,
-        wts = wts,
-        vcov = vcov,
-        by = by,
-        calling_function = "slopes",
-        ...
-    )
+    # Note: model sanitization is handled in comparisons()
     sanity_dots(model = model, calling_function = "slopes", ...)
 
     ############### sanity checks are over
@@ -304,31 +275,7 @@ slopes <- function(
     call_attr_c[["internal_call"]] <- TRUE
     call_attr_c[["slope"]] <- NULL
 
-    # out <- comparisons(
-    #     model,
-    #     newdata = newdata,
-    #     variables = variables,
-    #     vcov = vcov,
-    #     conf_level = conf_level,
-    #     type = type,
-    #     wts = wts,
-    #     hypothesis = hypothesis,
-    #     equivalence = equivalence,
-    #     df = df,
-    #     by = by,
-    #     eps = eps,
-    #     numderiv = numderiv,
-    #     comparison = slope,
-    #     cross = FALSE,
-    #     # secret arguments
-    #     internal_call = TRUE,
-    #     ...)
-
     out <- eval.parent(call_attr_c)
-
-    if (!is.null(attr(out, "call"))) {
-        attr(out, "call") <- call_attr
-    }
 
     # class
     data.table::setDF(out)
@@ -357,35 +304,8 @@ avg_slopes <- function(
     df = Inf,
     eps = NULL,
     numderiv = "fdforward",
-    ...
-) {
-    # order of the first few paragraphs is important
-    # if `newdata` is a call to `typical` or `counterfactual`, insert `model`
-    # should probably not be nested too deeply in the call stack since we eval.parent() (not sure about this)
-    # scall <- rlang::enquo(newdata)
-    # newdata <- sanitize_newdata_call(scall, newdata, model, by = by)
-
-    #Construct comparisons() call
+    ...) {
     call_attr <- construct_call(model, "slopes")
-
     out <- eval.parent(call_attr)
-
-    # out <- slopes(
-    #     model = model,
-    #     newdata = newdata,
-    #     variables = variables,
-    #     type = type,
-    #     vcov = vcov,
-    #     conf_level = conf_level,
-    #     by = by,
-    #     slope = slope,
-    #     wts = wts,
-    #     hypothesis = hypothesis,
-    #     equivalence = equivalence,
-    #     df = df,
-    #     eps = eps,
-    #     numderiv = numderiv,
-    #     ...)
-
     return(out)
 }

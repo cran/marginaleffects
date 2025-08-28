@@ -184,7 +184,7 @@ first entry in the error message is used by default.}
 \item Warning: When calling \code{predictions()} with \code{type="invlink(link)"} (the default in some models), \code{hypothesis} is tested and p values are computed on the link scale.
 }}
 
-\item{equivalence}{Numeric vector of length 2: bounds used for the two-one-sided test (TOST) of equivalence, and for the non-inferiority and non-superiority tests. See Details section below.}
+\item{equivalence}{Numeric vector of length 2: bounds used for the two-one-sided test (TOST) of equivalence, and for the non-inferiority and non-superiority tests. For bayesian models, this report the proportion of posterior draws in the interval and the ROPE. See Details section below.}
 
 \item{df}{Degrees of freedom used to compute p values and confidence intervals.
 \itemize{
@@ -233,9 +233,23 @@ Columns may include:
 \item \code{conf.high}: upper bound of the confidence (or credible) interval defined by the \code{conf_level} argument.
 \item \code{predicted_lo}: predicted outcome for the "low" value of the focal predictor in a counterfactual comparison.
 \item \code{predicted_hi}: predicted outcome for the "high" value of the focal predictor in a counterfactual comparison.
+\item \code{p.rope.unconditional}: share of posterior draws in the interval specified by the \code{equivalence} argument. This is only available for Bayesian models.
+\item \code{p.rope.conditional}: share of posterior draws in the interval specified by the \code{equivalence} argument, among draws in the confidence interval. This is only available for Bayesian models.
+\item \code{rope}: share of the posterior draws between \code{conf.low} and \code{conf.high} that are covered by the interval specified by the \code{equivalence} argument.
+\item \code{statistic.noninf}: test statistic for non-inferiority test (when \code{equivalence} argument is used).
+\item \code{statistic.nonsup}: test statistic for non-superiority test (when \code{equivalence} argument is used).
+\item \code{p.value.noninf}: p-value for non-inferiority test (when \code{equivalence} argument is used).
+\item \code{p.value.nonsup}: p-value for non-superiority test (when \code{equivalence} argument is used).
+\item \code{p.value.equiv}: p-value for equivalence test using Two One-Sided Tests (TOST) approach (when \code{equivalence} argument is used).
 }
 
 See \code{?print.marginaleffects} for printing options.
+
+The \code{data.frame}s produced by \code{marginaleffects} stores an attribute that holds many internal objects, such as the original model, data, and much other information that can be used for post-processing. This information can be inspected using the \code{components()} function.
+
+Warning: The internal attributes retrieved by \code{components()} are not considered part of the public API of the package. Their names and contents can change without warning or notice. Users should not rely on them.
+
+Warning: In some cases, the internal attributes used by \code{marginaleffects()} can use up a substantial amount of memory. To clear this data, use the \code{prune()} function or set \code{options(marginaleffects_lean=TRUE)}.
 }
 \description{
 Partial derivative of the regression equation with respect to a regressor of interest.
@@ -251,6 +265,8 @@ See the slopes vignette and package website for worked examples and case studies
 \item \url{https://marginaleffects.com/chapters/slopes.html}
 \item \url{https://marginaleffects.com/}
 }
+
+Warning: Slopes and elasticities can only be calculated for continuous numeric variables. The \code{slopes()} functions will automatically revert to \code{comparisons()} for binary or categorical variables.
 }
 \details{
 A "slope" or "marginal effect" is the partial derivative of the regression equation
@@ -469,6 +485,7 @@ Other options:
 
 \examples{
 \dontshow{if (interactive() || isTRUE(Sys.getenv("R_DOC_BUILD") == "true")) (if (getRversion() >= "3.4") withAutoprint else force)(\{ # examplesIf}
+library("marginaleffects")
 # Unit-level (conditional) Marginal Effects
 mod <- glm(am ~ hp * wt, data = mtcars, family = binomial)
 mfx <- slopes(mod)
@@ -497,9 +514,9 @@ avg_slopes(mod2, variables = "hp", by = "cyl")
 # original values, and the whole dataset is duplicated once for each
 # combination of the values in `datagrid()`
 mfx <- slopes(mod,
-  newdata = datagrid(
-    hp = c(100, 110),
-    grid_type = "counterfactual"))
+    newdata = datagrid(
+        hp = c(100, 110),
+        grid_type = "counterfactual"))
 head(mfx)
 
 # Heteroskedasticity robust standard errors
@@ -510,33 +527,33 @@ head(mfx)
 mod <- lm(mpg ~ wt + drat, data = mtcars)
 
 slopes(
-  mod,
-  newdata = "mean",
-  hypothesis = "wt = drat")
+    mod,
+    newdata = "mean",
+    hypothesis = "wt = drat")
 
 # same hypothesis test using row indices
 slopes(
-  mod,
-  newdata = "mean",
-  hypothesis = "b1 - b2 = 0")
+    mod,
+    newdata = "mean",
+    hypothesis = "b1 - b2 = 0")
 
 # same hypothesis test using numeric vector of weights
 slopes(
-  mod,
-  newdata = "mean",
-  hypothesis = c(1, -1))
+    mod,
+    newdata = "mean",
+    hypothesis = c(1, -1))
 
 # two custom contrasts using a matrix of weights
 lc <- matrix(
-  c(
-    1, -1,
-    2, 3),
-  ncol = 2)
+    c(
+        1, -1,
+        2, 3),
+    ncol = 2)
 colnames(lc) <- c("Contrast A", "Contrast B")
 slopes(
-  mod,
-  newdata = "mean",
-  hypothesis = lc)
+    mod,
+    newdata = "mean",
+    hypothesis = lc)
 \dontshow{\}) # examplesIf}
 }
 \references{

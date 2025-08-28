@@ -168,7 +168,7 @@ hypothesis_formula_list <- list(
             comparison = function(x) {
                 nx <- length(x)
                 w <- stats::contr.poly(nx)
-                w <- w[, 1:min(5, ncol(w))]
+                w <- w[, seq_len(min(5, ncol(w))), drop = FALSE]
                 as.vector(crossprod(w, matrix(x)))
             },
             label = function(x) {
@@ -201,19 +201,11 @@ hypothesis_formula <- function(x, hypothesis, newdata, by) {
     # default values
     draws <- attr(x, "posterior_draws")
 
-    if (inherits(x, "data.frame")) {
-        data.table::setDT(x)
-    }
-    if (inherits(newdata, "data.frame")) {
-        data.table::setDT(newdata)
-        if (nrow(newdata) != nrow(x)) {
-            newdata <- NULL
-        }
-    }
-
     form <- sanitize_hypothesis_formula(hypothesis)
 
     group <- form$group
+
+    x <- data.table::as.data.table(x)
 
     if (isTRUE(checkmate::check_character(by))) {
         bycols <- setdiff(by, group)
@@ -287,7 +279,8 @@ hypothesis_formula <- function(x, hypothesis, newdata, by) {
         )
         if (inherits(labels, "data.frame") && nrow(labels) == nrow(estimates)) {
             data.table::setnames(labels, old = "estimate", "hypothesis")
-            estimates <- cbind(labels, estimates)
+            cols <- setdiff(colnames(estimates), colnames(labels))
+            estimates <- cbind(labels, subset(estimates, select = cols))
         }
     }
 

@@ -1,11 +1,27 @@
-equivalence <- function(x, equivalence = NULL, df = Inf, ...) {
+equivalence <- function(x, equivalence = NULL, df = Inf, draws = NULL, ...) {
     if (is.null(equivalence)) {
         return(x)
     }
 
-    if (!is.null(equivalence) && !all(c("estimate", "std.error") %in% colnames(x))) {
-        msg <- "The `equivalence` argument is not supported with models for which `marginaleffects` does not estimate a standard error (e.g., bayesian)."
-        insight::format_error(msg)
+    if (!is.null(draws)) {
+        # `draws` is an Parameters x Draws matrix.
+
+        # Pr(Equivalence)
+        idx_equiv <- draws > equivalence[1] & draws < equivalence[2]
+        x$p.rope.unconditional <- apply(idx_equiv, 1, mean)
+
+        # Pr(Equivalence|CI)
+        rope <- draws
+        rope[rope < x$conf.low | rope > x$conf.high] <- NA
+        rope <- rope > equivalence[1] & rope < equivalence[2]
+        x$p.rope.conditional <- apply(rope, 1, mean, na.rm = TRUE)
+
+        return(x)
+    }
+
+    if (!all(c("estimate", "std.error") %in% colnames(x))) {
+        msg <- "The `equivalence` argument is not supported with models for which `marginaleffects` does not estimate a standard error."
+        stop_sprintf(msg)
     }
 
     checkmate::assert_numeric(equivalence, min.len = 1, max.len = 2)
@@ -14,7 +30,6 @@ equivalence <- function(x, equivalence = NULL, df = Inf, ...) {
     }
 
     delta <- abs(diff(equivalence)) / 2
-    null <- min(equivalence) + delta
 
     # definitions from `emmeans`, with a different user interface based on symmetric "equivalence"
     x$statistic.noninf <- (x$estimate - equivalence[1]) / x$std.error

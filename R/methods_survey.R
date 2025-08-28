@@ -41,23 +41,26 @@ get_predict.svyolr <- function(
     model,
     newdata = insight::get_data(model),
     type = "probs",
-    ...
-) {
-    type <- sanitize_type(model, type, calling_function = "predictions")
+    mfx = NULL,
+    ...) {
+    calling_function <- if (!is.null(mfx)) mfx@calling_function else "predictions"
+    type <- sanitize_type(model, type, calling_function = calling_function)
 
-    # hack: 1-row newdata returns a vector, so get_predict.default does not learn about groups
+    # hack: 1-row newdata returns a vector, so get_predict.default
+    # does not learn about groups
+    hack <- FALSE
     if (nrow(newdata) == 1) {
         hack <- TRUE
         newdata <- newdata[c(1, 1), , drop = FALSE]
-        newdata$rowid[1] <- -Inf
-    } else {
-        hack <- FALSE
     }
 
     out <- get_predict.default(model, newdata = newdata, type = type, ...)
 
-    # hack
-    out <- out[out$rowid != -Inf, ]
+    if (hack) {
+        out <- out[1, , drop = FALSE]
+    }
+
+    out <- add_rowid(out, newdata)
 
     return(out)
 }
@@ -70,31 +73,18 @@ get_predict.svyglm <- function(
     model,
     newdata = insight::get_data(model),
     type = "response",
+    mfx = NULL,
+    newparams = NULL,
+    ndraws = NULL,
     se.fit = FALSE,
-    ...
-) {
+    ...) {
     estimate <- stats::predict(
         model,
         newdata = newdata,
         type = type,
         se.fit = se.fit
     )
-    rowid <- attr(estimate, "names")
-
-    # useless integer index creates problems: Issue #1161
-    if (identical(suppressWarnings(as.integer(rowid)), seq_len(nrow(newdata)))) {
-        rowid <- NULL
-    }
-
-    if (is.null(rowid) && "rowid" %in% colnames(newdata)) {
-        rowid <- newdata[["rowid"]]
-    } else if (is.null(rowid)) {
-        rowid <- seq_len(estimate)
-    } else {
-        # rowid might be character, but survey::predict() requires non-negative integers
-        rowid <- seq_along(rowid)
-    }
-    out <- data.frame(rowid, estimate = as.numeric(estimate))
+    out <- data.frame(estimate = as.numeric(estimate))
     row.names(out) <- NULL
     return(out)
 }
@@ -107,8 +97,7 @@ sanitize_model_specific.svyolr <- function(
     model,
     wts = FALSE,
     by = FALSE,
-    ...
-) {
+    ...) {
     if (isFALSE(wts) && !isFALSE(by)) {
         warning(
             "With models of this class, it is normally good practice to specify weights using the `wts` argument. Otherwise, weights will be ignored in the computation of quantities of interest.",

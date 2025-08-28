@@ -30,7 +30,6 @@
 #' @return A `ggplot2` object
 #' @export
 #' @examplesIf interactive() || isTRUE(Sys.getenv("R_DOC_BUILD") == "true")
-#' library(marginaleffects)
 #' mod <- lm(mpg ~ hp * drat * factor(am), data = mtcars)
 #'
 #' plot_slopes(mod, variables = "hp", condition = "drat")
@@ -48,9 +47,9 @@
 #'
 #' # marginal slopes on a counterfactual grid
 #' plot_slopes(mod,
-#'   variables = "hp",
-#'   by = "am",
-#'   newdata = datagrid(am = 0:1, grid_type = "counterfactual")
+#'     variables = "hp",
+#'     by = "am",
+#'     newdata = datagrid(am = 0:1, grid_type = "counterfactual")
 #' )
 #'
 plot_slopes <- function(
@@ -67,34 +66,46 @@ plot_slopes <- function(
     rug = FALSE,
     gray = getOption("marginaleffects_plot_gray", default = FALSE),
     draw = TRUE,
-    ...
-) {
+    ...) {
     if ("effect" %in% ...names()) {
         if (is.null(variables)) {
             variables <- ...elt(match("effect", ...names())[1L])
         } else {
-            insight::format_error(
+            stop_sprintf(
                 "The `effect` argument has been renamed to `variables`."
             )
         }
     }
 
-    if (inherits(model, "mira") && is.null(newdata)) {
+    if (inherits(model, c("mira", "amest"))) {
+        msg <- "This function does not support multiple imputation. Call `slopes()` or `avg_slopes()` instead. These functions return easy to plot data frames."
+        stop_sprintf(msg)
+    }
+
+    # init
+    call <- construct_call(model, "comparisons")
+    model <- sanitize_model(model, call = call, newdata = newdata, wts = wts, vcov = vcov, by = by, ...)
+    mfx <- new_marginaleffects_internal(
+        call = call,
+        model = model
+    )
+
+    if (inherits(mfx@model, "mira") && is.null(newdata)) {
         msg <- "Please supply a data frame to the `newdata` argument explicitly."
-        insight::format_error(msg)
+        stop_sprintf(msg)
     }
 
     # order of the first few paragraphs is important
     # if `newdata` is a call to `typical` or `counterfactual`, insert `model`
     # should probably not be nested too deeply in the call stack since we eval.parent() (not sure about this)
     scall <- rlang::enquo(newdata)
-    newdata <- sanitize_newdata_call(scall, newdata, model)
+    newdata <- sanitize_newdata_call(scall, newdata, mfx = mfx)
 
     valid <- c("dydx", "eyex", "eydx", "dyex")
     checkmate::assert_choice(slope, choices = valid)
 
     out <- plot_comparisons(
-        model,
+        mfx@model,
         variables = variables,
         condition = condition,
         by = by,

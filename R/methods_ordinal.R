@@ -4,8 +4,7 @@ get_predict.clm <- function(
     model,
     newdata = insight::get_data(model),
     type = "prob",
-    ...
-) {
+    ...) {
     # `predict.clm()` only makes predictions for the observed response group of
     # each observation in `newdata`. When we remove the response from
     # `newdata`, `predict.clm()` makes predictions for all levels, which is
@@ -13,7 +12,8 @@ get_predict.clm <- function(
     resp <- insight::find_response(model)
 
     # otherwise `predict.clm` does not see some columns (mystery)
-    data.table::setDF(newdata)
+    # copy to avoid breakage in get_comparisons()
+    newdata <- as.data.frame(newdata)
 
     newdata <- newdata[, setdiff(colnames(newdata), resp), drop = FALSE]
 
@@ -28,19 +28,12 @@ get_predict.clm <- function(
     }
     pred <- tmp
 
-    out <- data.frame(
+    out <- data.table(
         group = rep(colnames(pred), each = nrow(pred)),
         estimate = c(pred)
     )
     out$group <- group_to_factor(out$group, model)
-
-    # often an internal call
-    if ("rowid" %in% colnames(newdata)) {
-        out$rowid <- rep(newdata$rowid, times = ncol(pred))
-    } else {
-        out$rowid <- rep(seq_len(nrow(pred)), times = ncol(pred))
-    }
-
+    out <- add_rowid(out, newdata)
     return(out)
 }
 

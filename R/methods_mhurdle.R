@@ -4,10 +4,10 @@ get_predict.mhurdle <- function(
     model,
     newdata = insight::get_data(model),
     type = "response",
-    ...
-) {
+    ...) {
     out <- stats::predict(model, what = type, newdata = newdata)
-    out <- data.frame(rowid = seq_len(length(out)), estimate = out)
+    out <- data.table(estimate = out)
+    out <- add_rowid(out, newdata)
     return(out)
 }
 
@@ -16,7 +16,7 @@ get_predict.mhurdle <- function(
 #' @export
 get_vcov.mhurdle <- function(model, vcov = NULL, ...) {
     if (!is.null(vcov) && !is.logical(vcov)) {
-        insight::format_error(
+        stop_sprintf(
             "The `vcov` for this class of models must be TRUE or FALSE."
         )
     }

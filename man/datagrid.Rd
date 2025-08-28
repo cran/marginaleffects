@@ -11,6 +11,7 @@ datagrid(
   by = NULL,
   grid_type = "mean_or_mode",
   response = FALSE,
+  FUN = NULL,
   FUN_character = NULL,
   FUN_factor = NULL,
   FUN_logical = NULL,
@@ -38,10 +39,13 @@ datagrid(
 \itemize{
 \item "mean_or_mode": Character, factor, logical, and binary variables are set to their modes. Numeric, integer, and other variables are set to their means.
 \item "balanced": Each unique level of character, factor, logical, and binary variables are preserved. Numeric, integer, and other variables are set to their means. Warning: When there are many variables and many levels per variable, a balanced grid can be very large. In those cases, it is better to use \code{grid_type="mean_or_mode"} and to specify the unique levels of a subset of named variables explicitly.
+\item "dataframe": Similar to "mean_or_mode" but creates a data frame by binding columns element-wise rather than taking the cross-product. All explicitly specified vectors must have the same length (or length 1), and the result has as many rows as the longest vector. This differs from other grid types which use \code{expand.grid()} or \code{data.table::CJ()} to create all combinations.
 \item "counterfactual": the entire dataset is duplicated for each combination of the variable values specified in \code{...}. Variables not explicitly supplied to \code{datagrid()} are set to their observed values in the original dataset.
 }}
 
 \item{response}{Logical should the response variable be included in the grid, even if it is not specified explicitly.}
+
+\item{FUN}{a function to be applied to all variables in the grid. This is useful when you want to apply the same function to all variables, such as \code{mean} or \code{median}. If you specify \code{FUN}, it will override the \code{grid_type} defaults, but not other \verb{FUN_*} arguments below.}
 
 \item{FUN_character}{the function to be applied to character variables.}
 
@@ -70,8 +74,9 @@ If \code{datagrid} is used in a \code{predictions()}, \code{comparisons()}, or \
 \code{newdata} argument, the model is automatically inserted in the \code{model} argument of \code{datagrid()}
 call, and users do not need to specify either the \code{model} or \code{newdata} arguments. The same behavior will occur when the value supplied to \verb{newdata=} is a function call which starts with "datagrid". This is intended to allow users to create convenience shortcuts like:
 
+\strong{Warning about hierarchical grouping variables:} When using the default \code{grid_type = "mean_or_mode"} with hierarchical models (such as mixed models with nested grouping factors), \code{datagrid()} may create invalid combinations of grouping variables. For example, if you have students nested within schools, or countries nested within regions, the modal values of each grouping variable may not correspond to valid nested relationships in the data. This can cause prediction errors. To avoid this issue, explicitly specify valid combinations of hierarchical grouping variables in the \code{datagrid()} call, or use \code{grid_type = "counterfactual"} to preserve the original data structure.
+
 \preformatted{
-library(marginaleffects)
 mod <- lm(mpg ~ am + vs + factor(cyl) + hp, mtcars)
 datagrid_bal <- function(...) datagrid(..., grid_type = "balanced")
 predictions(model, newdata = datagrid_bal(cyl = 4))
@@ -91,7 +96,7 @@ datagrid(model = mod, hp = c(100, 110))
 
 # Use in `marginaleffects` to compute "Typical Marginal Effects". When used
 # in `slopes()` or `predictions()` we do not need to specify the
-#`model` or `newdata` arguments.
+# `model` or `newdata` arguments.
 slopes(mod, newdata = datagrid(hp = c(100, 110)))
 
 # datagrid accepts functions
@@ -108,4 +113,14 @@ nrow(dg)
 mod <- lm(mpg ~ hp, mtcars)
 dg <- datagrid(model = mod, hp = c(100, 110), grid_type = "counterfactual")
 nrow(dg)
+
+# Use `by` to hold variables at group-specific values
+mod2 <- lm(mpg ~ hp + cyl, mtcars)
+datagrid(model = mod2, hp = mean, by = "cyl")
+
+# Use `FUN` to apply function to all variables
+datagrid(model = mod2, FUN = median)
+
+# Use `grid_type="dataframe"` for column-wise binding instead of cross-product
+datagrid(model = mod2, hp = c(100, 200), cyl = c(4, 6), grid_type = "dataframe")
 }

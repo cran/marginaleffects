@@ -4,15 +4,16 @@ get_predict.fixest <- function(
     model,
     newdata = insight::get_data(model),
     type = "response",
-    ...
-) {
+    mfx = NULL,
+    ...) {
     insight::check_if_installed("fixest")
 
     if (is.null(type)) {
+        calling_function <- if (!is.null(mfx)) mfx@calling_function else "predictions"
         type <- sanitize_type(
             model = model,
             type = type,
-            calling_function = "predictions"
+            calling_function = calling_function
         )
     }
 
@@ -44,21 +45,11 @@ get_predict.fixest <- function(
         return(pred)
     }
 
-    if ("rowid" %in% colnames(newdata)) {
-        out <- data.frame(
-            rowid = newdata$rowid,
-            estimate = as.numeric(pred)
-        )
-    } else {
-        out <- data.frame(
-            rowid = seq_len(nrow(newdata)),
-            estimate = as.numeric(pred)
-        )
-    }
+    out <- data.table(estimate = as.numeric(pred))
+    out <- add_rowid(out, newdata)
 
     return(out)
 }
-
 
 
 #' @rdname sanitize_model_specific
@@ -70,11 +61,17 @@ sanitize_model_specific.fixest <- function(model, vcov = TRUE, calling_function 
 
     msg <- "For this model type, `marginaleffects` cannot take into account the uncertainty in fixed-effects parameters. Set `vcov=FALSE` to compute estimates without standard errors."
 
-    # issue #1487: fixed-effects always matter for predictions
-    if (identical(calling_function, "predictions")) stop_sprintf(msg)
+    if (!is.null(model[["fixef_vars"]])) {
+        # issue #1487: fixed-effects always matter for predictions
+        if (identical(calling_function, "predictions")) {
+            stop_sprintf(msg)
+        }
 
-    # issue #1487: fixed-effects matter for slopes and contrasts, except for linear models
-    if (!is.null(model$family)) stop_sprintf(msg)
+        # issue #1487: fixed-effects matter for slopes and contrasts, except for linear models
+        if (!is.null(model$family)) {
+            stop_sprintf(msg)
+        }
+    }
 
     return(model)
 }

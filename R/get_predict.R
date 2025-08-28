@@ -7,7 +7,15 @@
 #' @inheritParams slopes
 #' @keywords internal
 #' @export
-get_predict <- function(model, newdata, type, ...) {
+get_predict <- function(
+    model,
+    newdata,
+    type,
+    mfx = NULL,
+    newparams = NULL,
+    ndraws = NULL,
+    se.fit = NULL,
+    ...) {
     UseMethod("get_predict", model)
 }
 
@@ -18,8 +26,11 @@ get_predict.default <- function(
     model,
     newdata = insight::get_data(model),
     type = "response",
-    ...
-) {
+    mfx = NULL,
+    newparams = NULL,
+    ndraws = NULL,
+    se.fit = NULL,
+    ...) {
     dots <- list(...)
 
     if (is.null(type)) {
@@ -34,17 +45,22 @@ get_predict.default <- function(
         "internal_call",
         "draw",
         "modeldata",
-        "flag"
+        "flag",
+        "marginaleffects",
+        "mfx"
     )
     dots <- dots[setdiff(names(dots), unused)]
 
     # first argument in the predict methods is not always named "x" or "model"
     dots[["newdata"]] <- newdata
     dots[["type"]] <- type
+    if (!is.null(newparams)) {
+        dots[["newparams"]] <- newparams
+    }
     args <- c(list(model), dots)
 
     # `pred` is a secret argument called by `predict.lm` to turn a numeric vector into a data frame with correct `rowid`
-    if ("pred" %in% names(dots)) {
+    if ("pred" %in% ...names()) {
         pred <- dots[["pred"]]
     } else {
         fun <- stats::predict
@@ -75,20 +91,11 @@ get_predict.default <- function(
     # atomic vector
     if (isTRUE(checkmate::check_atomic_vector(pred))) {
         # strip weird attributes added by some methods (e.g., predict.svyglm)
-        if (length(pred) == nrow(newdata)) {
-            # as.numeric is slow with large objects and we can't use is.numeric
-            # to run it conditionally because objects of class "svystat" are
-            # already numeric
-            class(pred) <- "numeric"
-            if ("rowid" %in% colnames(newdata)) {
-                out <- list(
-                    rowid = newdata$rowid,
-                    estimate = pred
-                )
-            } else {
-                out <- list(rowid = seq_len(length(pred)), estimate = pred)
-            }
-        }
+        # as.numeric is slow with large objects and we can't use is.numeric
+        # to run it conditionally because objects of class "svystat" are
+        # already numeric
+        class(pred) <- "numeric"
+        out <- data.frame(estimate = pred)
 
         # matrix with outcome levels as columns
     } else if (is.matrix(pred)) {
@@ -96,19 +103,10 @@ get_predict.default <- function(
             colnames(pred) <- seq_len(ncol(pred))
         }
         # internal calls always includes "rowid" as a column in `newdata`
-        if ("rowid" %in% colnames(newdata)) {
-            out <- list(
-                rowid = rep(newdata[["rowid"]], times = ncol(pred)),
-                group = rep(colnames(pred), each = nrow(pred)),
-                estimate = c(pred)
-            )
-        } else {
-            out <- list(
-                rowid = rep(seq_len(nrow(pred)), times = ncol(pred)),
-                group = rep(colnames(pred), each = nrow(pred)),
-                estimate = c(pred)
-            )
-        }
+        out <- data.frame(
+            group = rep(colnames(pred), each = nrow(pred)),
+            estimate = c(pred)
+        )
         out$group <- group_to_factor(out$group, model)
     } else {
         stop(
@@ -121,7 +119,41 @@ get_predict.default <- function(
         )
     }
 
-    data.table::setDF(out)
+    out <- add_rowid(out, newdata)
 
     return(out)
+}
+
+
+get_predict_error <- function(model, newdata = NULL, ...) {
+    pred_result <- myTryCatch(get_predict(model, newdata = newdata, ...))
+
+    if (inherits(pred_result$value, "data.frame")) {
+        out <- pred_result$value
+        return(out)
+    } else {
+        if (
+            inherits(pred_result$error, "rlang_error") &&
+                isTRUE(grepl("the object should be", pred_result$error$message))
+        ) {
+            stop_sprintf(pred_result$error$message)
+        }
+
+        msg <- "Unable to compute predicted values with this model. This error can arise when `insight::get_data()` is unable to extract the dataset from the model object, or when the data frame was modified since fitting the model. You can try to supply a different dataset to the `newdata` argument."
+        if (!is.null(pred_result$error)) {
+            msg <- c(
+                msg,
+                "",
+                "In addition, this error message was raised:",
+                "",
+                pred_result$error$message
+            )
+        }
+        msg <- c(
+            msg,
+            "",
+            "Bug Tracker: https://github.com/vincentarelbundock/marginaleffects/issues"
+        )
+        stop_sprintf(msg)
+    }
 }
