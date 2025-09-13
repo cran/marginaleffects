@@ -1,7 +1,7 @@
 Package: marginaleffects
 Title: Predictions, Comparisons, Slopes, Marginal Means, and Hypothesis
         Tests
-Version: 0.29.0
+Version: 0.30.0
 Authors@R: 
     c(person(given = "Vincent",
              family = "Arel-Bundock",
@@ -35,11 +35,10 @@ BugReports: https://github.com/vincentarelbundock/marginaleffects/issues
 RoxygenNote: 7.3.2
 Depends: R (>= 3.6.0)
 Imports: backports, checkmate, data.table (>= 1.16.4), generics,
-        Formula, insight (>= 1.3.0), methods, rlang, Rcpp (>= 1.0.0)
-LinkingTo: Rcpp, RcppEigen
-Suggests: AER, Amelia, afex, aod, bayestestR, bench, betareg, BH, bife,
-        biglm, blme, boot, brglm2, brms, brmsmargins, broom, car,
-        carData, causaldata, clarify, cjoint, cobalt, collapse,
+        Formula, insight (>= 1.3.0), methods, rlang
+Suggests: AER, Amelia, afex, aod, arrow, bayestestR, bench, betareg,
+        BH, bife, biglm, blme, boot, brglm2, brms, brmsmargins, broom,
+        car, carData, causaldata, clarify, cjoint, cobalt, collapse,
         conflicted, countrycode, covr, crch, DALEXtra, DCchoice,
         dbarts, distributional, dfidx, dplyr, emmeans, equivalence,
         estimatr, fixest, flexsurv, fmeffects, fontquiver, future,
@@ -60,10 +59,10 @@ Suggests: AER, Amelia, afex, aod, bayestestR, bench, betareg, BH, bife,
         tictoc, tidymodels, tidyr, tidyverse, tinysnapshot (>= 0.0.7),
         tinytable (>= 0.6.1), tinytest, titanic, truncreg, tsModel,
         withr, workflows, yaml, xgboost, altdoc, knitr, quarto
-Collate: 'RcppExports.R' 'add_hypothesis.R' 'add_rowid.R'
-        'attributes.R' 'backtransform.R' 'broom.R' 'by.R' 'class.R'
-        'comparisons.R' 'components.R' 'construct_call.R' 'datagrid.R'
-        'equivalence.R' 'get_ci.R' 'get_coef.R' 'get_comparisons.R'
+Collate: 'add_hypothesis.R' 'add_rowid.R' 'attributes.R' 'autodiff.R'
+        'backtransform.R' 'broom.R' 'by.R' 'class.R' 'comparisons.R'
+        'components.R' 'construct_call.R' 'datagrid.R' 'equivalence.R'
+        'get_ci.R' 'get_coef.R' 'get_comparisons.R'
         'get_comparisons_data.R' 'get_comparisons_data_character.R'
         'get_comparisons_data_factor.R'
         'get_comparisons_data_logical.R'
@@ -80,19 +79,19 @@ Collate: 'RcppExports.R' 'add_hypothesis.R' 'add_rowid.R'
         'inferences_simulation.R' 'matrix_apply.R' 'mean_or_mode.R'
         'methods.R' 'set_coef.R' 'methods_AER.R' 'methods_MASS.R'
         'methods_MCMCglmm.R' 'methods_Rchoice.R' 'methods_WeightIt.R'
-        'methods_afex.R' 'methods_aod.R' 'methods_betareg.R'
-        'methods_bife.R' 'methods_biglm.R' 'methods_nnet.R'
-        'methods_brglm2.R' 'sanity_model.R' 'methods_brms.R'
-        'methods_crch.R' 'methods_dataframe.R' 'methods_dbarts.R'
-        'methods_fixest.R' 'methods_flexsurv.R' 'methods_gamlss.R'
-        'methods_glmmTMB.R' 'methods_glmtoolbox.R' 'methods_glmx.R'
-        'methods_lme4.R' 'methods_mclogit.R' 'methods_mgcv.R'
-        'methods_mhurdle.R' 'methods_mice.R' 'methods_mlm.R'
-        'methods_mlogit.R' 'methods_mlr3.R' 'methods_nlme.R'
-        'methods_ordinal.R' 'methods_plm.R' 'methods_pscl.R'
-        'methods_quantreg.R' 'methods_rms.R' 'methods_robustlmm.R'
-        'methods_rstanarm.R' 'methods_rstpm2.R'
-        'methods_sampleSelection.R' 'methods_scam.R' 'methods_stats.R'
+        'methods_aaa.R' 'methods_afex.R' 'methods_aod.R'
+        'methods_betareg.R' 'methods_bife.R' 'methods_biglm.R'
+        'methods_nnet.R' 'methods_brglm2.R' 'sanity_model.R'
+        'methods_brms.R' 'methods_crch.R' 'methods_dataframe.R'
+        'methods_dbarts.R' 'methods_fixest.R' 'methods_flexsurv.R'
+        'methods_gamlss.R' 'methods_glmmTMB.R' 'methods_glmtoolbox.R'
+        'methods_glmx.R' 'methods_ivreg.R' 'methods_lme4.R'
+        'methods_mclogit.R' 'methods_mgcv.R' 'methods_mhurdle.R'
+        'methods_mice.R' 'methods_mlm.R' 'methods_mlogit.R'
+        'methods_mlr3.R' 'methods_nlme.R' 'methods_ordinal.R'
+        'methods_plm.R' 'methods_pscl.R' 'methods_quantreg.R'
+        'methods_rms.R' 'methods_robustlmm.R' 'methods_rstanarm.R'
+        'methods_rstpm2.R' 'methods_sampleSelection.R' 'methods_scam.R'
         'methods_survey.R' 'methods_survival.R' 'methods_systemfit.R'
         'methods_tidymodels.R' 'methods_tobit1.R' 'modelarchive.R'
         'multcomp.R' 'myTryCatch.R' 'package.R' 'pad.R' 'plot.R'
@@ -110,7 +109,7 @@ Collate: 'RcppExports.R' 'add_hypothesis.R' 'add_rowid.R'
 Language: en-US
 VignetteBuilder: knitr, quarto
 NeedsCompilation: yes
-Packaged: 2025-08-28 04:01:39 UTC; vincent
+Packaged: 2025-09-13 15:45:34 UTC; vincent
 Author: Vincent Arel-Bundock [aut, cre, cph] (ORCID:
     <https://orcid.org/0000-0003-2042-7063>),
   Noah Greifer [ctb] (ORCID: <https://orcid.org/0000-0003-3067-7154>),
@@ -119,4 +118,4 @@ Author: Vincent Arel-Bundock [aut, cre, cph] (ORCID:
   Andrew Heiss [ctb] (ORCID: <https://orcid.org/0000-0002-3948-3914>)
 Maintainer: Vincent Arel-Bundock <vincent.arel-bundock@umontreal.ca>
 Repository: CRAN
-Date/Publication: 2025-08-28 17:40:02 UTC
+Date/Publication: 2025-09-13 16:30:02 UTC

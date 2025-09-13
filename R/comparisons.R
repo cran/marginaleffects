@@ -356,6 +356,11 @@ comparisons <- function(
     args <- utils::modifyList(args, dots)
     cmp <- do.call("get_comparisons", args)
 
+    # hypothesis formula names are attached in by() in get_predictions()
+    mfx@variable_names_by <- unique(c(
+        mfx@variable_names_by, 
+        attr(cmp, "hypothesis_function_by")))
+
     # bayesian posterior
     mfx@draws <- attr(cmp, "posterior_draws")
 
@@ -381,6 +386,7 @@ comparisons <- function(
             hi = contrast_data$hi,
             lo = contrast_data$lo,
             original = contrast_data$original,
+            estimates = cmp,
             numderiv = numderiv
         )
         args <- utils::modifyList(args, dots)

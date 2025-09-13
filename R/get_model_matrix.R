@@ -65,14 +65,13 @@ add_model_matrix_attribute <- function(mfx, newdata = NULL) {
     }
 
     # supported models (no inheritance)
-    if (!isTRUE(class(model)[1] %in% c("lm", "glm", "rq"))) {
+    supported <- c("lm", "glm", "rq", "ols", "lrm", "ivreg")
+    if (!isTRUE(class(model)[1] %in% supported)) {
         return(newdata)
     }
 
     # stats::model.matrix creates all-0 columns with splines::bs() and other functions
-    # this may be too aggressive, but it avoids all functions
-    funs <- grep("\\(", names(get_coef(model)), value = TRUE)
-    funs <- funs[!grepl("factor\\(|\\(Intercept", funs)]
+    funs <- grep("factor\\(|\\(Intercept|bs\\(", colnames(newdata), value = TRUE)
     if (length(funs) > 0) {
         return(newdata)
     }

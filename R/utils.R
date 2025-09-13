@@ -97,7 +97,8 @@ is_binary <- function(x) {
         null.ok = TRUE,
         upper = 1,
         lower = 0,
-        any.missing = FALSE
+        any.missing = TRUE,
+        all.missing = FALSE
     ))
 }
 
@@ -126,7 +127,7 @@ sub_named_vector <- function(x, y) {
 group_to_factor <- function(group, model) {
     dv <- try(insight::get_response(model), silent = TRUE)
     if (inherits(dv, "factor")) {
-        if (length(unique(group)) == length(levels(dv))) {
+        if (length(unique(group)) == nlevels(dv)) {
             group <- factor(group, levels(dv))
         }
     }

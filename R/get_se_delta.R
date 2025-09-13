@@ -4,7 +4,6 @@ align_jacobian_vcov <- function(J, V, object, ...) {
         # Issue #718: ordinal::clm in test-pkg-ordinal.R
         if (
             anyNA(beta) &&
-                anyDuplicated(names(beta)) &&
                 ncol(J) > ncol(V) &&
                 ncol(J) == length(beta) &&
                 length(stats::na.omit(beta)) == ncol(V)
@@ -51,8 +50,8 @@ get_se_delta <- function(
     hi = NULL,
     lo = NULL,
     original = NULL,
-    ...
-) {
+    estimates = NULL,
+    ...) {
     # Use mfx slots when available
     if (!is.null(mfx)) {
         eps <- if (is.null(eps)) mfx@eps else eps
@@ -86,10 +85,9 @@ get_se_delta <- function(
 
     # user-supplied jacobian machine (e.g. JAX)
     if (is.null(J)) {
-        fun <- getOption("marginaleffects_jacobian_function", default = function(...) NULL)
-        if (!isTRUE(checkmate::check_function(fun))) {
-            msg <- "The `marginaleffects_jacobian_function` option must be a function."
-            stop_sprintf(msg)
+        fun <- settings_get("jacobian_function")
+        if (is.null(fun)) {
+            fun <- function(...) NULL
         }
         if (!"..." %in% names(formals(fun))) {
             msg <- "The `marginaleffects_jacobian_function` option must accept the ... argument."
@@ -107,10 +105,20 @@ get_se_delta <- function(
             hi = hi,
             lo = lo,
             original = original,
+            estimates = estimates,
             comparison = comparison,
             calling_function = calling_function
         )
         checkmate::assert_matrix(J, mode = "numeric", ncols = length(coefs), null.ok = TRUE)
+
+        # Unpad Jacobian for autodiff jax_jacobian if newdata was padded
+        # JAX computes jacobian on padded newdata, but final results are unpadded
+        if (!is.null(J) && !is.null(mfx) && "rowid" %in% colnames(mfx@newdata)) {
+            idx <- mfx@newdata$rowid > 0
+            if (!all(idx) && nrow(J) == nrow(mfx@newdata)) {
+                J <- J[idx, , drop = FALSE]
+            }
+        }
     }
 
     # input: named vector of coefficients
@@ -180,9 +188,12 @@ get_se_delta <- function(
     # Var(dydx) = J Var(beta) J'
     # computing the full matrix is memory-expensive, and we only need the diagonal
     # algebra trick: https://stackoverflow.com/a/42569902/342331
-    # keep old code for transparency and reference
-    # se <- sqrt(rowSums(tcrossprod(J, V) * J))
-    se <- eigen_J_V_SE(J, V)
+    if (isTRUE(settings_get("autodiff"))) {
+        mAD <- settings_get("mAD")
+        se <- mAD$utils$standard_errors(J, V)
+    } else {
+        se <- sqrt(rowSums(tcrossprod(J, V) * J))
+    }
     se[se == 0] <- NA_real_
     attr(se, "jacobian") <- J
 

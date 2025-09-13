@@ -271,14 +271,15 @@ predictions <- function(
 
     # analogous to comparisons(variables=list(...))
     if (!is.null(variables)) {
-        args <- list(
-            model = mfx@model,
-            newdata = mfx@newdata,
-            grid_type = "counterfactual"
-        )
         mfx <- add_variables(
             variables = variables,
             mfx = mfx
+        )
+        args <- list(
+            model = mfx@model,
+            newdata = mfx@newdata,
+            grid_type = "counterfactual",
+            marginaleffects_internal = mfx
         )
         for (v in mfx@variables) {
             args[[v$name]] <- v$value
@@ -312,6 +313,11 @@ predictions <- function(
 
     args <- utils::modifyList(args, dots)
     tmp <- do.call(get_predictions, args)
+
+    # hypothesis formula names are attached in by() in get_predictions()
+    mfx@variable_names_by <- unique(c(
+        mfx@variable_names_by, 
+        attr(tmp, "hypothesis_function_by")))
 
     # two cases when tmp is a data.frame
     # get_predict gets us rowid with the original rows
