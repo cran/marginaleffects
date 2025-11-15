@@ -11,7 +11,7 @@ unique_s <- function(x) sort(unique(x))
 #' @param ... named arguments with vectors of values or functions for user-specified variables.
 #' + Functions are applied to the variable in the `model` dataset or `newdata`, and must return a vector of the appropriate type.
 #' + Character vectors are automatically transformed to factors if necessary.
-#' +The output will include all combinations of these variables (see Examples below.)
+#' + The output will include all combinations of these variables (see Examples below.)
 #' @param model Model object
 #' @param newdata data.frame (one and only one of the `model` and `newdata` arguments can be used.)
 #' @param by character vector with grouping variables within which `FUN_*` functions are applied to create "sub-grids" with unspecified variables.
@@ -20,7 +20,7 @@ unique_s <- function(x) sort(unique(x))
 #' @param FUN_character the function to be applied to character variables.
 #' @param FUN_factor the function to be applied to factor variables. This only applies if the variable in the original data is a factor. For variables converted to factor in a model-fitting formula, for example, `FUN_character` is used.
 #' @param FUN_logical the function to be applied to logical variables.
-#' @param FUN_integer the function to be applied to integer variables.
+#' @param FUN_integer the function to be applied to integer-ish variables (including columns without decimal places).
 #' @param FUN_binary the function to be applied to binary variables.
 #' @param FUN_numeric the function to be applied to numeric variables.
 #' @param FUN_other the function to be applied to other variable types.

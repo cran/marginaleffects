@@ -26,7 +26,7 @@ datagrid(
 \itemize{
 \item Functions are applied to the variable in the \code{model} dataset or \code{newdata}, and must return a vector of the appropriate type.
 \item Character vectors are automatically transformed to factors if necessary.
-+The output will include all combinations of these variables (see Examples below.)
+\item The output will include all combinations of these variables (see Examples below.)
 }}
 
 \item{model}{Model object}
@@ -55,7 +55,7 @@ datagrid(
 
 \item{FUN_numeric}{the function to be applied to numeric variables.}
 
-\item{FUN_integer}{the function to be applied to integer variables.}
+\item{FUN_integer}{the function to be applied to integer-ish variables (including columns without decimal places).}
 
 \item{FUN_binary}{the function to be applied to binary variables.}
 

@@ -6,10 +6,6 @@ set_coef.glm <- function(model, coefs, ...) {
         model[["coefficients"]],
         coefs
     )
-    ## But, there's an edge case!! When `predict(model, se.fit = TRUE)` is called without `newdata`, `predict.lm()` isn't called.
-    ## Instead `model$linear.predictors` is returned directly if `type = "link"` and
-    ## `model$fitted.values` is returned directly if `type = "response"`.
-    ## `marginal_effects()` for "glm" is always called with `newdata`, so we won't hit this.
     model
 }
 
@@ -168,8 +164,9 @@ get_autodiff_args.glm <- function(model, mfx) {
     }
 
     # Check comparison type for comparisons function
-    if (mfx@calling_function == "comparisons" && !mfx@comparison %in% c("difference", "ratio")) {
-        autodiff_warning("other functions than `predictions()` or `comparisons()`, with `comparisons='difference'` or `'ratio'`")
+    if (mfx@calling_function == "comparisons" && (!is.character(mfx@comparison) || !mfx@comparison %in% c("difference", "ratio"))) {
+        comp_str <- if (is.character(mfx@comparison)) mfx@comparison else "custom function"
+        autodiff_warning(sprintf("`comparison='%s'` (only 'difference' and 'ratio' supported)", comp_str))
         return(NULL)
     }
 

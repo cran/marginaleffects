@@ -1,5 +1,27 @@
 # News {.unnumbered}
 
+## 0.31.0
+
+Deprecated:
+
+* The `conformal_calibration`, `conformal_train`, and `conformal_test` arguments in `inferences()` are deprecated (but kept for backward compatibility). Use the new `data_calib`, `data_train`, and `data_test`.
+
+New:
+
+* `inferences(method = "conformal_full")` implements full conformal prediction for regression models. This provides distribution-free prediction intervals by refitting the model on augmented data for each test observation. Unlike split conformal or CV+, full conformal uses all training data without requiring a separate calibration set. It is computationally intensive but provides valid coverage guarantees. For tidymodels workflows, pass the training data explicitly via the `data_train` argument.
+* Add support `MASS::lda()` models for estimates but not standard errors. Thanks to @friendly for feature request #1598.
+
+Bugs:
+
+* `hypotheses()` with multiple one-sided tests (e.g., `c("b1<=0", "b2<=0")`) incorrectly computed two-sided p-values instead of one-sided p-values. This occurred because `isTRUE(grepl("<=", vector))` returns `FALSE` when `grepl()` returns a vector of logical values. The bug is now fixed by handling vectorized hypothesis directions. Thanks to @raffaem for report #1624.
+* `plot_predictions(points=1)` errors with `y|trials(n)~` formulas. Thanks to @avehtari for report #1615.
+* Custom functions in `hypothesis` formulas now correctly capture their parent environment, allowing them to access user-defined variables and weights. Thanks to @strengejacke for report #1608.
+* Fix to `get_coef.betareg()` to extract `precision` parameter instead of just `phi`. This fixes a mismatch issue with names in the vcov. Thanks to @ngreifer for the report.
+
+Misc:
+
+* Informative warning when reading persistent config file fails due to corruption. Thanks to @r2evans for issue #1609.
+
 ## 0.30.0
 
 New:
@@ -14,6 +36,7 @@ Bug:
 * Binary variables treated as integers by `datagrid()` with `newdata=` instead of `model=`. Issue #1584.
 * Better labelling in some `brms` models with categorical outcomes. Thanks to @mattansb for a proposed solution and to @strengejacke for report #1392.
 * Improve printing of grouped hypotheses. Issue #1579.
+* In `datagrid()`, the `FUN_integer` argument also applies to integer-ish columns, including numeric columns without decimal places. Thanks to @strengejacke for report #1575. (Note that this bullet point was added retroactively after the release of version 0.30.0.)
 
 ## 0.29.0
 

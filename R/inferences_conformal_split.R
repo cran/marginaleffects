@@ -1,0 +1,24 @@
+conformal_split <- function(x,
+                            data_test,
+                            data_calib,
+                            score,
+                            conf_level,
+                            mfx = NULL,
+                            ...) {
+    # calibration
+    # use original model---fitted on the training set---to make predictions in the calibration set
+    p_calib <- refit(x, newdata = data_calib, vcov = FALSE)
+    score <- get_conformal_score(p_calib, score = score, mfx = mfx)
+
+    # test
+    # use original model to make predictions in the test set
+    p_test <- refit(x, newdata = data_test, vcov = FALSE)
+
+    # bounds
+    out <- get_conformal_bounds(p_test,
+        score = score,
+        conf_level = conf_level,
+        mfx = mfx)
+
+    return(out)
+}

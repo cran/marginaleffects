@@ -137,7 +137,7 @@ sanitize_newdata <- function(mfx, newdata, by, wts) {
 
     # Convert to data.table
     # setDT() raises warnings and breaks mergin with mlogit index columns
-    # but as.data.table() breaks a bunch of other models, for reasons I can't 
+    # but as.data.table() breaks a bunch of other models, for reasons I can't
     # quite figure out
     if (inherits(model, "mlogit")) {
         out <- as.data.table(newdata)
@@ -244,6 +244,7 @@ add_newdata <- function(
     flag2 <- isTRUE(checkmate::check_data_frame(newdata, min.rows = 1))
     if (!flag1 && flag2) {
         mfx@modeldata <- newdata
+        mfx@modeldata_available <- FALSE
         mfx@variable_class <- detect_variable_class(newdata, model = mfx@model)
     }
 
