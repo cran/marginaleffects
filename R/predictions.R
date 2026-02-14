@@ -58,7 +58,7 @@
 #' type, but will typically be a string such as: "response", "link", "probs",
 #' or "zero". When an unsupported string is entered, the model-specific list of
 #' acceptable values is returned in an error message. When `type` is `NULL`, the
-#' first entry in the error message is used by default.
+#' first entry in the error message is used by default. See the Type section in the documentation below.
 #' @param transform A function applied to unit-level adjusted predictions and confidence intervals just before the function returns results. For bayesian models, this function is applied to individual draws from the posterior distribution, before computing summaries.
 #'
 #' @template references
@@ -66,11 +66,11 @@
 #' @template model_specific_arguments
 #' @template bayesian
 #' @template equivalence
-#' @template type
 #' @template order_of_operations
 #' @template parallel
 #' @template options
 #' @template return
+#' @template type
 #' @examplesIf interactive() || isTRUE(Sys.getenv("R_DOC_BUILD") == "true")
 #' library("marginaleffects")
 #' # Adjusted Prediction for every row of the original dataset
@@ -394,7 +394,7 @@ predictions <- function(
         )
 
         args <- utils::modifyList(args, dots)
-        tmp <- do.call(get_predictions, args)
+        tmp <- do_call(get_predictions, args)
 
         # hypothesis formula names are attached in by() in get_predictions()
         mfx@variable_names_by <- unique(c(
@@ -439,7 +439,7 @@ predictions <- function(
                     hypothesis = mfx@hypothesis
                 )
                 args <- utils::modifyList(args, dots)
-                se <- do.call(get_se_delta, args)
+                se <- do_call(get_se_delta, args)
                 if (is.numeric(se) && length(se) == nrow(tmp)) {
                     mfx@jacobian <- attr(se, "jacobian")
                     tmp[["std.error"]] <- as.vector(se) # drop attribute

@@ -57,7 +57,7 @@ compute contrasts or slopes. This can differ based on the model
 type, but will typically be a string such as: "response", "link", "probs",
 or "zero". When an unsupported string is entered, the model-specific list of
 acceptable values is returned in an error message. When \code{type} is \code{NULL}, the
-first entry in the error message is used by default.}
+first entry in the error message is used by default. See the Type section in the documentation below.}
 
 \item{vcov}{Type of uncertainty estimates to report (e.g., for robust standard errors). Acceptable values:
 \itemize{
@@ -88,15 +88,9 @@ first entry in the error message is used by default.}
 
 \item{comparison}{How should pairs of predictions be compared? Difference, ratio, odds ratio, or user-defined functions.
 \itemize{
-\item string: shortcuts to common contrast functions.
-\itemize{
-\item Supported shortcuts strings: difference, differenceavg, differenceavgwts, dydx, eyex, eydx, dyex, dydxavg, eyexavg, eydxavg, dyexavg, dydxavgwts, eyexavgwts, eydxavgwts, dyexavgwts, ratio, ratioavg, ratioavgwts, lnratio, lnratioavg, lnratioavgwts, lnor, lnoravg, lnoravgwts, lift, liftavg, liftavgwts, expdydx, expdydxavg, expdydxavgwts
-\item See the Comparisons section below for definitions of each transformation.
-}
+\item string: shortcuts to common contrast functions. Supported shortcuts strings: difference, differenceavg, differenceavgwts, dydx, eyex, eydx, dyex, dydxavg, eyexavg, eydxavg, dyexavg, dydxavgwts, eyexavgwts, eydxavgwts, dyexavgwts, ratio, ratioavg, ratioavgwts, lnratio, lnratioavg, lnratioavgwts, lnor, lnoravg, lnoravgwts, lift, liftavg, liftavgwts, expdydx, expdydxavg, expdydxavgwts
 \item function: accept two equal-length numeric vectors of adjusted predictions (\code{hi} and \code{lo}) and returns a vector of contrasts of the same length, or a unique numeric value.
-\itemize{
-\item See the Transformations section below for examples of valid functions.
-}
+\item See the "Comparison functions" section below for a list of common transformations and the definitions of available shortcuts.
 }}
 
 \item{transform}{string or function. Transformation applied to unit-level estimates and confidence intervals just before the function returns results. Functions must accept a vector and return a vector of the same length. Support string shortcuts: "exp", "ln"}
@@ -159,7 +153,7 @@ https://github.com/vincentarelbundock/marginaleffects/issues\tabular{llll}{
 }
 
 \examples{
-\dontshow{if (interactive() || isTRUE(Sys.getenv("R_DOC_BUILD") == "true")) (if (getRversion() >= "3.4") withAutoprint else force)(\{ # examplesIf}
+\dontshow{if (interactive() || isTRUE(Sys.getenv("R_DOC_BUILD") == "true")) withAutoprint(\{ # examplesIf}
 mod <- lm(mpg ~ hp * drat * factor(am), data = mtcars)
 
 plot_comparisons(mod, variables = "hp", condition = "drat")

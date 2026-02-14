@@ -145,6 +145,12 @@ sanitize_newdata <- function(mfx, newdata, by, wts) {
         data.table::setDT(newdata)
     }
 
+    safe <- isTRUE(getOption("marginaleffects_safe", default = TRUE))
+    nc <- ncol(newdata)
+    if (safe && isTRUE(nc > 100)) {
+        warn_sprintf("The `newdata` data frame has %s columns. This can slow down computation and increase memory costs. Please supply a data frame with fewer columns to the `newdata` argument, or set `options('marginaleffects_safe'=FALSE)` to silence this warning.", nc)
+    }
+
     return(newdata)
 }
 
@@ -178,7 +184,7 @@ add_wts_column <- function(wts, newdata, model) {
     flag2 <- isTRUE(checkmate::check_numeric(wts, len = nrow(newdata)))
     if (!flag1 && !flag2) {
         msg <- sprintf(
-            "The `wts` argument must be a numeric vector of length %s, or a string which matches a column name in `newdata`. If you did not supply a `newdata` explicitly, `marginaleffects` extracted it automatically from the model object, and the `wts` variable may not have been available. The easiest strategy is often to supply a data frame such as the original data to `newdata` explicitly, and to make sure that it includes an appropriate column of weights, identified by the `wts` argument.",
+            "The `wts` argument must be a numeric vector of length %s, or a string which matches one of the `colnames()` in the data frame that you supplied to the `newdata`, or in the `marginaleffects` objects.",
             nrow(newdata)
         )
         stop(msg, call. = FALSE)
@@ -232,6 +238,19 @@ add_newdata <- function(
 
     # Store processed newdata in the mfx object
     mfx@newdata <- newdata
+
+    # Merge variable class info from newdata to handle workflows that drop raw predictors
+    newdata_vclass <- detect_variable_class(newdata, model = mfx@model)
+    if (length(newdata_vclass) > 0) {
+        if (length(mfx@variable_class) == 0) {
+            mfx@variable_class <- newdata_vclass
+        } else {
+            missing <- setdiff(names(newdata_vclass), names(mfx@variable_class))
+            if (length(missing) > 0) {
+                mfx@variable_class[missing] <- newdata_vclass[missing]
+            }
+        }
+    }
 
     # Extract and store variable_names_datagrid attribute from newdata
     datagrid_vars <- attr(newdata, "variable_names_datagrid")

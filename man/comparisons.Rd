@@ -118,15 +118,9 @@ avg_comparisons(
 
 \item{comparison}{How should pairs of predictions be compared? Difference, ratio, odds ratio, or user-defined functions.
 \itemize{
-\item string: shortcuts to common contrast functions.
-\itemize{
-\item Supported shortcuts strings: difference, differenceavg, differenceavgwts, dydx, eyex, eydx, dyex, dydxavg, eyexavg, eydxavg, dyexavg, dydxavgwts, eyexavgwts, eydxavgwts, dyexavgwts, ratio, ratioavg, ratioavgwts, lnratio, lnratioavg, lnratioavgwts, lnor, lnoravg, lnoravgwts, lift, liftavg, liftavgwts, expdydx, expdydxavg, expdydxavgwts
-\item See the Comparisons section below for definitions of each transformation.
-}
+\item string: shortcuts to common contrast functions. Supported shortcuts strings: difference, differenceavg, differenceavgwts, dydx, eyex, eydx, dyex, dydxavg, eyexavg, eydxavg, dyexavg, dydxavgwts, eyexavgwts, eydxavgwts, dyexavgwts, ratio, ratioavg, ratioavgwts, lnratio, lnratioavg, lnratioavgwts, lnor, lnoravg, lnoravgwts, lift, liftavg, liftavgwts, expdydx, expdydxavg, expdydxavgwts
 \item function: accept two equal-length numeric vectors of adjusted predictions (\code{hi} and \code{lo}) and returns a vector of contrasts of the same length, or a unique numeric value.
-\itemize{
-\item See the Transformations section below for examples of valid functions.
-}
+\item See the "Comparison functions" section below for a list of common transformations and the definitions of available shortcuts.
 }}
 
 \item{type}{string indicates the type (scale) of the predictions used to
@@ -134,7 +128,7 @@ compute contrasts or slopes. This can differ based on the model
 type, but will typically be a string such as: "response", "link", "probs",
 or "zero". When an unsupported string is entered, the model-specific list of
 acceptable values is returned in an error message. When \code{type} is \code{NULL}, the
-first entry in the error message is used by default.}
+first entry in the error message is used by default. See the Type section in the documentation below.}
 
 \item{vcov}{Type of uncertainty estimates to report (e.g., for robust standard errors). Acceptable values:
 \itemize{
@@ -207,7 +201,7 @@ first entry in the error message is used by default.}
 \item \code{reference}: differences between the estimates in each row and the estimate in the first row.
 \item \code{sequential}: difference between an estimate and the estimate in the next row.
 \item \code{meandev}: difference between an estimate and the mean of all estimates.
-\item `meanotherdev: difference between an estimate and the mean of all other estimates, excluding the current one.
+\item \code{meanotherdev}: difference between an estimate and the mean of all other estimates, excluding the current one.
 \item \code{poly}: polynomial contrasts, as computed by the \code{stats::contr.poly()} function.
 \item \code{helmert}: Helmert contrasts, as computed by the \code{stats::contr.helmert()} function. Contrast 2nd level to the first, 3rd to the average of the first two, and so on.
 \item \code{trt_vs_ctrl}: difference between the mean of estimates (except the first) and the first estimate.
@@ -258,8 +252,8 @@ numerical problems in certain models.}
 
 \item{numderiv}{string or list of strings indicating the method to use to for the numeric differentiation used in to compute delta method standard errors.
 \itemize{
-\item "fdforward": finite difference method with forward differences
-\item "fdcenter": finite difference method with central differences (default)
+\item "fdforward": finite difference method with forward differences (default)
+\item "fdcenter": finite difference method with central differences
 \item "richardson": Richardson extrapolation method
 \item Extra arguments can be specified by passing a list to the \code{numDeriv} argument, with the name of the method first and named arguments following, ex: \code{numderiv=list("fdcenter", eps = 1e-5)}. When an unknown argument is used, \code{marginaleffects} prints the list of valid arguments for each method.
 }}
@@ -374,37 +368,57 @@ https://github.com/vincentarelbundock/marginaleffects/issues\tabular{llll}{
 }
 }
 
-\section{comparison argument functions}{
+\section{Comparison functions}{
 
 
-The following transformations can be applied by supplying one of the shortcut strings to the
-\code{comparison} argument.
-\code{hi} is a vector of adjusted predictions for the "high" side of the
-contrast. \code{lo} is a vector of adjusted predictions for the "low" side of the
-contrast. \code{y} is a vector of adjusted predictions for the original data. \code{x}
-is the predictor in the original data. \code{eps} is the step size to use to
-compute derivatives and elasticities.\tabular{ll}{
+Each of the quantities computed by \code{comparisons()} can be defined as a function of these quantities:
+\itemize{
+\item \code{hi}: vector of predictions for the "high" side of the contrast.
+\item \code{lo}: vector of predictions for the "low" side of the contrast.
+\item \code{y}: predictions for the original data.
+\item \code{x}: focal predictor in the original data.
+\item \code{w}: weights
+}
+
+For example, the "lift" of a binary predictor is a popular quantity of
+interest, defined as the difference between predictions when the focal
+predictor \eqn{X = 1}, and predictions when the focal predictor is
+\eqn{X = 0}, normalized by the starting point. Or:
+
+\eqn{\frac{\hat{Y}_{X=1} - \hat{Y}_{X=0}}{\hat{Y}_{X=0}}}
+
+When, the argument is set to \code{comparison="lift"}, \code{marginaleffects} will compute the quantity using this function:
+
+\code{function(hi, lo) { (hi - lo) / lo }}
+
+Users can supply custom functions to the \code{comparison} argument, or use one of the many shortcuts available for common quantities of interest:
+
+Note on automatic \code{avg} switching: when the \code{by} argument is used (including
+\code{by = TRUE} or a character vector), \code{marginaleffects} will automatically
+switch comparison shortcuts to their \code{avg} variants unless they already end
+with \code{avg}. For example, \code{comparison = "difference"} becomes
+\code{comparison = "differenceavg"} when aggregating over \code{by}.\tabular{ll}{
    Shortcut \tab Function \cr
-   difference \tab \(hi, lo) hi - lo \cr
-   differenceavg \tab \(hi, lo) mean(hi - lo) \cr
-   dydx \tab \(hi, lo, eps) (hi - lo)/eps \cr
-   eyex \tab \(hi, lo, eps, y, x) (hi - lo)/eps * (x/y) \cr
-   eydx \tab \(hi, lo, eps, y, x) ((hi - lo)/eps)/y \cr
-   dyex \tab \(hi, lo, eps, x) ((hi - lo)/eps) * x \cr
-   dydxavg \tab \(hi, lo, eps) mean((hi - lo)/eps) \cr
-   eyexavg \tab \(hi, lo, eps, y, x) mean((hi - lo)/eps * (x/y)) \cr
-   eydxavg \tab \(hi, lo, eps, y, x) mean(((hi - lo)/eps)/y) \cr
-   dyexavg \tab \(hi, lo, eps, x) mean(((hi - lo)/eps) * x) \cr
-   ratio \tab \(hi, lo) hi/lo \cr
-   ratioavg \tab \(hi, lo) mean(hi)/mean(lo) \cr
-   lnratio \tab \(hi, lo) log(hi/lo) \cr
-   lnratioavg \tab \(hi, lo) log(mean(hi)/mean(lo)) \cr
-   lnor \tab \(hi, lo) log((hi/(1 - hi))/(lo/(1 - lo))) \cr
-   lnoravg \tab \(hi, lo) log((mean(hi)/(1 - mean(hi)))/(mean(lo)/(1 - mean(lo)))) \cr
-   lift \tab \(hi, lo) (hi - lo)/lo \cr
-   liftavg \tab \(hi, lo) (mean(hi - lo))/mean(lo) \cr
-   expdydx \tab \(hi, lo, eps) ((exp(hi) - exp(lo))/exp(eps))/eps \cr
-   expdydxavg \tab \(hi, lo, eps) mean(((exp(hi) - exp(lo))/exp(eps))/eps) \cr
+   difference \tab function (hi, lo) hi - lo \cr
+   differenceavg \tab function (hi, lo) mean(hi - lo) \cr
+   dydx \tab function (hi, lo, eps) (hi - lo)/eps \cr
+   eyex \tab function (hi, lo, eps, y, x) (hi - lo)/eps * (x/y) \cr
+   eydx \tab function (hi, lo, eps, y, x) ((hi - lo)/eps)/y \cr
+   dyex \tab function (hi, lo, eps, x) ((hi - lo)/eps) * x \cr
+   dydxavg \tab function (hi, lo, eps) mean((hi - lo)/eps) \cr
+   eyexavg \tab function (hi, lo, eps, y, x) mean((hi - lo)/eps * (x/y)) \cr
+   eydxavg \tab function (hi, lo, eps, y, x) mean(((hi - lo)/eps)/y) \cr
+   dyexavg \tab function (hi, lo, eps, x) mean(((hi - lo)/eps) * x) \cr
+   ratio \tab function (hi, lo) hi/lo \cr
+   ratioavg \tab function (hi, lo) mean(hi)/mean(lo) \cr
+   lnratio \tab function (hi, lo) log(hi/lo) \cr
+   lnratioavg \tab function (hi, lo) log(mean(hi)/mean(lo)) \cr
+   lnor \tab function (hi, lo) log((hi/(1 - hi))/(lo/(1 - lo))) \cr
+   lnoravg \tab function (hi, lo) log((mean(hi)/(1 - mean(hi)))/(mean(lo)/(1 - mean(lo)))) \cr
+   lift \tab function (hi, lo) (hi - lo)/lo \cr
+   liftavg \tab function (hi, lo) (mean(hi - lo))/mean(lo) \cr
+   expdydx \tab function (hi, lo, eps) ((exp(hi) - exp(lo))/exp(eps))/eps \cr
+   expdydxavg \tab function (hi, lo, eps) mean(((exp(hi) - exp(lo))/exp(eps))/eps) \cr
 }
 }
 
@@ -463,18 +477,6 @@ Equivalence: Two One-Sided Tests (TOST)
 }
 
 Thanks to Russell V. Lenth for the excellent \code{emmeans} package and documentation which inspired this feature.
-}
-
-\section{Prediction types}{
-
-
-The \code{type} argument determines the scale of the predictions used to compute quantities of interest with functions from the \code{marginaleffects} package. Admissible values for \code{type} depend on the model object. When users specify an incorrect value for \code{type}, \code{marginaleffects} will raise an informative error with a list of valid \code{type} values for the specific model object. The first entry in the list in that error message is the default type.
-
-The \code{invlink(link)} is a special type defined by \code{marginaleffects}. It is available for some (but not all) models, and only for the \code{predictions()} function. With this link type, we first compute predictions on the link scale, then we use the inverse link function to backtransform the predictions to the response scale. This is useful for models with non-linear link functions as it can ensure that confidence intervals stay within desirable bounds, ex: 0 to 1 for a logit model. Note that an average of estimates with \code{type="invlink(link)"} will not always be equivalent to the average of estimates with \code{type="response"}. This type is default when calling \code{predictions()}. It is available---but not default---when calling \code{avg_predictions()} or \code{predictions()} with the \code{by} argument.
-
-Some of the most common \code{type} values are:
-
-response, link, E, Ep, average, class, conditional, count, cum.prob, cumhaz, cumprob, density, detection, disp, ev, expected, expvalue, fitted, hazard, invlink(link), latent, latent_N, linear, linear.predictor, linpred, location, lp, mean, numeric, p, posterior, ppd, pr, precision, prediction, prob, probability, probs, quantile, risk, rmst, scale, survival, unconditional, utility, variance, xb, zero, zlink, zprob
 }
 
 \section{Order of operations}{
@@ -563,8 +565,89 @@ Other options:
 }
 }
 
+\section{Types}{
+
+
+The \code{type} argument determines the scale of the predictions used to compute quantities of interest with functions from the \code{marginaleffects} package. Admissible values for \code{type} depend on the model object. When users specify an incorrect value for \code{type}, \code{marginaleffects} will raise an informative error with a list of valid \code{type} values for the specific model object. The first entry in the list in that error message is the default type.
+
+The \code{invlink(link)} is a special type defined by \code{marginaleffects}. It is available for some (but not all) models, and only for the \code{predictions()} function. With this link type, we first compute predictions on the link scale, then we use the inverse link function to backtransform the predictions to the response scale. This is useful for models with non-linear link functions as it can ensure that confidence intervals stay within desirable bounds, ex: 0 to 1 for a logit model. Note that an average of estimates with \code{type="invlink(link)"} will not always be equivalent to the average of estimates with \code{type="response"}. This type is default when calling \code{predictions()}. It is available---but not default---when calling \code{avg_predictions()} or \code{predictions()} with the \code{by} argument.
+
+Some of the most common \code{type} values are:\tabular{ll}{
+   class \tab type \cr
+   DirichletRegModel \tab response \cr
+   Gam \tab invlink(link), response, link \cr
+   Gls \tab lp \cr
+   MCMCglmm \tab response \cr
+   bam \tab response, link \cr
+   bart \tab ev, ppd \cr
+   betareg \tab response, link, precision, quantile, variance \cr
+   bife \tab response, link \cr
+   bracl \tab probs \cr
+   brglmFit \tab response, link \cr
+   brmsfit \tab response, link, prediction, average \cr
+   brmultinom \tab probs, class \cr
+   clm \tab prob, cum.prob, linear.predictor \cr
+   clogit \tab expected, lp, risk, survival \cr
+   coxph \tab survival, expected, lp, risk \cr
+   coxph_weightit \tab survival, expected, lp, risk \cr
+   crch \tab response, location, scale, density \cr
+   fixest \tab invlink(link), response, link \cr
+   flexsurvreg \tab survival, response, mean, link, lp, linear, rmst, hazard, cumhaz \cr
+   gam \tab response, link \cr
+   geeglm \tab response, link \cr
+   glimML \tab response, link \cr
+   glm \tab invlink(link), response, link \cr
+   glm_weightit \tab invlink(link), probs, response, lp, link \cr
+   glmerMod \tab response, link \cr
+   glmgee \tab response \cr
+   glmmPQL \tab response, link \cr
+   glmmTMB \tab response, link, conditional, zprob, zlink, disp \cr
+   glmrob \tab response, link \cr
+   glmx \tab response \cr
+   hetprob \tab pr, xb \cr
+   hurdle \tab response, prob, count, zero \cr
+   hxlr \tab location, cumprob, scale, density \cr
+   iv_robust \tab response \cr
+   ivpml \tab pr, xb \cr
+   ivreg \tab response \cr
+   lda \tab class, posterior \cr
+   lm \tab response \cr
+   lm_robust \tab response \cr
+   lmerMod \tab response \cr
+   lmerModLmerTest \tab response \cr
+   lmrob \tab response \cr
+   lrm \tab fitted, lp, mean \cr
+   mblogit \tab response, latent, link \cr
+   mclogit \tab response, latent, link \cr
+   mhurdle \tab E, Ep, p \cr
+   model_fit \tab numeric, prob, class \cr
+   multinom \tab probs, latent \cr
+   multinom_weightit \tab probs, response, mean \cr
+   mvgam \tab response, link, expected, detection, latent_N \cr
+   negbin \tab invlink(link), response, link \cr
+   ols \tab lp \cr
+   oohbchoice \tab probability, utility \cr
+   ordinal_weightit \tab probs, response, link, lp, mean \cr
+   orm \tab fitted, mean, lp \cr
+   polr \tab probs \cr
+   rendo.base \tab response, link \cr
+   rlm \tab response \cr
+   selection \tab response, link, unconditional, conditional \cr
+   speedglm \tab response, link \cr
+   speedlm \tab response \cr
+   stanreg \tab response, link \cr
+   survreg \tab response, link, quantile \cr
+   svyglm \tab response, link \cr
+   svyolr \tab probs \cr
+   tobit \tab response, link \cr
+   tobit1 \tab expvalue, linpred, prob \cr
+   workflow \tab numeric, prob, class \cr
+   zeroinfl \tab response, prob, count, zero \cr
+}
+}
+
 \examples{
-\dontshow{if (interactive() || isTRUE(Sys.getenv("R_DOC_BUILD") == "true")) (if (getRversion() >= "3.4") withAutoprint else force)(\{ # examplesIf}
+\dontshow{if (interactive() || isTRUE(Sys.getenv("R_DOC_BUILD") == "true")) withAutoprint(\{ # examplesIf}
 # Linear model
 tmp <- mtcars
 tmp$am <- as.logical(tmp$am)
@@ -684,6 +767,7 @@ comparisons(mod, type = "probs", by = by)
 \references{
 \itemize{
 \item Arel-Bundock V, Greifer N, Heiss A (2024). “How to Interpret Statistical Models Using marginaleffects for R and Python.” \emph{Journal of Statistical Software}, \emph{111}(9), 1-32. doi:10.18637/jss.v111.i09 \doi{10.18637/jss.v111.i09}
+\item Arel-Bundock (2026). "Model to Meaning: How to interpret statistical models in R and Python." CRC Press. https://routledge.com/9781032908724
 \item Greenland S. 2019. "Valid P-Values Behave Exactly as They Should: Some Misleading Criticisms of P-Values and Their Resolution With S-Values." The American Statistician. 73(S1): 106–114.
 \item Cole, Stephen R, Jessie K Edwards, and Sander Greenland. 2020. "Surprise!" American Journal of Epidemiology 190 (2): 191–93. \doi{10.1093/aje/kwaa136}
 }

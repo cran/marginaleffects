@@ -1,7 +1,7 @@
 Package: marginaleffects
 Title: Predictions, Comparisons, Slopes, Marginal Means, and Hypothesis
         Tests
-Version: 0.31.0
+Version: 0.32.0
 Authors@R: 
     c(person(given = "Vincent",
              family = "Arel-Bundock",
@@ -40,13 +40,13 @@ Suggests: AER, Amelia, afex, aod, arrow, bayestestR, bench, betareg,
         BH, bife, biglm, blme, boot, brglm2, brms, brmsmargins, broom,
         car, carData, causaldata, clarify, cjoint, cobalt, collapse,
         conflicted, countrycode, covr, crch, DALEXtra, DCchoice,
-        dbarts, distributional, dfidx, dplyr, emmeans, equivalence,
-        estimatr, fixest, flexsurv, fmeffects, fontquiver, future,
-        future.apply, fwb, gam, gamlss, gamlss.dist, geepack, ggdist,
-        ggokabeito, ggplot2, ggrepel, glmmTMB, glmtoolbox, glmx, haven,
-        here, itsadug, ivreg, kableExtra, lme4, lmerTest, logistf,
-        magrittr, margins, MatchIt, MASS, mclogit, MCMCglmm, mhurdle,
-        missRanger, mgcv, mice, miceadds, mlogit, mlr3verse,
+        dbarts, DirichletReg, distributional, dfidx, dplyr, emmeans,
+        equivalence, estimatr, fixest, flexsurv, fmeffects, fontquiver,
+        future, future.apply, fwb, gam, gamlss, gamlss.dist, geepack,
+        ggdist, ggokabeito, ggplot2, ggrepel, glmmTMB, glmtoolbox,
+        glmx, haven, here, itsadug, ivreg, kableExtra, lme4, lmerTest,
+        logistf, magrittr, margins, MatchIt, MASS, mclogit, MCMCglmm,
+        mhurdle, missRanger, mgcv, mice, miceadds, mlogit, mlr3verse,
         modelbased, modelsummary, multcomp, mvgam, mvtnorm,
         nanoparquet, nlme, nnet, numDeriv, nycflights13, optmatch,
         ordbetareg, ordinal, parameters, parsnip, partykit, patchwork,
@@ -81,22 +81,22 @@ Collate: 'add_hypothesis.R' 'add_rowid.R' 'attributes.R' 'autodiff.R'
         'inferences_conformal_split.R' 'inferences_fwb.R'
         'inferences_rsample.R' 'inferences_simulation.R'
         'matrix_apply.R' 'mean_or_mode.R' 'methods.R' 'set_coef.R'
-        'methods_AER.R' 'methods_MASS.R' 'methods_MCMCglmm.R'
-        'methods_Rchoice.R' 'methods_WeightIt.R' 'methods_aaa.R'
-        'methods_afex.R' 'methods_aod.R' 'methods_betareg.R'
-        'methods_bife.R' 'methods_biglm.R' 'methods_nnet.R'
-        'methods_brglm2.R' 'sanity_model.R' 'methods_brms.R'
-        'methods_crch.R' 'methods_dataframe.R' 'methods_dbarts.R'
-        'methods_fixest.R' 'methods_flexsurv.R' 'methods_gamlss.R'
-        'methods_glmmTMB.R' 'methods_glmtoolbox.R' 'methods_glmx.R'
-        'methods_ivreg.R' 'methods_lme4.R' 'methods_mclogit.R'
-        'methods_mgcv.R' 'methods_mhurdle.R' 'methods_mice.R'
-        'methods_mlm.R' 'methods_mlogit.R' 'methods_mlr3.R'
-        'methods_nlme.R' 'methods_ordinal.R' 'methods_plm.R'
-        'methods_pscl.R' 'methods_quantreg.R' 'methods_rms.R'
-        'methods_robustlmm.R' 'methods_rstanarm.R' 'methods_rstpm2.R'
-        'methods_sampleSelection.R' 'methods_scam.R' 'methods_survey.R'
-        'methods_survival.R' 'methods_systemfit.R'
+        'methods_AER.R' 'sanity_model.R' 'methods_DirichletReg.R'
+        'methods_MASS.R' 'methods_MCMCglmm.R' 'methods_Rchoice.R'
+        'methods_WeightIt.R' 'methods_aaa.R' 'methods_afex.R'
+        'methods_aod.R' 'methods_betareg.R' 'methods_bife.R'
+        'methods_biglm.R' 'methods_nnet.R' 'methods_brglm2.R'
+        'methods_brms.R' 'methods_crch.R' 'methods_dataframe.R'
+        'methods_dbarts.R' 'methods_fixest.R' 'methods_flexsurv.R'
+        'methods_gamlss.R' 'methods_glmmTMB.R' 'methods_glmtoolbox.R'
+        'methods_glmx.R' 'methods_ivreg.R' 'methods_lme4.R'
+        'methods_mclogit.R' 'methods_mgcv.R' 'methods_mhurdle.R'
+        'methods_mice.R' 'methods_mlm.R' 'methods_mlogit.R'
+        'methods_mlr3.R' 'methods_nlme.R' 'methods_ordinal.R'
+        'methods_plm.R' 'methods_pscl.R' 'methods_quantreg.R'
+        'methods_rms.R' 'methods_robustlmm.R' 'methods_rstanarm.R'
+        'methods_rstpm2.R' 'methods_sampleSelection.R' 'methods_scam.R'
+        'methods_survey.R' 'methods_survival.R' 'methods_systemfit.R'
         'methods_tidymodels.R' 'methods_tobit1.R' 'modelarchive.R'
         'multcomp.R' 'myTryCatch.R' 'package.R' 'pad.R' 'plot.R'
         'plot_build.R' 'plot_comparisons.R' 'plot_predictions.R'
@@ -113,7 +113,7 @@ Collate: 'add_hypothesis.R' 'add_rowid.R' 'attributes.R' 'autodiff.R'
 Language: en-US
 VignetteBuilder: knitr, quarto
 NeedsCompilation: no
-Packaged: 2025-11-15 01:13:09 UTC; vincent
+Packaged: 2026-02-14 02:05:39 UTC; vincent
 Author: Vincent Arel-Bundock [aut, cre, cph] (ORCID:
     <https://orcid.org/0000-0003-2042-7063>),
   Noah Greifer [ctb] (ORCID: <https://orcid.org/0000-0003-3067-7154>),
@@ -122,4 +122,4 @@ Author: Vincent Arel-Bundock [aut, cre, cph] (ORCID:
   Andrew Heiss [ctb] (ORCID: <https://orcid.org/0000-0002-3948-3914>)
 Maintainer: Vincent Arel-Bundock <vincent.arel-bundock@umontreal.ca>
 Repository: CRAN
-Date/Publication: 2025-11-15 03:50:02 UTC
+Date/Publication: 2026-02-14 06:40:08 UTC

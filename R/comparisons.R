@@ -68,11 +68,9 @@
 #' + [subset()] call with a single argument to select a subset of the dataset used to fit the model, ex: `newdata = subset(treatment == 1)`
 #' + [dplyr::filter()] call with a single argument to select a subset of the dataset used to fit the model, ex: `newdata = filter(treatment == 1)`
 #' @param comparison How should pairs of predictions be compared? Difference, ratio, odds ratio, or user-defined functions.
-#' * string: shortcuts to common contrast functions.
-#'   - Supported shortcuts strings: `r toString(names(marginaleffects:::comparison_function_dict))`
-#'   - See the Comparisons section below for definitions of each transformation.
+#' * string: shortcuts to common contrast functions. Supported shortcuts strings: `r toString(names(marginaleffects:::comparison_function_dict))`
 #' * function: accept two equal-length numeric vectors of adjusted predictions (`hi` and `lo`) and returns a vector of contrasts of the same length, or a unique numeric value.
-#'   - See the Transformations section below for examples of valid functions.
+#' * See the "Comparison functions" section below for a list of common transformations and the definitions of available shortcuts.
 #' @param transform string or function. Transformation applied to unit-level estimates and confidence intervals just before the function returns results. Functions must accept a vector and return a vector of the same length. Support string shortcuts: "exp", "ln"
 #' @param equivalence Numeric vector of length 2: bounds used for the two-one-sided test (TOST) of equivalence, and for the non-inferiority and non-superiority tests. For bayesian models, this report the proportion of posterior draws in the interval and the ROPE. See Details section below.
 #' @param by Aggregate unit-level estimates (aka, marginalize, average over). Valid inputs:
@@ -91,11 +89,11 @@
 #' @template comparison_functions
 #' @template bayesian
 #' @template equivalence
-#' @template type
 #' @template order_of_operations
 #' @template parallel
 #' @template options
 #' @template return
+#' @template type
 #'
 #' @examplesIf interactive() || isTRUE(Sys.getenv("R_DOC_BUILD") == "true")
 #' # Linear model
@@ -340,7 +338,7 @@ comparisons <- function(
     )
     dots[["modeldata"]] <- NULL # dont' pass twice
     args <- utils::modifyList(args, dots)
-    contrast_data <- do.call("get_comparisons_data", args)
+    contrast_data <- do_call(get_comparisons_data, args)
 
     # Add model matrices to hi/lo data
     contrast_data$hi <- add_model_matrix_attribute_data(mfx, contrast_data$hi)
@@ -457,7 +455,7 @@ comparisons <- function(
             hypothesis = mfx@hypothesis
         )
         args <- utils::modifyList(args, dots)
-        cmp <- do.call("get_comparisons", args)
+        cmp <- do_call(get_comparisons, args)
 
         # hypothesis formula names are attached in by() in get_predictions()
         mfx@variable_names_by <- unique(c(
@@ -493,7 +491,7 @@ comparisons <- function(
                 numderiv = numderiv
             )
             args <- utils::modifyList(args, dots)
-            se <- do.call("get_se_delta", args)
+            se <- do_call(get_se_delta, args)
             mfx@jacobian <- attr(se, "jacobian")
             cmp$std.error <- as.vector(as.numeric(se)) # drop attributes
             mfx@draws <- NULL

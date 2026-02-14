@@ -39,6 +39,15 @@ plot_preprocess <- function(
     if (isTRUE(v_facet_2 %in% colnames(dat))) {
         dat[[v_facet_2]] <- factor(dat[[v_facet_2]])
     }
+
+    if (!is.null(mfx) && !is.null(mfx@modeldata)) {
+        vars <- c(v_x, v_color, v_facet_1, v_facet_2)
+        for (v in vars) {
+            if (isTRUE(v %in% colnames(dat)) && isTRUE(v %in% colnames(mfx@modeldata))) {
+                attr(dat[[v]], "label") <- attr(mfx@modeldata[[v]], "label")
+            }
+        }
+    }
     return(dat)
 }
 
@@ -58,9 +67,23 @@ plot_build <- function(
     checkmate::assert_flag(rug)
     checkmate::assert_flag(gray)
 
+    is_discrete <- function(df, var, mfx = NULL) {
+        if (is.null(var) || !isTRUE(var %in% colnames(df))) {
+            return(FALSE)
+        }
+        out <- is.factor(df[[var]]) ||
+            is.character(df[[var]]) ||
+            is.logical(df[[var]])
+        if (!is.null(mfx)) {
+            out <- out || check_variable_class(mfx, var, "categorical")
+        }
+        return(out)
+    }
+
     # create index before building ggplot to make sure it is available
     dat$marginaleffects_term_index <- get_unique_index(dat, mfx)
     multi_variables <- isTRUE(length(unique(dat$marginaleffects_term_index)) > 1)
+    x_is_discrete <- is_discrete(dat, v_x, mfx)
 
     # Handle case where dv is a vector (e.g., binomial models with trials())
     # Use the first element for plotting the raw data points
@@ -70,37 +93,46 @@ plot_build <- function(
 
     if (
         points > 0 &&
-            !check_variable_class(mfx, v_x, "categorical") &&
+            !x_is_discrete &&
             !check_variable_class(mfx, dv, "categorical")
     ) {
-        if (!is.null(v_color) && check_variable_class(mfx, v_color, "categorical")) {
+        dat_points <- mfx@modeldata
+        if (!is.null(dat_points)) {
+            if (is_discrete(dat_points, v_x, mfx)) {
+                dat_points[[v_x]] <- factor(dat_points[[v_x]])
+            }
+            if (is_discrete(dat_points, v_color, mfx)) {
+                dat_points[[v_color]] <- factor(dat_points[[v_color]])
+            }
+        }
+        if (is_discrete(dat_points, v_color, mfx)) {
             if (isTRUE(gray)) {
                 p <- p +
                     ggplot2::geom_point(
-                        data = mfx@modeldata,
+                        data = dat_points,
                         alpha = points,
                         ggplot2::aes(
                             x = .data[[v_x]],
                             y = .data[[dv_plot]],
-                            shape = factor(.data[[v_color]])
+                            shape = .data[[v_color]]
                         )
                     )
             } else {
                 p <- p +
                     ggplot2::geom_point(
-                        data = mfx@modeldata,
+                        data = dat_points,
                         alpha = points,
                         ggplot2::aes(
                             x = .data[[v_x]],
                             y = .data[[dv_plot]],
-                            color = factor(.data[[v_color]])
+                            color = .data[[v_color]]
                         )
                     )
             }
         } else {
             p <- p +
                 ggplot2::geom_point(
-                    data = mfx@modeldata,
+                    data = dat_points,
                     alpha = points,
                     ggplot2::aes(x = .data[[v_x]], y = .data[[dv_plot]])
                 )
@@ -130,12 +162,12 @@ plot_build <- function(
     aes_args_ribbon$color <- NULL
 
     # discrete x-axis
-    if (is.factor(dat[[v_x]])) {
+    if (x_is_discrete) {
         if (!is.null(v_color)) {
             if (gray) {
-                aes_args$shape <- substitute(factor(.data[[v_color]]))
+                aes_args$shape <- substitute(.data[[v_color]])
             } else {
-                aes_args$color <- substitute(factor(.data[[v_color]]))
+                aes_args$color <- substitute(.data[[v_color]])
             }
         }
         aes_obj <- do.call(ggplot2::aes, aes_args)
@@ -157,11 +189,11 @@ plot_build <- function(
     } else {
         if (!is.null(v_color)) {
             if (gray) {
-                aes_args$linetype <- substitute(factor(.data[[v_color]]))
-                aes_args_ribbon$linetype <- substitute(factor(.data[[v_color]]))
+                aes_args$linetype <- substitute(.data[[v_color]])
+                aes_args_ribbon$linetype <- substitute(.data[[v_color]])
             } else {
-                aes_args$color <- substitute(factor(.data[[v_color]]))
-                aes_args_ribbon$fill <- substitute(factor(.data[[v_color]]))
+                aes_args$color <- substitute(.data[[v_color]])
+                aes_args_ribbon$fill <- substitute(.data[[v_color]])
             }
         }
         aes_obj_ribbon <- do.call(ggplot2::aes, aes_args_ribbon)

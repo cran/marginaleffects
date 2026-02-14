@@ -48,7 +48,7 @@ hypotheses(
 \item \code{reference}: differences between the estimates in each row and the estimate in the first row.
 \item \code{sequential}: difference between an estimate and the estimate in the next row.
 \item \code{meandev}: difference between an estimate and the mean of all estimates.
-\item `meanotherdev: difference between an estimate and the mean of all other estimates, excluding the current one.
+\item \code{meanotherdev}: difference between an estimate and the mean of all other estimates, excluding the current one.
 \item \code{poly}: polynomial contrasts, as computed by the \code{stats::contr.poly()} function.
 \item \code{helmert}: Helmert contrasts, as computed by the \code{stats::contr.helmert()} function. Contrast 2nd level to the first, 3rd to the average of the first two, and so on.
 \item \code{trt_vs_ctrl}: difference between the mean of estimates (except the first) and the first estimate.
@@ -125,8 +125,8 @@ hypotheses(
 
 \item{numderiv}{string or list of strings indicating the method to use to for the numeric differentiation used in to compute delta method standard errors.
 \itemize{
-\item "fdforward": finite difference method with forward differences
-\item "fdcenter": finite difference method with central differences (default)
+\item "fdforward": finite difference method with forward differences (default)
+\item "fdcenter": finite difference method with central differences
 \item "richardson": Richardson extrapolation method
 \item Extra arguments can be specified by passing a list to the \code{numDeriv} argument, with the name of the method first and named arguments following, ex: \code{numderiv=list("fdcenter", eps = 1e-5)}. When an unknown argument is used, \code{marginaleffects} prints the list of valid arguments for each method.
 }}

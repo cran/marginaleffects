@@ -56,7 +56,7 @@ compute contrasts or slopes. This can differ based on the model
 type, but will typically be a string such as: "response", "link", "probs",
 or "zero". When an unsupported string is entered, the model-specific list of
 acceptable values is returned in an error message. When \code{type} is \code{NULL}, the
-first entry in the error message is used by default.}
+first entry in the error message is used by default. See the Type section in the documentation below.}
 
 \item{vcov}{Type of uncertainty estimates to report (e.g., for robust standard errors). Acceptable values:
 \itemize{
@@ -151,7 +151,7 @@ https://github.com/vincentarelbundock/marginaleffects/issues\tabular{llll}{
 }
 
 \examples{
-\dontshow{if (interactive() || isTRUE(Sys.getenv("R_DOC_BUILD") == "true")) (if (getRversion() >= "3.4") withAutoprint else force)(\{ # examplesIf}
+\dontshow{if (interactive() || isTRUE(Sys.getenv("R_DOC_BUILD") == "true")) withAutoprint(\{ # examplesIf}
 mod <- lm(mpg ~ hp * drat * factor(am), data = mtcars)
 
 plot_slopes(mod, variables = "hp", condition = "drat")
